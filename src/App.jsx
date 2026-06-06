@@ -679,6 +679,25 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
   );
 }
 
+/* ─── FIELD (hors composant pour éviter le re-mount à chaque frappe) ─── */
+function Field({ label, value, onChange, placeholder, type = "text", err }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <label className="lk-label">{label}</label>
+      <input
+        type={type}
+        className="lk-input"
+        value={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        onChange={onChange}
+        style={{ background: err ? "rgba(240,101,101,.06)" : "", borderColor: err ? "rgba(240,101,101,.4)" : "" }}
+      />
+      {err && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{err}</div>}
+    </div>
+  );
+}
+
 /* ─── REGISTER ─── */
 function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
   const [tab, setTab] = useState("client");
@@ -723,23 +742,6 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
     setModal(false);
     onSuccess(v);
   };
-
-  // Champ individuel stable (ne provoque pas de re-render des autres champs)
-  const Field = ({ label, value, onChange, placeholder, type = "text", err }) => (
-    <div style={{ marginBottom: 14 }}>
-      <label className="lk-label">{label}</label>
-      <input
-        type={type}
-        className="lk-input"
-        value={value}
-        placeholder={placeholder}
-        autoComplete="off"
-        onChange={onChange}
-        style={{ background: err ? "rgba(240,101,101,.06)" : "", borderColor: err ? "rgba(240,101,101,.4)" : "" }}
-      />
-      {err && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{err}</div>}
-    </div>
-  );
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto" }}>
@@ -1428,11 +1430,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
   const realProAccounts = allAccounts.filter(a => a.role === "pro" && a.verified);
   // On fusionne : pour chaque pro, on construit un objet artisan
   const getArtisanList = () => {
-    // Démo artisans (marqués isDemo)
-    const demoArts = DEMO_ARTISANS.filter(a => a.dispo);
-    // Pros réels inscrits (non démo)
+    const clientRegion = (account.ville || "").trim().toLowerCase();
+    // Démo artisans (marqués isDemo) — filtrés par région du client
+    const demoArts = DEMO_ARTISANS.filter(a =>
+      a.dispo && (!clientRegion || (a.ville || "").trim().toLowerCase() === clientRegion)
+    );
+    // Pros réels inscrits (non démo) — filtrés par région du client
     const realArts = realProAccounts
-      .filter(a => !a.isDemo)
+      .filter(a => !a.isDemo && (!clientRegion || (a.ville || "").trim().toLowerCase() === clientRegion))
       .map(a => ({
         id: a.artisanId || a.id,
         nom: a.nom,
