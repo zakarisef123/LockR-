@@ -1,17 +1,180 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-const fmt = n => Number(n).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+const fmt = n => `${Math.round(Number(n))} €`;
 const fmtTime = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const fmtDate = d => new Date(d).toLocaleDateString("fr-FR");
 const ts = () => new Date().toISOString();
 
+/* ─── TRANSLATIONS ─── */
+const TRANS = {
+  fr: {
+    appTagline: "L'artisan arrive. Vous restez serein.",
+    login: "Connexion", register: "Inscription", logout: "Déconnexion",
+    email: "Adresse email", password: "Mot de passe", confirmPassword: "Confirmer le mot de passe",
+    firstname: "Prénom", lastname: "Nom", phone: "Téléphone", city: "Ville / Région",
+    individual: "Particulier", craftsman: "Artisan pro",
+    findCraftsman: "Trouver un artisan", myMissions: "Mes missions",
+    createAccount: "Créer un compte", freeAccount: "Créer un compte gratuit",
+    alreadyMember: "Déjà inscrit ?", notMember: "Pas encore de compte ?",
+    connectAs: "Se connecter", forgotPass: "Mot de passe oublié ?",
+    minChars: "6 caractères minimum", passMismatch: "Les mots de passe ne correspondent pas",
+    invalidEmail: "Email invalide", emailUsed: "Email déjà utilisé",
+    invalidPhone: "Numéro de téléphone invalide", firstnameRequired: "Prénom requis", lastnameRequired: "Nom requis",
+    emailSent: "Email envoyé !", checkInbox: "Consultez votre boîte mail",
+    enterCode: "Saisissez le code reçu par email :", verifyCode: "Vérifier le code",
+    wrongCode: "Code incorrect, réessayez.", accountVerified: "Compte vérifié !",
+    welcome: "Bienvenue,", accessApp: "Accéder à l'application",
+    generatingEmail: "Génération de l'email…", verifying: "Vérification du code…",
+    codeNotInApp: "Le code a été envoyé par email. Il n'apparaît pas dans l'application.",
+    cancel: "Annuler", back: "Retour", confirm: "Confirmer",
+    available: "Disponible", unavailable: "Indisponible",
+    urgent: "URGENT", reviews: "avis", verified: "Pro vérifié",
+    newRequest: "Nouvelle demande", interventionType: "Type d'intervention",
+    availableCraftsmen: "Artisans disponibles", noAvailable: "(aucun pour l'instant)",
+    book: "Réserver", liveTracking: "Suivi en direct",
+    onRoute: "En route", arrived: "Artisan arrivé", openDoor: "Ouvrez la porte",
+    artisanArriving: "Votre artisan arrive",
+    payInvoice: "Payer la facture", callArtisan: "Appeler",
+    transport: "Moyen de transport", car: "Voiture", scooter: "Scooter",
+    motorcycle: "Moto", bicycle: "Vélo", onFoot: "À pied",
+    missions: "Missions", inProgress: "En cours", bonuses: "Bons", chat: "Chat",
+    stats: "Stats", history: "Historique",
+    noMissionPending: "Aucune mission en attente", noMissionActive: "Aucune mission active",
+    start: "Démarrer", refuse: "Refuser", viewMission: "Voir la mission en cours",
+    earnings: "Mes revenus", thisMonth: "Ce mois",
+    closeMission: "Clôturer la mission", invoicePhoto: "Photo de la facture *",
+    photographOrSelect: "Photographier ou sélectionner",
+    totalAmount: "Montant total de la facture *", paymentStatus: "Statut du paiement *",
+    paid: "Payé", pending: "En attente", summary: "Récapitulatif",
+    yourShare: "Votre part", lockrShare: "LOCKR",
+    confirmPaid: "Confirmer — Facture payée", confirmPending: "Confirmer — Paiement en attente",
+    edit: "Modifier", next: "Continuer",
+    regionalChat: "Chat Pros", chatSubtitle: "Échangez avec les pros de votre région",
+    noMessage: "Aucun message. Soyez le premier à écrire !",
+    yourMessage: "Votre message…", send: "Envoyer",
+    availableBonuses: "Bons disponibles", region: "Région", post: "Poster",
+    noBonusRegion: "Aucun bon disponible dans votre région",
+    yourSharePct: "Votre part", acceptBonus: "Accepter ce bon",
+    postBonus: "Poster un bon", publishBonus: "Publier le bon",
+    title: "Titre", clientAddress: "Adresse client", interventionTypeLabel: "Type d'intervention",
+    estimatedAmount: "Montant estimé (€)", technicianShare: "Part du technicien",
+    urgentIntervention: "Intervention urgente",
+    helloUser: "Bonjour,", whatNeed: "De quoi avez-vous besoin ?",
+    quickInterventions: "Interventions rapides", myInterventions: "Mes interventions",
+    gpsActive: "GPS actif", artisanOnRoute: "Artisan en route",
+    followLive: "Suivre en direct", min: "min",
+    dashboard: "Dashboard", adminBonuses: "Bons", craftsmen: "Artisans", allMissions: "Missions",
+    revenue: "Chiffre d'affaires", platformRevenue: "Revenu plateforme",
+    totalMissions: "Missions totales", prosRegistered: "Pros inscrits",
+    platformRevenue6m: "Revenus plateforme (6 mois)", lockrBonuses: "Bons LOCKR",
+    newBonus: "Nouveau", publishBonus2: "Publier ce bon", deleteBonus: "Supprimer",
+    registeredCraftsmen: "Artisans inscrits", demoAccount: "Compte démo",
+    allMissionsLabel: "Toutes les missions", techShare: "Tech (40%)",
+    newLockrBonus: "Nouveau bon LOCKR", artisanShare: "Part artisan",
+    certifRge: "RGE Certifié", qualibat: "Qualibat", proCertif: "Pro Certifié",
+    artisanAgree: "Artisan Agréé", proLockr: "Pro LOCKR",
+    paymentEncrypted: "Paiement chiffré SSL 256-bit",
+    cardNumber: "Numéro de carte", cardHolder: "Titulaire", expiry: "Expiration", cvv: "CVV",
+    pay: "Payer", paymentMethod: "Méthode de paiement",
+    confirmWith: "Confirmer avec", confirmPayment: "Confirmer le paiement",
+    changeMethod: "Changer de méthode", processing: "Transaction en cours…",
+    paymentConfirmed: "Paiement confirmé !", debited: "débité avec succès", close: "Fermer",
+    invoiceInvalid: "Montant invalide", invoiceRequired: "Une photo de facture est requise",
+    cardInvalid: "Numéro de carte invalide", expInvalid: "Date d'expiration invalide",
+    cvvInvalid: "CVV invalide", holderRequired: "Nom du titulaire requis",
+    joinFree: "Rejoignez LOCKR gratuitement",
+    settlementLabel: "Règlement de prestation",
+    lang: "EN",
+  },
+  en: {
+    appTagline: "The craftsman arrives. You stay calm.",
+    login: "Login", register: "Register", logout: "Logout",
+    email: "Email address", password: "Password", confirmPassword: "Confirm password",
+    firstname: "First name", lastname: "Last name", phone: "Phone", city: "City / Region",
+    individual: "Individual", craftsman: "Pro craftsman",
+    findCraftsman: "Find a craftsman", myMissions: "My missions",
+    createAccount: "Create an account", freeAccount: "Create a free account",
+    alreadyMember: "Already registered?", notMember: "No account yet?",
+    connectAs: "Sign in", forgotPass: "Forgot password?",
+    minChars: "6 characters minimum", passMismatch: "Passwords do not match",
+    invalidEmail: "Invalid email", emailUsed: "Email already used",
+    invalidPhone: "Invalid phone number", firstnameRequired: "First name required", lastnameRequired: "Last name required",
+    emailSent: "Email sent!", checkInbox: "Check your inbox",
+    enterCode: "Enter the code received by email:", verifyCode: "Verify code",
+    wrongCode: "Incorrect code, try again.", accountVerified: "Account verified!",
+    welcome: "Welcome,", accessApp: "Access the application",
+    generatingEmail: "Sending email…", verifying: "Verifying code…",
+    codeNotInApp: "The code was sent by email. It does not appear in the application.",
+    cancel: "Cancel", back: "Back", confirm: "Confirm",
+    available: "Available", unavailable: "Unavailable",
+    urgent: "URGENT", reviews: "reviews", verified: "Verified pro",
+    newRequest: "New request", interventionType: "Intervention type",
+    availableCraftsmen: "Available craftsmen", noAvailable: "(none for now)",
+    book: "Book", liveTracking: "Live tracking",
+    onRoute: "On the way", arrived: "Craftsman arrived", openDoor: "Open the door",
+    artisanArriving: "Your craftsman is arriving",
+    payInvoice: "Pay invoice", callArtisan: "Call",
+    transport: "Transport", car: "Car", scooter: "Scooter",
+    motorcycle: "Motorcycle", bicycle: "Bicycle", onFoot: "On foot",
+    missions: "Missions", inProgress: "In progress", bonuses: "Bonuses", chat: "Chat",
+    stats: "Stats", history: "History",
+    noMissionPending: "No pending mission", noMissionActive: "No active mission",
+    start: "Start", refuse: "Decline", viewMission: "View ongoing mission",
+    earnings: "My earnings", thisMonth: "This month",
+    closeMission: "Close mission", invoicePhoto: "Invoice photo *",
+    photographOrSelect: "Photograph or select",
+    totalAmount: "Total invoice amount *", paymentStatus: "Payment status *",
+    paid: "Paid", pending: "Pending", summary: "Summary",
+    yourShare: "Your share", lockrShare: "LOCKR",
+    confirmPaid: "Confirm — Invoice paid", confirmPending: "Confirm — Payment pending",
+    edit: "Edit", next: "Continue",
+    regionalChat: "Pro Chat", chatSubtitle: "Connect with pros in your region",
+    noMessage: "No messages. Be the first to write!",
+    yourMessage: "Your message…", send: "Send",
+    availableBonuses: "Available bonuses", region: "Region", post: "Post",
+    noBonusRegion: "No bonuses available in your region",
+    yourSharePct: "Your share", acceptBonus: "Accept bonus",
+    postBonus: "Post a bonus", publishBonus: "Publish bonus",
+    title: "Title", clientAddress: "Client address", interventionTypeLabel: "Intervention type",
+    estimatedAmount: "Estimated amount (€)", technicianShare: "Technician share",
+    urgentIntervention: "Urgent intervention",
+    helloUser: "Hello,", whatNeed: "What do you need?",
+    quickInterventions: "Quick interventions", myInterventions: "My interventions",
+    gpsActive: "GPS active", artisanOnRoute: "Craftsman on the way",
+    followLive: "Follow live", min: "min",
+    dashboard: "Dashboard", adminBonuses: "Bonuses", craftsmen: "Craftsmen", allMissions: "Missions",
+    revenue: "Revenue", platformRevenue: "Platform revenue",
+    totalMissions: "Total missions", prosRegistered: "Registered pros",
+    platformRevenue6m: "Platform revenue (6 months)", lockrBonuses: "LOCKR Bonuses",
+    newBonus: "New", publishBonus2: "Publish bonus", deleteBonus: "Delete",
+    registeredCraftsmen: "Registered craftsmen", demoAccount: "Demo account",
+    allMissionsLabel: "All missions", techShare: "Tech (40%)",
+    newLockrBonus: "New LOCKR bonus", artisanShare: "Craftsman share",
+    certifRge: "RGE Certified", qualibat: "Qualibat", proCertif: "Pro Certified",
+    artisanAgree: "Approved craftsman", proLockr: "Pro LOCKR",
+    paymentEncrypted: "SSL 256-bit encrypted payment",
+    cardNumber: "Card number", cardHolder: "Cardholder", expiry: "Expiry", cvv: "CVV",
+    pay: "Pay", paymentMethod: "Payment method",
+    confirmWith: "Confirm with", confirmPayment: "Confirm payment",
+    changeMethod: "Change method", processing: "Processing…",
+    paymentConfirmed: "Payment confirmed!", debited: "debited successfully", close: "Close",
+    invoiceInvalid: "Invalid amount", invoiceRequired: "An invoice photo is required",
+    cardInvalid: "Invalid card number", expInvalid: "Invalid expiry date",
+    cvvInvalid: "Invalid CVV", holderRequired: "Cardholder name required",
+    joinFree: "Join LOCKR for free",
+    settlementLabel: "Service payment",
+    lang: "FR",
+  }
+};
+
 const T = {
-  bg: "#080b14", surface: "#0e1322", card: "#131929", border: "rgba(255,255,255,.08)",
-  borderHi: "rgba(99,179,237,.3)", accent: "#5b8def", accent2: "#7b6ef6",
-  success: "#3ecf8e", warn: "#f5a623", danger: "#f06565",
-  textHi: "#f0f4ff", textMid: "rgba(240,244,255,.55)", textLo: "rgba(240,244,255,.25)",
-  grad: "linear-gradient(135deg,#5b8def,#7b6ef6)", gradBtn: "linear-gradient(135deg,#4d7fe8,#6b5ff4)",
+  bg: "#f4f4f2", surface: "#ffffff", card: "#ffffff", border: "rgba(0,0,0,.08)",
+  borderHi: "rgba(28,28,28,.3)", accent: "#1c1c1c", accent2: "#c9a030",
+  success: "#1e9e6b", warn: "#d97706", danger: "#dc2626",
+  textHi: "#1c1c1c", textMid: "rgba(28,28,28,.55)", textLo: "rgba(28,28,28,.38)",
+  grad: "linear-gradient(135deg,#1c1c1c,#3a3a3a)", gradBtn: "linear-gradient(135deg,#1c1c1c,#2e2e2e)",
+  gold: "#c9a030",
 };
 
 const PLATFORM_CUT = 0.10;
@@ -98,8 +261,8 @@ function PhoneInput({ value, onChange, placeholder }) {
           type="button"
           onClick={() => setShowDropdown(d => !d)}
           style={{
-            background: "rgba(255,255,255,.04)",
-            border: "1px solid rgba(255,255,255,.1)",
+            background: "rgba(0,0,0,.03)",
+            border: "1px solid rgba(0,0,0,.08)",
             borderRadius: 10,
             color: T.textHi,
             fontSize: 13,
@@ -129,12 +292,12 @@ function PhoneInput({ value, onChange, placeholder }) {
       {showDropdown && (
         <div style={{
           position: "absolute", top: "100%", left: 0, zIndex: 9999,
-          background: T.surface, border: "1px solid rgba(255,255,255,.12)",
+          background: T.surface, border: "1px solid rgba(0,0,0,.08)",
           borderRadius: 12, minWidth: 240, maxHeight: 280, overflow: "hidden",
           display: "flex", flexDirection: "column", marginTop: 4,
           boxShadow: "0 8px 32px rgba(0,0,0,.5)"
         }}>
-          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
             <input
               className="lk-input"
               value={search}
@@ -151,7 +314,7 @@ function PhoneInput({ value, onChange, placeholder }) {
                 type="button"
                 onClick={() => selectCode(c.code)}
                 style={{
-                  width: "100%", background: c.code === countryCode ? "rgba(91,141,239,.1)" : "none",
+                  width: "100%", background: c.code === countryCode ? "rgba(28,28,28,.06)" : "none",
                   border: "none", padding: "10px 14px", cursor: "pointer",
                   display: "flex", alignItems: "center", gap: 10, textAlign: "left",
                   fontFamily: "'Inter',sans-serif",
@@ -172,10 +335,10 @@ function PhoneInput({ value, onChange, placeholder }) {
 /* ─── DATA ─── */
 // Artisans réels (pas de faux) — uniquement utilisés en mode démo
 const DEMO_ARTISANS = [
-  { id: "a1", nom: "Karim Benali", note: 4.9, avis: 127, tarif: 90, distance: 1.2, dispo: true, certif: "RGE Certifié", color: "#5b8def", tel: "0601020304", ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true },
-  { id: "a2", nom: "Youssef Mrani", note: 4.7, avis: 89, tarif: 80, distance: 2.1, dispo: true, certif: "Qualibat", color: "#7b6ef6", tel: "0605060708", ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true },
-  { id: "a3", nom: "Ahmed Tazi", note: 4.8, avis: 203, tarif: 95, distance: 3.4, dispo: false, certif: "Pro Certifié", color: "#3ecf8e", tel: "0609101112", ville: "Paris", lat: 48.850, lng: 2.360, isDemo: true },
-  { id: "a4", nom: "Thomas Leclerc", note: 4.6, avis: 54, tarif: 75, distance: 4.8, dispo: true, certif: "Artisan Agréé", color: "#f5a623", tel: "0612131415", ville: "Lyon", lat: 45.764, lng: 4.834, isDemo: true },
+  { id: "a1", nom: "Karim Benali", note: 4.9, avis: 127, tarif: 90, distance: 1.2, dispo: true, certif: "RGE Certifié", color: "#5b8def", tel: "0601020304", ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true, transport: "voiture" },
+  { id: "a2", nom: "Youssef Mrani", note: 4.7, avis: 89, tarif: 80, distance: 2.1, dispo: true, certif: "Qualibat", color: "#7b6ef6", tel: "0605060708", ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true, transport: "scooter" },
+  { id: "a3", nom: "Ahmed Tazi", note: 4.8, avis: 203, tarif: 95, distance: 3.4, dispo: false, certif: "Pro Certifié", color: "#3ecf8e", tel: "0609101112", ville: "Paris", lat: 48.850, lng: 2.360, isDemo: true, transport: "voiture" },
+  { id: "a4", nom: "Thomas Leclerc", note: 4.6, avis: 54, tarif: 75, distance: 4.8, dispo: true, certif: "Artisan Agréé", color: "#f5a623", tel: "0612131415", ville: "Lyon", lat: 45.764, lng: 4.834, isDemo: true, transport: "scooter" },
 ];
 
 const PROBLEMES = [
@@ -261,39 +424,41 @@ const Icon = {
 const PROB_ICONS = { ouverture: Icon.door, serrure: Icon.key, blindage: Icon.shield, coffre: Icon.safe, digicode: Icon.code, autre: Icon.tool };
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-  @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased}
-  ::-webkit-scrollbar{width:3px}
-  ::-webkit-scrollbar-thumb{background:#1e2a40;border-radius:3px}
-  .leaflet-container{background:#080b14 !important}
-  .leaflet-tile{filter:brightness(.45) saturate(.5) hue-rotate(200deg) contrast(1.1)}
-  .leaflet-control-zoom,.leaflet-control-attribution{display:none !important}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-  @keyframes checkPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-  @keyframes notif{0%{transform:translateY(-80px);opacity:0}15%{transform:translateY(0);opacity:1}80%{transform:translateY(0);opacity:1}100%{transform:translateY(-80px);opacity:0}}
-  .lk-btn{background:linear-gradient(135deg,#4d7fe8,#6b5ff4);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif}
-  .lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(91,141,239,.45)}
-  .lk-btn:active{transform:translateY(0)}
-  .lk-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
-  .lk-ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(240,244,255,.7);font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif}
-  .lk-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18)}
-  .lk-card{background:#131929;border:1px solid rgba(255,255,255,.07);border-radius:16px;transition:all .2s}
-  .lk-card:hover{border-color:rgba(91,141,239,.25);box-shadow:0 4px 20px rgba(0,0,0,.3)}
-  .lk-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#f0f4ff;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;font-family:'Inter',sans-serif}
-  .lk-input:focus{border-color:rgba(91,141,239,.6);background:rgba(91,141,239,.06)}
-  .lk-input::placeholder{color:rgba(240,244,255,.2)}
-  .lk-label{display:block;color:rgba(240,244,255,.4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
-  .lk-tag-urgent{background:rgba(240,101,101,.12);border:1px solid rgba(240,101,101,.25);color:#f06565;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
-  .lk-badge-ok{background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.2);color:#3ecf8e;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
-  .lk-badge-off{background:rgba(240,101,101,.1);border:1px solid rgba(240,101,101,.2);color:#f06565;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
-  .notif-banner{animation:notif 5s ease forwards;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;max-width:420px;width:95%}
-  select.lk-input option{background:#131929;color:#f0f4ff}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#f4f4f2}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:#d0d0cc;border-radius:4px}
+.leaflet-container{background:#e8e8e4 !important}
+.leaflet-tile{filter:brightness(1) saturate(0.85) contrast(1.05)}
+.leaflet-control-zoom{border:none !important;box-shadow:0 2px 8px rgba(0,0,0,.15) !important}
+.leaflet-control-zoom a{background:#fff !important;color:#1c1c1c !important;border:1px solid rgba(0,0,0,.1) !important;border-radius:8px !important}
+.leaflet-control-attribution{display:none !important}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes checkPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes notif{0%{transform:translateY(-80px);opacity:0}15%{transform:translateY(0);opacity:1}80%{transform:translateY(0);opacity:1}100%{transform:translateY(-80px);opacity:0}}
+.lk-btn{background:linear-gradient(135deg,#1c1c1c,#2e2e2e);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.lk-btn:active{transform:translateY(0)}
+.lk-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.lk-ghost{background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:rgba(28,28,28,.7);font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.lk-ghost:hover{background:#f8f8f6;border-color:rgba(0,0,0,.2)}
+.lk-card{background:#ffffff;border:1px solid rgba(0,0,0,.07);border-radius:16px;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.lk-card:hover{border-color:rgba(201,160,48,.3);box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.lk-input{width:100%;background:#f8f8f6;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:#1c1c1c;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;font-family:'Inter',sans-serif}
+.lk-input:focus{border-color:rgba(28,28,28,.5);background:#ffffff;box-shadow:0 0 0 3px rgba(201,160,48,.15)}
+.lk-input::placeholder{color:rgba(28,28,28,.3)}
+.lk-label{display:block;color:rgba(28,28,28,.45);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.lk-tag-urgent{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);color:#dc2626;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
+.lk-badge-ok{background:rgba(30,158,107,.08);border:1px solid rgba(30,158,107,.18);color:#1e9e6b;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.lk-badge-off{background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.15);color:#dc2626;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.notif-banner{animation:notif 5s ease forwards;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;max-width:420px;width:95%}
+select.lk-input option{background:#ffffff;color:#1c1c1c}
 `;
 
 /* ─── MAP HELPERS ─── */
@@ -345,10 +510,24 @@ async function fetchRoute(aLat, aLng, cLat, cLng) {
   };
 }
 
-function makeSvgIcon(L, isFull, color, size = 40) {
-  const inner = isFull
-    ? `<rect x="10" y="16" width="20" height="14" rx="2" fill="${color}"/><path d="M14 16v-4a6 6 0 0 1 12 0v4" stroke="${color}" stroke-width="2" fill="none"/>`
-    : `<circle cx="20" cy="14" r="5" fill="${color}"/><path d="M12 26a8 8 0 0 1 16 0" fill="${color}"/>`;
+function makeSvgIcon(L, isFull, color, size = 40, transport = "voiture", photoUrl = null) {
+  let inner;
+  if (isFull) {
+    if (photoUrl) {
+      inner = `<clipPath id="cp"><circle cx="20" cy="20" r="16"/></clipPath><image href="${photoUrl}" x="4" y="4" width="32" height="32" clip-path="url(#cp)"/><circle cx="20" cy="20" r="16" fill="none" stroke="${color}" stroke-width="2"/>`;
+    } else if (transport === "scooter" || transport === "moto") {
+      inner = `<circle cx="20" cy="24" r="5" fill="${color}"/><circle cx="8" cy="24" r="5" fill="${color}"/><path d="M8 24 Q10 14 18 14 L24 14 L28 20 L20 20 Q17 20 14 24" stroke="${color}" stroke-width="2" fill="none"/><circle cx="24" cy="18" r="3" fill="${color}"/>`;
+    } else if (transport === "velo") {
+      inner = `<circle cx="10" cy="26" r="6" fill="none" stroke="${color}" stroke-width="2"/><circle cx="30" cy="26" r="6" fill="none" stroke="${color}" stroke-width="2"/><path d="M10 26 L20 14 L30 26 M20 14 L20 20 M16 20 L24 20" stroke="${color}" stroke-width="2" fill="none"/>`;
+    } else if (transport === "pied") {
+      inner = `<circle cx="20" cy="10" r="5" fill="${color}"/><path d="M20 15 L18 26 L15 34 M20 15 L22 26 L25 34 M16 20 L24 20" stroke="${color}" stroke-width="2" fill="none"/>`;
+    } else {
+      // voiture (default)
+      inner = `<rect x="6" y="16" width="28" height="14" rx="3" fill="${color}"/><rect x="10" y="10" width="20" height="10" rx="2" fill="${color}"/><circle cx="12" cy="30" r="4" fill="#555"/><circle cx="28" cy="30" r="4" fill="#555"/><rect x="11" y="12" width="6" height="6" rx="1" fill="rgba(255,255,255,0.5)"/><rect x="23" y="12" width="6" height="6" rx="1" fill="rgba(255,255,255,0.5)"/>`;
+    }
+  } else {
+    inner = `<circle cx="20" cy="14" r="5" fill="${color}"/><path d="M12 26a8 8 0 0 1 16 0" fill="${color}"/>`;
+  }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 40 40">${inner}</svg>`;
   return L.divIcon({ html: `<div style="filter:drop-shadow(0 2px 10px ${color}99)">${svg}</div>`, className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 }
@@ -378,7 +557,7 @@ function LiveMap({ progress = 0, artisanColor = "#5b8def", compact = false, clie
       const aLat = artisanPos?.[0] ?? (cLat + 0.015);
       const aLng = artisanPos?.[1] ?? (cLng + 0.015);
 
-      const map = L.map(mapRef.current, { center: [cLat, cLng], zoom: 14, zoomControl: false, attributionControl: false });
+      const map = L.map(mapRef.current, { center: [cLat, cLng], zoom: 14, zoomControl: true, attributionControl: false });
       mapObj.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
@@ -394,7 +573,7 @@ function LiveMap({ progress = 0, artisanColor = "#5b8def", compact = false, clie
       if (onRouteReady) onRouteReady(route);
 
       // Route grisée (tout le trajet)
-      L.polyline(route.coords, { color: "rgba(91,141,239,.2)", weight: 4, dashArray: "8 6" }).addTo(map);
+      L.polyline(route.coords, { color: "rgba(28,28,28,.12)", weight: 4, dashArray: "8 6" }).addTo(map);
       // Route effectuée (colorée)
       donePoly.current = L.polyline([], { color: artisanColor, weight: 5 }).addTo(map);
 
@@ -411,28 +590,23 @@ function LiveMap({ progress = 0, artisanColor = "#5b8def", compact = false, clie
     if (!pos) return;
     artMk.current.setLatLng(pos);
     donePoly.current?.setLatLngs(c.slice(0, idx + 1));
-    if (mapObj.current && progress < 0.98) {
-      const cLat = clientPos?.[0] ?? 48.8566;
-      const cLng = clientPos?.[1] ?? 2.3522;
-      mapObj.current.fitBounds(L_.current.latLngBounds([pos, [cLat, cLng]]), { padding: [52, 52], animate: false });
-    }
   }, [progress]);
 
   const eta = Math.max(0, Math.round((1 - progress) * 12));
   return (
-    <div style={{ position: "relative", height: H, background: "#080b14", overflow: "hidden" }}>
+    <div style={{ position: "relative", height: H, background: "#e8e8e4", overflow: "hidden" }}>
       <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 52, background: "linear-gradient(0deg,#080b14,transparent)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 52, background: "linear-gradient(0deg,#f4f4f2,transparent)", pointerEvents: "none" }} />
       {progress < 0.97 && (
-        <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(8,11,20,.92)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 10, padding: "7px 12px", display: "flex", alignItems: "center", gap: 7 }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#f06565", animation: "blink 1.2s infinite" }} />
-          <span style={{ color: "#f0f4ff", fontWeight: 700, fontSize: 12, letterSpacing: ".5px" }}>EN DIRECT</span>
+        <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,.92)", border: "1px solid rgba(0,0,0,.1)", borderRadius: 10, padding: "7px 12px", display: "flex", alignItems: "center", gap: 7, boxShadow: "0 2px 8px rgba(0,0,0,.12)" }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626", animation: "blink 1.2s infinite" }} />
+          <span style={{ color: "#1c1c1c", fontWeight: 700, fontSize: 12, letterSpacing: ".5px" }}>EN DIRECT</span>
           <span style={{ color: artisanColor, fontWeight: 800, fontSize: 13, marginLeft: 2 }}>{eta} min</span>
         </div>
       )}
       {progress >= 0.97 && (
-        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", background: "rgba(62,207,142,.15)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 10, padding: "7px 14px" }}>
-          <span style={{ color: "#3ecf8e", fontWeight: 700, fontSize: 13 }}>Artisan arrivé ✓</span>
+        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", background: "rgba(30,158,107,.12)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "7px 14px", boxShadow: "0 2px 8px rgba(0,0,0,.1)" }}>
+          <span style={{ color: "#1e9e6b", fontWeight: 700, fontSize: 13 }}>Artisan arrivé ✓</span>
         </div>
       )}
     </div>
@@ -457,7 +631,7 @@ function NotifBanner({ notifs }) {
   if (!notifs.length) return null;
   const n = notifs[0];
   return (
-    <div className="notif-banner" style={{ padding: "12px 16px", background: "linear-gradient(135deg,rgba(91,141,239,.95),rgba(123,110,246,.95))", borderRadius: "0 0 16px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,.5)" }}>
+    <div className="notif-banner" style={{ padding: "12px 16px", background: "linear-gradient(135deg,rgba(28,28,28,.97),rgba(46,46,46,.97))", borderRadius: "0 0 16px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,.25)" }}>
       {Icon.bell("#fff", 20)}
       <div style={{ flex: 1 }}>
         <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>{n.titre}</div>
@@ -472,10 +646,10 @@ function NotifBanner({ notifs }) {
 
 /* ─── PAY MODAL ─── */
 const PAY_METHODS = [
-  { id: "stripe", label: "Carte / Stripe", abbr: "S", color: "#635bff", bg: "#1a1835" },
-  { id: "apple", label: "Apple Pay", abbr: "A", color: "#e8e8e8", bg: "#1c1c1e" },
-  { id: "google", label: "Google Pay", abbr: "G", color: "#4285f4", bg: "#1a2a42" },
-  { id: "paypal", label: "PayPal", abbr: "PP", color: "#009cde", bg: "#001a30" },
+  { id: "stripe", label: "Carte / Stripe", abbr: "S", color: "#635bff", bg: "#f0efff" },
+  { id: "apple", label: "Apple Pay", abbr: "A", color: "#e8e8e8", bg: "#f5f5f5" },
+  { id: "google", label: "Google Pay", abbr: "G", color: "#4285f4", bg: "#eef4ff" },
+  { id: "paypal", label: "PayPal", abbr: "PP", color: "#009cde", bg: "#e8f6ff" },
 ];
 const fmtCard = v => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
@@ -499,7 +673,7 @@ function PayModal({ amount, onClose, onDone }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
-        <div style={{ width: 36, height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22 }}>
           <div>
             <div style={{ fontSize: 26, fontWeight: 800, color: T.textHi, letterSpacing: "-1px" }}>{fmt(amount)}</div>
@@ -511,7 +685,7 @@ function PayModal({ amount, onClose, onDone }) {
           <>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
               {PAY_METHODS.map(m => (
-                <button key={m.id} onClick={() => pick(m)} style={{ background: m.bg, border: "1px solid rgba(255,255,255,.08)", borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left", transition: "all .15s", fontFamily: "'Inter',sans-serif" }}>
+                <button key={m.id} onClick={() => pick(m)} style={{ background: m.bg, border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left", transition: "all .15s", fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: `${m.color}18`, border: `1px solid ${m.color}30`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
                     <span style={{ color: m.color, fontWeight: 800, fontSize: 13 }}>{m.abbr}</span>
                   </div>
@@ -551,7 +725,7 @@ function PayModal({ amount, onClose, onDone }) {
         )}
         {step === "processing" && (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <div style={{ width: 52, height: 52, border: "3px solid rgba(91,141,239,.15)", borderTop: `3px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+            <div style={{ width: 52, height: 52, border: "3px solid rgba(0,0,0,.06)", borderTop: `3px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
             <div style={{ color: T.textMid, fontSize: 14, fontWeight: 500 }}>Transaction en cours…</div>
           </div>
         )}
@@ -617,8 +791,8 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
   };
   const dStyle = i => ({
     width: 44, height: 54,
-    background: digits[i] ? "rgba(91,141,239,.15)" : "rgba(255,255,255,.04)",
-    border: `1.5px solid ${digits[i] ? "rgba(91,141,239,.5)" : "rgba(255,255,255,.1)"}`,
+    background: digits[i] ? "rgba(0,0,0,.06)" : "rgba(0,0,0,.03)",
+    border: `1.5px solid ${digits[i] ? "rgba(28,28,28,.5)" : "rgba(0,0,0,.08)"}`,
     borderRadius: 12, color: T.textHi, fontSize: 22, fontWeight: 700,
     textAlign: "center", outline: "none", caretColor: T.accent,
     fontFamily: "monospace", transition: "all .15s"
@@ -630,39 +804,31 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
       <div style={{ background: T.surface, borderRadius: 20, width: "100%", maxWidth: 420, padding: "28px 24px", animation: "fadeUp .3s ease" }}>
         {step === "loading" && (
           <div style={{ textAlign: "center", padding: "48px 0" }}>
-            <div style={{ width: 48, height: 48, border: "2.5px solid rgba(91,141,239,.15)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+            <div style={{ width: 48, height: 48, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
             <div style={{ color: T.textMid, fontSize: 14 }}>Génération de l'email…</div>
           </div>
         )}
-        {(step === "input" || step === "error") && emailContent && (
+        {(step === "input" || step === "error") && (
           <>
             <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ width: 56, height: 56, background: "rgba(91,141,239,.1)", border: "1px solid rgba(91,141,239,.2)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>{Icon.mail(T.accent, 26)}</div>
+              <div style={{ width: 56, height: 56, background: "rgba(28,28,28,.06)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>{Icon.mail(T.accent, 26)}</div>
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>Email envoyé !</div>
-              <div style={{ color: T.textLo, fontSize: 13 }}>Consultez <span style={{ color: T.accent }}>{account.email}</span></div>
-            </div>
-            <div style={{ background: "#fff", borderRadius: 14, padding: "18px 16px", marginBottom: 22, maxHeight: 200, overflowY: "auto" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a2e", marginBottom: 8 }}>{emailContent.subject}</div>
-              <div style={{ fontSize: 12, color: "#555", lineHeight: 1.6, marginBottom: 16 }}>{emailContent.greeting}<br />{emailContent.body}</div>
-              <div style={{ background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", borderRadius: 10, padding: "14px", textAlign: "center" }}>
-                <div style={{ color: "#fff", fontWeight: 900, fontSize: 28, letterSpacing: "8px", fontFamily: "monospace" }}>{emailContent.code}</div>
-              </div>
-              <div style={{ fontSize: 11, color: "#999", marginTop: 10 }}>{emailContent.validity}</div>
+              <div style={{ color: T.textLo, fontSize: 13, lineHeight: 1.5 }}>Consultez votre boîte mail — le code ne s'affiche pas dans l'application.</div>
             </div>
             <div style={{ marginBottom: 18 }}>
-              <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", marginBottom: 14 }}>Saisissez le code reçu :</div>
+              <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", marginBottom: 14 }}>Saisissez le code reçu par email :</div>
               <div style={{ display: "flex", gap: 8, justifyContent: "center" }} onPaste={onPaste}>
                 {digits.map((d, i) => <input key={i} ref={el => refs.current[i] = el} value={d} onChange={e => setDigit(i, e.target.value)} onKeyDown={e => onKD(i, e)} style={dStyle(i)} inputMode="numeric" maxLength={1} />)}
               </div>
             </div>
-            {step === "error" && <div style={{ background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, textAlign: "center", marginBottom: 14 }}>Code incorrect, réessayez.</div>}
+            {step === "error" && <div style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.18)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, textAlign: "center", marginBottom: 14 }}>Code incorrect, réessayez.</div>}
             <button onClick={verify} disabled={digits.join("").length < 6} className="lk-btn" style={{ marginBottom: 10 }}>Vérifier le code</button>
             <button onClick={onClose} style={{ width: "100%", marginTop: 10, background: "none", border: "none", color: T.textLo, fontSize: 13, cursor: "pointer", padding: 8, fontFamily: "'Inter',sans-serif" }}>Annuler</button>
           </>
         )}
         {step === "verifying" && (
           <div style={{ textAlign: "center", padding: "48px 0" }}>
-            <div style={{ width: 48, height: 48, border: "2.5px solid rgba(91,141,239,.15)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+            <div style={{ width: 48, height: 48, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
             <div style={{ color: T.textMid, fontSize: 14 }}>Vérification du code…</div>
           </div>
         )}
@@ -699,7 +865,8 @@ function Field({ label, value, onChange, placeholder, type = "text", err }) {
 }
 
 /* ─── REGISTER ─── */
-function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
+function RegisterScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr", setLang }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [tab, setTab] = useState("client");
   // Chaque champ est un état LOCAL indépendant → plus de re-render global
   const [prenom, setPrenom] = useState("");
@@ -709,6 +876,7 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
   const [ville, setVille] = useState("");
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [transport, setTransport] = useState("voiture");
   const [errs, setErrs] = useState({});
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
@@ -731,7 +899,7 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
     const e = validate();
     if (Object.keys(e).length) { setErrs(e); return; }
     const acc = { id: uid(), role: tab, nom: prenom + " " + nom, email, pass, verified: false, photo: null, ville };
-    if (tab === "pro") acc.artisanId = "a" + uid();
+    if (tab === "pro") { acc.artisanId = "a" + uid(); acc.transport = transport; }
     setPending(acc);
     setModal(true);
   };
@@ -750,13 +918,13 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}>
           <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>Créer un compte</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>Rejoignez LOCKR gratuitement</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>{tr.createAccount}</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>{tr.joinFree}</div>
           </div>
         </div>
-        <div style={{ display: "flex", background: "rgba(255,255,255,.04)", borderRadius: 12, padding: 4, marginBottom: 24 }}>
-          {[{ id: "client", label: "Particulier", sub: "Trouver un artisan" }, { id: "pro", label: "Artisan pro", sub: "Recevoir des missions" }].map(t => (
-            <button key={t.id} onClick={() => { setTab(t.id); setErrs({}); }} style={{ flex: 1, border: "none", borderRadius: 10, padding: "11px 8px", cursor: "pointer", background: tab === t.id ? "linear-gradient(135deg,#4d7fe8,#6b5ff4)" : "transparent", transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 12, padding: 4, marginBottom: 24 }}>
+          {[{ id: "client", label: tr.individual, sub: tr.findCraftsman }, { id: "pro", label: tr.craftsman, sub: tr.myMissions }].map(t => (
+            <button key={t.id} onClick={() => { setTab(t.id); setErrs({}); }} style={{ flex: 1, border: "none", borderRadius: 10, padding: "11px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
               <div style={{ color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 13 }}>{t.label}</div>
               <div style={{ color: tab === t.id ? "rgba(255,255,255,.55)" : T.textLo, fontSize: 11, marginTop: 2 }}>{t.sub}</div>
             </button>
@@ -782,7 +950,19 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
             {errs.tel && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{errs.tel}</div>}
           </div>
           <Field label="Ville / Région" value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" err={errs.ville} />
-          <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 18, marginBottom: 8 }}>
+          {tab === "pro" && (
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">Moyen de transport</label>
+              <select className="lk-input" value={transport} onChange={e => setTransport(e.target.value)} style={{ cursor: "pointer" }}>
+                <option value="voiture">Voiture</option>
+                <option value="scooter">Scooter</option>
+                <option value="moto">Moto</option>
+                <option value="velo">Vélo</option>
+                <option value="pied">À pied</option>
+              </select>
+            </div>
+          )}
+          <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
             <Field label="Mot de passe" value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder="Minimum 6 caractères" type="password" err={errs.pass} />
             <Field label="Confirmer le mot de passe" value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder="Répétez votre mot de passe" type="password" err={errs.confirm} />
           </div>
@@ -799,7 +979,8 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts }) {
 }
 
 /* ─── LOGIN ─── */
-function LoginScreen({ onLogin, onRegister, accounts }) {
+function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [tab, setTab] = useState("client");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -824,21 +1005,21 @@ function LoginScreen({ onLogin, onRegister, accounts }) {
       <div style={{ width: "100%", maxWidth: 390, animation: "fadeUp .45s ease" }}>
         <div style={{ textAlign: "center", marginBottom: 42 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 40, height: 40, background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 20)}</div>
+            <div style={{ width: 40, height: 40, background: T.grad, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 20)}</div>
             <span style={{ fontSize: 28, fontWeight: 800, color: T.textHi, letterSpacing: "-1.2px" }}>LOCKR</span>
           </div>
-          <div style={{ color: T.textLo, fontSize: 14 }}>L'artisan arrive. Vous restez serein.</div>
+          <div style={{ color: T.textLo, fontSize: 14 }}>{tr.appTagline}</div>
         </div>
-        <div style={{ display: "flex", background: "rgba(255,255,255,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
-          {[{ id: "client", label: "Particulier" }, { id: "pro", label: "Artisan pro" }].map(t => (
-            <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 8px", cursor: "pointer", background: tab === t.id ? "linear-gradient(135deg,#4d7fe8,#6b5ff4)" : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 12, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
+          {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }].map(t => (
+            <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 12, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
               {t.label}
             </button>
           ))}
         </div>
         <div className="lk-card" style={{ borderRadius: 16, padding: "24px 20px", marginBottom: 18 }}>
           <div style={{ marginBottom: 16 }}>
-            <label className="lk-label">Adresse email</label>
+            <label className="lk-label">{tr.email}</label>
             <input
               className="lk-input"
               value={email}
@@ -849,7 +1030,7 @@ function LoginScreen({ onLogin, onRegister, accounts }) {
             />
           </div>
           <div style={{ marginBottom: err ? 12 : 20 }}>
-            <label className="lk-label">Mot de passe</label>
+            <label className="lk-label">{tr.password}</label>
             <input
               className="lk-input"
               type="password"
@@ -862,7 +1043,7 @@ function LoginScreen({ onLogin, onRegister, accounts }) {
           </div>
           {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>{Icon.x(T.danger, 13)} {err}</div>}
           <button onClick={login} className="lk-btn" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            {tab === "client" ? "Trouver un artisan" : "Mes missions"} {Icon.arrow("#fff", 15)}
+            {tab === "client" ? tr.findCraftsman : tr.myMissions} {Icon.arrow("#fff", 15)}
           </button>
         </div>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
@@ -872,10 +1053,13 @@ function LoginScreen({ onLogin, onRegister, accounts }) {
             </button>
           ))}
         </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
+        </div>
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px", textAlign: "center" }}>
-          <div style={{ color: T.textMid, fontSize: 13, marginBottom: 10 }}>Pas encore de compte ?</div>
+          <div style={{ color: T.textMid, fontSize: 13, marginBottom: 10 }}>{tr.notMember}</div>
           <button onClick={onRegister} className="lk-ghost" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            Créer un compte gratuit {Icon.arrow(T.accent, 14)}
+            {tr.freeAccount} {Icon.arrow(T.accent, 14)}
           </button>
         </div>
       </div>
@@ -914,7 +1098,7 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "90vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
-        <div style={{ width: 36, height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
         {step === "form" && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
@@ -928,14 +1112,14 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
               <label className="lk-label">Photo de la facture *</label>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
               {!preview ? (
-                <button onClick={() => fileRef.current?.click()} style={{ width: "100%", background: "rgba(255,255,255,.02)", border: "1.5px dashed rgba(91,141,239,.3)", borderRadius: 14, padding: "28px 20px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
+                <button onClick={() => fileRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 14, padding: "28px 20px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
                   {Icon.cam(T.accent, 30)}
                   <div style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Photographier ou sélectionner</div>
                 </button>
               ) : (
                 <div style={{ position: "relative", borderRadius: 13, overflow: "hidden", border: "1px solid rgba(62,207,142,.3)" }}>
                   <img src={preview} alt="Facture" style={{ width: "100%", maxHeight: 200, objectFit: "cover" }} />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg,rgba(8,11,20,.6),transparent)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: 12 }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg,rgba(0,0,0,.45),transparent)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{Icon.check(T.success, 14)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>Facture ajoutée</span></div>
                     <button onClick={() => { setFactureImg(null); setPreview(null); }} style={{ background: "rgba(240,101,101,.2)", border: "1px solid rgba(240,101,101,.3)", borderRadius: 8, padding: "4px 10px", color: T.danger, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Supprimer</button>
                   </div>
@@ -950,12 +1134,12 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
                 {[50, 80, 90, 120, 150, 200].map(v => (
-                  <button key={v} onClick={() => setMontant(String(v))} style={{ flex: 1, background: parseFloat(montant) === v ? "rgba(91,141,239,.15)" : "rgba(255,255,255,.04)", border: `1px solid ${parseFloat(montant) === v ? "rgba(91,141,239,.4)" : "rgba(255,255,255,.08)"}`, borderRadius: 8, padding: "6px 0", color: parseFloat(montant) === v ? T.accent : T.textLo, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{v}€</button>
+                  <button key={v} onClick={() => setMontant(String(v))} style={{ flex: 1, background: parseFloat(montant) === v ? "rgba(0,0,0,.06)" : "rgba(0,0,0,.03)", border: `1px solid ${parseFloat(montant) === v ? "rgba(28,28,28,.4)" : "rgba(0,0,0,.06)"}`, borderRadius: 8, padding: "6px 0", color: parseFloat(montant) === v ? T.accent : T.textLo, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{v}€</button>
                 ))}
               </div>
             </div>
             {montantNum > 0 && (
-              <div style={{ background: "rgba(91,141,239,.06)", border: "1px solid rgba(91,141,239,.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(0,0,0,.06)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                   <span style={{ color: T.textLo, fontSize: 13 }}>Votre part (40%)</span>
                   <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(montantNum * 0.40)}</span>
@@ -969,17 +1153,17 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">Statut du paiement *</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <button onClick={() => setStatut("payé")} style={{ background: isPaid ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.02)", border: `1px solid ${isPaid ? "rgba(62,207,142,.3)" : "rgba(255,255,255,.08)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
+                <button onClick={() => setStatut("payé")} style={{ background: isPaid ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.02)", border: `1px solid ${isPaid ? "rgba(62,207,142,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${isPaid ? T.success : "rgba(255,255,255,.15)"}`, background: isPaid ? "rgba(62,207,142,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${isPaid ? T.success : "rgba(0,0,0,.1)"}`, background: isPaid ? "rgba(62,207,142,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isPaid && Icon.check(T.success, 11)}
                     </div>
                     <span style={{ color: isPaid ? T.success : T.textMid, fontWeight: 700, fontSize: 13 }}>Payé</span>
                   </div>
                 </button>
-                <button onClick={() => setStatut("en_attente")} style={{ background: !isPaid ? "rgba(245,166,35,.07)" : "rgba(255,255,255,.02)", border: `1px solid ${!isPaid ? "rgba(245,166,35,.3)" : "rgba(255,255,255,.08)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
+                <button onClick={() => setStatut("en_attente")} style={{ background: !isPaid ? "rgba(245,166,35,.07)" : "rgba(255,255,255,.02)", border: `1px solid ${!isPaid ? "rgba(245,166,35,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${!isPaid ? T.warn : "rgba(255,255,255,.15)"}`, background: !isPaid ? "rgba(245,166,35,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${!isPaid ? T.warn : "rgba(0,0,0,.1)"}`, background: !isPaid ? "rgba(245,166,35,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {!isPaid && <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.warn }} />}
                     </div>
                     <span style={{ color: !isPaid ? T.warn : T.textMid, fontWeight: 700, fontSize: 13 }}>En attente</span>
@@ -1059,7 +1243,7 @@ function ChatRegional({ account, chatMessages, setChatMessages }) {
           const isMe = m.auteurId === account.id;
           return (
             <div key={m.id} style={{ display: "flex", flexDirection: isMe ? "row-reverse" : "row", gap: 10, alignItems: "flex-end" }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: isMe ? "linear-gradient(135deg,#4d7fe8,#6b5ff4)" : "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: isMe ? "linear-gradient(135deg,#4d7fe8,#6b5ff4)" : "rgba(0,0,0,.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <span style={{ color: isMe ? "#fff" : T.textMid, fontSize: 12, fontWeight: 700 }}>{m.auteurNom.charAt(0)}</span>
               </div>
               <div style={{ maxWidth: "70%" }}>
@@ -1085,7 +1269,7 @@ function ChatRegional({ account, chatMessages, setChatMessages }) {
         <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} style={{ display: "none" }} />
         <button onClick={() => fileRef.current?.click()} className="lk-ghost" style={{ padding: "10px 12px", flexShrink: 0 }}>{Icon.image(T.textMid, 16)}</button>
         <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMsg()} className="lk-input" placeholder="Votre message…" style={{ flex: 1 }} />
-        <button onClick={sendMsg} style={{ background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", border: "none", borderRadius: 10, padding: "10px 14px", cursor: "pointer", flexShrink: 0 }}>{Icon.send("#fff", 16)}</button>
+        <button onClick={sendMsg} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "10px 14px", cursor: "pointer", flexShrink: 0 }}>{Icon.send("#fff", 16)}</button>
       </div>
     </div>
   );
@@ -1121,7 +1305,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
           <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>Bons disponibles</div>
           <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>Région : {myRegion}</div>
         </div>
-        <button onClick={() => setPostModal(true)} style={{ background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} Poster</button>
+        <button onClick={() => setPostModal(true)} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} Poster</button>
       </div>
       {bonsRegion.length === 0 && <div style={{ textAlign: "center", padding: "48px 20px" }}>{Icon.list(T.textLo, 36)}<div style={{ color: T.textLo, fontSize: 14, marginTop: 12 }}>Aucun bon disponible dans votre région</div></div>}
       {bonsRegion.map(bon => {
@@ -1133,7 +1317,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
             {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginBottom: 8 }}>URGENT</div>}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(91,141,239,.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 18)}</div>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 18)}</div>
                 <div>
                   <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
                   <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
@@ -1156,7 +1340,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
       {postModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
-            <div style={{ width: 36, height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 20 }}>Poster un bon</div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">Titre</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">Adresse client</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
@@ -1209,7 +1393,7 @@ function EarningsChart({ bookings, artisanId }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140, marginBottom: 8 }}>
         {data.map((d, i) => (
           <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
-            <div style={{ width: "100%", height: `${Math.max((d.value / maxVal) * 100, 4)}%`, background: i === data.length - 1 ? "linear-gradient(180deg,#3ecf8e,#2aaf77)" : "linear-gradient(180deg,rgba(91,141,239,.6),rgba(91,141,239,.3))", borderRadius: "6px 6px 0 0" }} />
+            <div style={{ width: "100%", height: `${Math.max((d.value / maxVal) * 100, 4)}%`, background: i === data.length - 1 ? "linear-gradient(180deg,#3ecf8e,#2aaf77)" : "linear-gradient(180deg,rgba(201,160,48,.6),rgba(201,160,48,.3))", borderRadius: "6px 6px 0 0" }} />
           </div>
         ))}
       </div>
@@ -1221,7 +1405,8 @@ function EarningsChart({ bookings, artisanId }) {
 }
 
 /* ─── PRO APP ─── */
-function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, onLogout }) {
+function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, onLogout, lang = "fr", setLang }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [tab, setTab] = useState("missions");
   const [activeMission, setActiveMission] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -1254,21 +1439,21 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const prob = bk ? PROBLEMES.find(p => p.id === bk.probleme) : null;
 
   const tabs = [
-    { id: "missions", icon: Icon.list, l: "Missions" },
-    { id: "active", icon: Icon.map, l: "En cours" },
-    { id: "bons", icon: Icon.percent, l: "Bons" },
-    { id: "chat", icon: Icon.chat, l: "Chat" },
-    { id: "stats", icon: Icon.chart, l: "Stats" },
-    { id: "history", icon: Icon.hist, l: "Historique" },
+    { id: "missions", icon: Icon.list, l: tr.missions },
+    { id: "active", icon: Icon.map, l: tr.inProgress },
+    { id: "bons", icon: Icon.percent, l: tr.bonuses },
+    { id: "chat", icon: Icon.chat, l: tr.chat },
+    { id: "stats", icon: Icon.chart, l: tr.stats },
+    { id: "history", icon: Icon.hist, l: tr.history },
   ];
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{CSS}</style>
-      <div style={{ background: "rgba(8,11,20,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+      <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(91,141,239,.08)", border: "2px solid rgba(91,141,239,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(28,28,28,.06)", border: "2px solid rgba(28,28,28,.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ color: T.accent, fontWeight: 700, fontSize: 16 }}>{account.nom.charAt(0)}</span>
             </div>
             <div>
@@ -1277,9 +1462,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(62,207,142,.1)" : "rgba(240,101,101,.1)", border: `1px solid ${dispo ? "rgba(62,207,142,.3)" : "rgba(240,101,101,.3)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: dispo ? T.success : T.danger, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+            <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(30,158,107,.1)" : "rgba(220,38,38,.1)", border: `1px solid ${dispo ? "rgba(30,158,107,.3)" : "rgba(220,38,38,.3)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: dispo ? T.success : T.danger, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: dispo ? T.success : T.danger }} />
-              {dispo ? "Disponible" : "Indisponible"}
+              {dispo ? tr.available : tr.unavailable}
             </button>
             <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
           </div>
@@ -1304,7 +1489,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
         {tab === "missions" && (
           <div style={{ padding: "14px" }}>
-            {active.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>Aucune mission en attente</div>}
+            {active.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noMissionPending}</div>}
             {active.map(b => {
               const pr = PROBLEMES.find(p => p.id === b.probleme);
               const IC = PROB_ICONS[b.probleme] || Icon.tool;
@@ -1313,7 +1498,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(91,141,239,.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
                       <div>
                         <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pr?.label}</div>
                         <div style={{ color: T.textLo, fontSize: 12 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
@@ -1328,12 +1513,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   <div style={{ marginTop: 10 }}>
                     {!isActive ? (
                       <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>Démarrer</button>
-                        <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>Refuser</button>
+                        <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
+                        <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
                       </div>
                     ) : (
-                      <button onClick={() => { setActiveMission(b); setTab("active"); }} style={{ width: "100%", background: "rgba(91,141,239,.1)", border: "1px solid rgba(91,141,239,.25)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                        Voir la mission en cours {Icon.arrow(T.accent, 13)}
+                      <button onClick={() => { setActiveMission(b); setTab("active"); }} style={{ width: "100%", background: "rgba(28,28,28,.04)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                        {tr.viewMission} {Icon.arrow(T.accent, 13)}
                       </button>
                     )}
                   </div>
@@ -1346,8 +1531,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           <div style={{ padding: "14px" }}>
             {!activeMission ? (
               <div style={{ textAlign: "center", padding: "52px 20px" }}>
-                <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>Aucune mission active</div>
-                <button onClick={() => setTab("missions")} className="lk-btn">Voir les missions</button>
+                <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>{tr.noMissionActive}</div>
+                <button onClick={() => setTab("missions")} className="lk-btn">{tr.missions}</button>
               </div>
             ) : (
               <>
@@ -1359,7 +1544,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     <span style={{ color: T.textLo, fontSize: 12 }}>Progression</span>
                     <span style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{Math.round(progress * 100)}%</span>
                   </div>
-                  <div style={{ background: "rgba(255,255,255,.05)", borderRadius: 3, height: 3 }}>
+                  <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 3, height: 3 }}>
                     <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
                   </div>
                 </div>
@@ -1411,7 +1596,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
 }
 
 /* ─── CLIENT APP ─── */
-function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
+function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, lang = "fr", setLang }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [screen, setScreen] = useState("home");
   const [selProb, setSelProb] = useState(null);
   const [selArt, setSelArt] = useState(null);
@@ -1527,40 +1713,40 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
   if (screen === "home") return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif" }}>
       <style>{CSS}</style>
-      <div style={{ background: "rgba(8,11,20,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 13)}</div>
+          <div style={{ width: 26, height: 26, background: T.grad, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 13)}</div>
           <span style={{ fontSize: 17, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {clientPos && <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 20, padding: "4px 10px" }}>{Icon.pin(T.success, 11)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>GPS actif</span></div>}
+          {clientPos && <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(30,158,107,.08)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 20, padding: "4px 10px" }}>{Icon.pin(T.success, 11)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.gpsActive}</span></div>}
           <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
         </div>
       </div>
       {liveBk && (
-        <div onClick={() => setScreen("tracking")} style={{ margin: "14px 14px 0", background: "rgba(91,141,239,.08)", border: "1px solid rgba(91,141,239,.2)", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div onClick={() => setScreen("tracking")} style={{ margin: "14px 14px 0", background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.accent, animation: "blink 1.2s infinite" }} />
             <div>
-              <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>Artisan en route</div>
-              <div style={{ color: T.textMid, fontSize: 12 }}>{artOf(liveBk)?.nom} · Suivre en direct</div>
+              <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{tr.artisanOnRoute}</div>
+              <div style={{ color: T.textMid, fontSize: 12 }}>{artOf(liveBk)?.nom} · {tr.followLive}</div>
             </div>
           </div>
           {Icon.arrow(T.accent, 14)}
         </div>
       )}
       <div style={{ padding: "18px 14px" }}>
-        <div style={{ background: "linear-gradient(135deg,rgba(91,141,239,.12),rgba(123,110,246,.08))", border: "1px solid rgba(91,141,239,.15)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
-          <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>Bonjour, {account.nom.split(" ")[0]} 👋</div>
-          <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>De quoi avez-vous besoin ?</div>
-          <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>Trouver un artisan {Icon.arrow("#fff", 14)}</button>
+        <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.12)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
+          <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {account.nom.split(" ")[0]} 👋</div>
+          <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
+          <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
         </div>
         <div style={{ marginBottom: 22 }}>
-          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Interventions rapides</div>
+          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {PROBLEMES.slice(0, 4).map(p => { const IC = PROB_ICONS[p.id]; return (
-              <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ border: "1px solid rgba(255,255,255,.07)", borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(91,141,239,.1)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>{IC ? IC(T.accent, 16) : null}</div>
+              <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>{IC ? IC(T.accent, 16) : null}</div>
                 <div style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{p.label}</div>
                 {p.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginTop: 4 }}>URGENT</div>}
               </button>
@@ -1569,14 +1755,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
         </div>
         {myBk.length > 0 && (
           <>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Mes interventions</div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.myInterventions}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {myBk.slice(-3).reverse().map(b => {
                 const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
                 return (
                   <div key={b.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(91,141,239,.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
                       <div>
                         <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
                         <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
@@ -1596,16 +1782,16 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
   if (screen === "choose") return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", paddingBottom: 90 }}>
       <style>{CSS}</style>
-      <div style={{ background: "rgba(8,11,20,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => { setSelProb(null); setScreen("home"); }} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
-        <span style={{ color: T.textHi, fontWeight: 700 }}>Nouvelle demande</span>
+        <span style={{ color: T.textHi, fontWeight: 700 }}>{tr.newRequest}</span>
       </div>
       <div style={{ padding: "18px 14px" }}>
-        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Type d'intervention</div>
+        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
           {PROBLEMES.map(p => { const IC = PROB_ICONS[p.id]; return (
             <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selProb?.id === p.id ? T.borderHi : T.border}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(91,141,239,.12)" : "rgba(255,255,255,.04)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.textLo, 18) : null}</div>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(28,28,28,.07)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.textLo, 18) : null}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{p.label}</div>
                 <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{p.desc}</div>
@@ -1618,8 +1804,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
         {selProb && (
           <div style={{ animation: "fadeUp .25s ease" }}>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
-              Artisans disponibles
-              {artisanList.length === 0 && <span style={{ color: T.textLo, fontWeight: 400, fontSize: 12, marginLeft: 8 }}>(aucun pour l'instant)</span>}
+              {tr.availableCraftsmen}
+              {artisanList.length === 0 && <span style={{ color: T.textLo, fontWeight: 400, fontSize: 12, marginLeft: 8 }}>{tr.noAvailable}</span>}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {artisanList.map(a => (
@@ -1665,21 +1851,21 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
   if (screen === "tracking") return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{CSS}</style>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "rgba(8,11,20,.95)", backdropFilter: "blur(20px)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)" }}>
         <button onClick={() => setScreen("home")} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 13)}</div>
-          <span style={{ fontSize: 16, fontWeight: 800, color: T.textHi }}>Suivi en direct</span>
+          <div style={{ width: 26, height: 26, background: T.grad, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 13)}</div>
+          <span style={{ fontSize: 16, fontWeight: 800, color: T.textHi }}>{tr.liveTracking}</span>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 20, padding: "5px 10px" }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.danger, animation: "blink 1.2s infinite" }} />
           <span style={{ color: T.danger, fontSize: 11, fontWeight: 600 }}>LIVE</span>
         </div>
       </div>
-      <div style={{ overflow: "hidden", borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+      <div style={{ overflow: "hidden", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
         {geoLoading && !bk?.clientPos ? (
-          <div style={{ height: 300, background: "#080b14", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
-            <div style={{ width: 38, height: 38, border: "2.5px solid rgba(91,141,239,.15)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+          <div style={{ height: 300, background: "#e8e8e4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
+            <div style={{ width: 38, height: 38, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
             <div style={{ color: T.textLo, fontSize: 13 }}>Localisation en cours…</div>
           </div>
         ) : (
@@ -1694,18 +1880,18 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
       </div>
       <div style={{ flex: 1, background: T.bg, padding: "16px 14px", overflowY: "auto" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, background: phase === "arrived" ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.03)", border: `1px solid ${phase === "arrived" ? "rgba(62,207,142,.2)" : T.border}`, borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 11, background: phase === "arrived" ? "rgba(62,207,142,.12)" : "rgba(255,255,255,.04)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 11, background: phase === "arrived" ? "rgba(62,207,142,.12)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {phase === "arrived" ? Icon.check(T.success, 20) : Icon.phone(T.textMid, 20)}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ color: phase === "arrived" ? T.success : T.textHi, fontWeight: 700, fontSize: 14 }}>
-              {phase === "arrived" ? "Artisan arrivé" : `En route · ${routeInfo ? Math.max(0, Math.round((1 - progress) * routeInfo.durationSec / 60)) : Math.max(0, Math.round((1 - progress) * 12))} min`}
+              {phase === "arrived" ? tr.arrived : `${tr.onRoute} · ${routeInfo ? Math.max(0, Math.round((1 - progress) * routeInfo.durationSec / 60)) : Math.max(0, Math.round((1 - progress) * 12))} ${tr.min}`}
             </div>
-            <div style={{ color: T.textLo, fontSize: 12 }}>{phase === "arrived" ? "Ouvrez la porte" : "Votre artisan arrive"}</div>
+            <div style={{ color: T.textLo, fontSize: 12 }}>{phase === "arrived" ? tr.openDoor : tr.artisanArriving}</div>
           </div>
         </div>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ background: "rgba(255,255,255,.05)", borderRadius: 4, height: 4, overflow: "hidden" }}>
+          <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 4, height: 4, overflow: "hidden" }}>
             <div style={{ height: "100%", borderRadius: 4, background: phase === "arrived" ? T.success : `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
           </div>
         </div>
@@ -1735,7 +1921,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts }) {
 }
 
 /* ─── ADMIN APP ─── */
-function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onLogout }) {
+function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onLogout, lang = "fr", setLang }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [tab, setTab] = useState("dashboard");
   const [postModal, setPostModal] = useState(false);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 40, region: "Paris" });
@@ -1770,18 +1957,18 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif" }}>
       <style>{CSS}</style>
-      <div style={{ background: "rgba(8,11,20,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.admin("#fff", 16)}</div>
+          <div style={{ width: 32, height: 32, background: T.grad, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.admin("#fff", 16)}</div>
           <div>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 15 }}>Admin LOCKR</div>
-            <div style={{ color: T.textLo, fontSize: 11 }}>Tableau de bord</div>
+            <div style={{ color: T.textLo, fontSize: 11 }}>{tr.dashboard}</div>
           </div>
         </div>
         <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
       </div>
       <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
-        {[{ id: "dashboard", l: "Dashboard" }, { id: "bons", l: `Bons (${adminBons.length})` }, { id: "pros", l: "Artisans" }, { id: "missions", l: "Missions" }].map(t => (
+        {[{ id: "dashboard", l: tr.dashboard }, { id: "bons", l: `${tr.adminBonuses} (${adminBons.length})` }, { id: "pros", l: tr.craftsmen }, { id: "missions", l: tr.allMissions }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", color: tab === t.id ? T.accent : T.textLo, fontWeight: tab === t.id ? 700 : 400, fontSize: 12, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
             {t.l}
           </button>
@@ -1791,18 +1978,18 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
         {tab === "dashboard" && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-              {[{ l: "Chiffre d'affaires", v: fmt(totalCA), c: T.accent }, { l: "Revenu plateforme", v: fmt(platformRevenu), c: T.success }, { l: "Missions totales", v: allDone.length, c: T.accent2 }, { l: "Pros inscrits", v: proAccounts.length, c: T.success }].map(s => (
+              {[{ l: tr.revenue, v: fmt(totalCA), c: T.accent }, { l: tr.platformRevenue, v: fmt(platformRevenu), c: T.success }, { l: tr.totalMissions, v: allDone.length, c: T.accent2 }, { l: tr.prosRegistered, v: proAccounts.length, c: T.success }].map(s => (
                 <div key={s.l} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "14px" }}>
                   <div style={{ color: T.textLo, fontSize: 11, marginBottom: 6 }}>{s.l}</div>
                   <div style={{ color: s.c, fontWeight: 800, fontSize: 18 }}>{s.v}</div>
                 </div>
               ))}
             </div>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Revenus plateforme (6 mois)</div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.platformRevenue6m}</div>
             <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120, marginBottom: 8 }}>
               {byMonth.map((d, i) => (
                 <div key={i} style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: 4 }}>
-                  <div style={{ width: "100%", height: `${Math.max((d.value / maxVal) * 100, 4)}%`, background: i === byMonth.length - 1 ? "linear-gradient(180deg,#3ecf8e,#2aaf77)" : "linear-gradient(180deg,rgba(91,141,239,.6),rgba(91,141,239,.3))", borderRadius: "6px 6px 0 0" }} />
+                  <div style={{ width: "100%", height: `${Math.max((d.value / maxVal) * 100, 4)}%`, background: i === byMonth.length - 1 ? "linear-gradient(180deg,#3ecf8e,#2aaf77)" : "linear-gradient(180deg,rgba(201,160,48,.6),rgba(201,160,48,.3))", borderRadius: "6px 6px 0 0" }} />
                 </div>
               ))}
             </div>
@@ -1815,8 +2002,8 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
           <>
             {postSuccess && <div style={{ background: "rgba(62,207,142,.12)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, color: T.success, fontWeight: 600, fontSize: 13 }}>Bon publié !</div>}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>Bons LOCKR</div>
-              <button onClick={() => setPostModal(true)} style={{ background: "linear-gradient(135deg,#4d7fe8,#6b5ff4)", border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} Nouveau</button>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>{tr.lockrBonuses}</div>
+              <button onClick={() => setPostModal(true)} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} {tr.newBonus}</button>
             </div>
             {adminBons.map(bon => {
               const IC = PROB_ICONS[bon.probleme] || Icon.tool;
@@ -1824,7 +2011,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
                 <div key={bon.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(91,141,239,.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
                       <div>
                         <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
                         <div style={{ color: T.textLo, fontSize: 12 }}>{bon.adresse}</div>
@@ -1832,7 +2019,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
                     </div>
                     <div style={{ color: T.accent, fontWeight: 800, fontSize: 17 }}>{bon.montantEstime}€</div>
                   </div>
-                  <button onClick={() => setBons(p => p.filter(b => b.id !== bon.id))} style={{ background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 8, padding: "5px 12px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Supprimer</button>
+                  <button onClick={() => setBons(p => p.filter(b => b.id !== bon.id))} style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "5px 12px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.deleteBonus}</button>
                 </div>
               );
             })}
@@ -1840,19 +2027,19 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
         )}
         {tab === "pros" && (
           <>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Artisans inscrits ({proAccounts.length})</div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.registeredCraftsmen} ({proAccounts.length})</div>
             {proAccounts.map(pro => {
               const proMissions = allDone.filter(b => b.artisanId === pro.artisanId);
               return (
                 <div key={pro.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(91,141,239,.1)", border: "2px solid rgba(91,141,239,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(28,28,28,.06)", border: "2px solid rgba(28,28,28,.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: T.accent, fontWeight: 700, fontSize: 18 }}>{pro.nom.charAt(0)}</span>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pro.nom}</div>
                       <div style={{ color: T.textLo, fontSize: 12 }}>{pro.ville || "—"}</div>
-                      {pro.isDemo && <span style={{ background: "rgba(245,166,35,.1)", border: "1px solid rgba(245,166,35,.2)", color: T.warn, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20 }}>Compte démo</span>}
+                      {pro.isDemo && <span style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.2)", color: T.warn, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20 }}>{tr.demoAccount}</span>}
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(proMissions.reduce((s, b) => s + (b.montantFinal || 0) * 0.40, 0))}</div>
@@ -1866,7 +2053,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
         )}
         {tab === "missions" && (
           <>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Toutes les missions ({allDone.length})</div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.allMissionsLabel} ({allDone.length})</div>
             {allDone.map(b => {
               const pr = PROBLEMES.find(p => p.id === b.probleme);
               const isPaid = b.statutPaiement === "payé";
@@ -1884,10 +2071,10 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 8, padding: "8px 10px" }}>
-                      <div style={{ color: T.textLo, fontSize: 10 }}>Tech (40%)</div>
+                      <div style={{ color: T.textLo, fontSize: 10 }}>{tr.techShare}</div>
                       <div style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
                     </div>
-                    <div style={{ background: "rgba(91,141,239,.06)", border: "1px solid rgba(91,141,239,.15)", borderRadius: 8, padding: "8px 10px" }}>
+                    <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(0,0,0,.06)", borderRadius: 8, padding: "8px 10px" }}>
                       <div style={{ color: T.textLo, fontSize: 10 }}>LOCKR (60%)</div>
                       <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmt((b.montantFinal || 0) * 0.60)}</div>
                     </div>
@@ -1901,8 +2088,8 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
       {postModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 36px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
-            <div style={{ width: 36, height: 3, background: "rgba(255,255,255,.15)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 20 }}>Nouveau bon LOCKR</div>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 20 }}>{tr.newLockrBonus}</div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">Titre</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">Adresse</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
             <div style={{ marginBottom: 14 }}>
@@ -1919,15 +2106,15 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
             </div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">Montant estimé (€)</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Part artisan : {newBon.techPct}%</label>
+              <label className="lk-label">{tr.artisanShare} : {newBon.techPct}%</label>
               <input type="range" min={5} max={95} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value) }))} style={{ width: "100%", accentColor: T.accent }} />
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="adm-urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
               <label htmlFor="adm-urgence" style={{ color: T.textMid, fontSize: 13, cursor: "pointer" }}>Urgent</label>
             </div>
-            <button onClick={posterBonAdmin} className="lk-btn" style={{ marginBottom: 10 }}>Publier ce bon</button>
-            <button onClick={() => setPostModal(false)} className="lk-ghost" style={{ width: "100%" }}>Annuler</button>
+            <button onClick={posterBonAdmin} className="lk-btn" style={{ marginBottom: 10 }}>{tr.publishBonus2}</button>
+            <button onClick={() => setPostModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
           </div>
         </div>
       )}
@@ -1943,13 +2130,14 @@ export default function App() {
   const [accounts, setAccounts] = useState(INIT_ACCOUNTS);
   const [bons, setBons] = useState(INIT_BONS);
   const [chatMessages, setChatMessages] = useState(INIT_CHAT);
+  const [lang, setLang] = useState("fr");
   const logout = () => { setAccount(null); setScreen("login"); };
 
   if (account) {
-    if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} />;
-    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} onLogout={logout} />;
-    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} />;
+    if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} lang={lang} setLang={setLang} />;
+    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />;
   }
-  if (screen === "register") return <RegisterScreen onBack={() => setScreen("login")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} />;
-  return <LoginScreen onLogin={setAccount} onRegister={() => setScreen("register")} accounts={accounts} />;
+  if (screen === "register") return <RegisterScreen onBack={() => setScreen("login")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} setLang={setLang} />;
+  return <LoginScreen onLogin={setAccount} onRegister={() => setScreen("register")} accounts={accounts} lang={lang} setLang={setLang} />;
 }
