@@ -356,6 +356,9 @@ const INIT_ACCOUNTS = [
   { id: "p1", role: "pro", artisanId: "a1", nom: "Karim Benali", email: "karim@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true },
   { id: "p2", role: "pro", artisanId: "a2", nom: "Youssef Mrani", email: "youssef@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true },
   { id: "admin1", role: "admin", nom: "Admin LOCKR", email: "admin@lockr.fr", pass: "admin2024", verified: true },
+  { id: "admin2", role: "admin", nom: "Soze", email: "soze@lockr.fr", pass: "soze2024", verified: true },
+  { id: "admin3", role: "admin", nom: "Emma", email: "emma@lockr.fr", pass: "emma2024", verified: true },
+  { id: "admin4", role: "admin", nom: "Zakari", email: "zakari@lockr.fr", pass: "zakari2024", verified: true },
 ];
 
 const INIT_BOOKINGS = [
@@ -469,6 +472,20 @@ function loadLeaflet() {
     s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
     s.onload = () => resolve(window.L);
     document.head.appendChild(s);
+
+function loadEmailJS() {
+  return new Promise(resolve => {
+    if (window.emailjs) return resolve(window.emailjs);
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+    s.onload = () => {
+      window.emailjs.init({ publicKey: "YOUR_EMAILJS_PUBLIC_KEY" });
+      resolve(window.emailjs);
+    };
+    document.head.appendChild(s);
+  });
+}
+
   });
 }
 
@@ -745,29 +762,25 @@ function PayModal({ amount, onClose, onDone }) {
 }
 
 /* ─── EMAIL CONFIRM MODAL ─── */
+/* ─── EMAIL CONFIRM MODAL ─── */
 function EmailConfirmModal({ account, onVerified, onClose }) {
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
-  const [step, setStep] = useState("loading");
-  const [emailContent, setEmailContent] = useState(null);
+  const [step, setStep] = useState("sending");
   const [realCode] = useState(() => String(Math.floor(100000 + Math.random() * 900000)));
   const refs = useRef([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 1000,
-            messages: [{ role: "user", content: `Génère un email de confirmation de compte pour ${account.nom} (${account.email}) avec le code ${realCode}. Réponds UNIQUEMENT en JSON: {"subject":"...","greeting":"...","body":"...","code":"${realCode}","validity":"Valable 10 minutes","footer":"Ne partagez pas ce code."}` }]
-          })
+        const ejs = await loadEmailJS();
+        await ejs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+          to_email: account.email,
+          to_name: account.nom,
+          verification_code: realCode,
+          app_name: "LOCKR",
         });
-        const data = await res.json();
-        setEmailContent(JSON.parse((data.content?.[0]?.text || "").replace(/```json|```/g, "").trim()));
-      } catch {
-        setEmailContent({ subject: "Confirmez votre compte LOCKR", greeting: `Bonjour ${account.nom},`, body: "Merci de créer votre compte sur LOCKR. Votre code de vérification est :", code: realCode, validity: "Valable 10 minutes", footer: "Ne partagez pas ce code." });
+      } catch (err) {
+        console.warn("EmailJS non configuré — code en console:", realCode);
       }
       setStep("input");
     })();
@@ -780,7 +793,10 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
     if (!val && i > 0) refs.current[i - 1]?.focus();
   };
   const onKD = (i, e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i - 1]?.focus(); };
-  const onPaste = e => { const p = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6); if (p.length === 6) setDigits(p.split("")); };
+  const onPaste = e => {
+    const p = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (p.length === 6) setDigits(p.split(""));
+  };
   const verify = () => {
     if (digits.join("").length < 6) return;
     setStep("verifying");
@@ -799,44 +815,72 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
   });
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <style>{CSS}</style>
-      <div style={{ background: T.surface, borderRadius: 20, width: "100%", maxWidth: 420, padding: "28px 24px", animation: "fadeUp .3s ease" }}>
-        {step === "loading" && (
+      <div style={{ background: T.surface, borderRadius: 20, width: "100%", maxWidth: 420, padding: "28px 24px", animation: "fadeUp .3s ease", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+        {step === "sending" && (
           <div style={{ textAlign: "center", padding: "48px 0" }}>
             <div style={{ width: 48, height: 48, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-            <div style={{ color: T.textMid, fontSize: 14 }}>Génération de l'email…</div>
+            <div style={{ color: T.textMid, fontSize: 14 }}>Envoi de l'email en cours…</div>
           </div>
         )}
         {(step === "input" || step === "error") && (
           <>
-            <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ width: 56, height: 56, background: "rgba(28,28,28,.06)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>{Icon.mail(T.accent, 26)}</div>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>Email envoyé !</div>
-              <div style={{ color: T.textLo, fontSize: 13, lineHeight: 1.5 }}>Consultez votre boîte mail — le code ne s'affiche pas dans l'application.</div>
-            </div>
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", marginBottom: 14 }}>Saisissez le code reçu par email :</div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }} onPaste={onPaste}>
-                {digits.map((d, i) => <input key={i} ref={el => refs.current[i] = el} value={d} onChange={e => setDigit(i, e.target.value)} onKeyDown={e => onKD(i, e)} style={dStyle(i)} inputMode="numeric" maxLength={1} />)}
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{ width: 64, height: 64, background: "rgba(201,160,48,.1)", border: "1.5px solid rgba(201,160,48,.25)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                {Icon.mail(T.gold, 28)}
+              </div>
+              <div style={{ color: T.textHi, fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Email envoyé !</div>
+              <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6 }}>
+                Un code de vérification a été envoyé à<br />
+                <strong style={{ color: T.accent }}>{account.email}</strong>
+              </div>
+              <div style={{ marginTop: 10, background: "rgba(0,0,0,.03)", border: "1px solid rgba(0,0,0,.07)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: T.textLo }}>
+                🔒 Le code n'apparaît pas dans l'application
               </div>
             </div>
-            {step === "error" && <div style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.18)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, textAlign: "center", marginBottom: 14 }}>Code incorrect, réessayez.</div>}
-            <button onClick={verify} disabled={digits.join("").length < 6} className="lk-btn" style={{ marginBottom: 10 }}>Vérifier le code</button>
-            <button onClick={onClose} style={{ width: "100%", marginTop: 10, background: "none", border: "none", color: T.textLo, fontSize: 13, cursor: "pointer", padding: 8, fontFamily: "'Inter',sans-serif" }}>Annuler</button>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ color: T.textLo, fontSize: 12, textAlign: "center", marginBottom: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px" }}>
+                Saisissez le code à 6 chiffres
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }} onPaste={onPaste}>
+                {digits.map((d, i) => (
+                  <input key={i} ref={el => refs.current[i] = el} value={d}
+                    onChange={e => setDigit(i, e.target.value)}
+                    onKeyDown={e => onKD(i, e)}
+                    style={dStyle(i)} inputMode="numeric" maxLength={1} />
+                ))}
+              </div>
+            </div>
+            {step === "error" && (
+              <div style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.18)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, textAlign: "center", marginBottom: 14 }}>
+                Code incorrect — réessayez
+              </div>
+            )}
+            <button onClick={verify} disabled={digits.join("").length < 6} className="lk-btn" style={{ marginBottom: 10 }}>
+              Vérifier le code
+            </button>
+            <button onClick={() => { setStep("sending"); setDigits(["","","","","",""]); loadEmailJS().then(ejs => ejs.send("YOUR_SERVICE_ID","YOUR_TEMPLATE_ID",{ to_email: account.email, to_name: account.nom, verification_code: realCode, app_name: "LOCKR" }).catch(()=>{})).finally(()=>setStep("input")); }} style={{ width: "100%", background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", padding: "8px", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
+              Renvoyer le code
+            </button>
+            <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: T.textLo, fontSize: 13, cursor: "pointer", padding: "6px", fontFamily: "'Inter',sans-serif" }}>
+              Annuler
+            </button>
           </>
         )}
         {step === "verifying" && (
           <div style={{ textAlign: "center", padding: "48px 0" }}>
             <div style={{ width: 48, height: 48, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-            <div style={{ color: T.textMid, fontSize: 14 }}>Vérification du code…</div>
+            <div style={{ color: T.textMid, fontSize: 14 }}>Vérification…</div>
           </div>
         )}
         {step === "success" && (
           <div style={{ textAlign: "center", padding: "20px 10px" }}>
-            <div style={{ width: 80, height: 80, background: "rgba(62,207,142,.1)", border: "1.5px solid rgba(62,207,142,.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>{Icon.check(T.success, 30)}</div>
+            <div style={{ width: 80, height: 80, background: "rgba(30,158,107,.08)", border: "1.5px solid rgba(30,158,107,.25)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", animation: "checkPop .4s ease" }}>
+              {Icon.check(T.success, 32)}
+            </div>
             <div style={{ color: T.success, fontWeight: 800, fontSize: 22, marginBottom: 6 }}>Compte vérifié !</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginBottom: 28 }}>Bienvenue, <strong style={{ color: T.textHi }}>{account.nom}</strong></div>
+            <div style={{ color: T.textLo, fontSize: 13, marginBottom: 28 }}>Bienvenue, <strong style={{ color: T.textHi }}>{account.nom}</strong> 👋</div>
             <button onClick={onVerified} className="lk-btn">Accéder à l'application</button>
           </div>
         )}
@@ -864,11 +908,53 @@ function Field({ label, value, onChange, placeholder, type = "text", err }) {
   );
 }
 
-/* ─── REGISTER ─── */
-function RegisterScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr", setLang }) {
+/* ─── REGISTER CHOICE ─── */
+function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
-  const [tab, setTab] = useState("client");
-  // Chaque champ est un état LOCAL indépendant → plus de re-render global
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px" }}>
+      <style>{CSS}</style>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 40 }}>
+          <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>{tr.createAccount}</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>Choisissez votre profil</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <button onClick={() => onChoice("client")} style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 18, padding: "22px 20px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", transition: "all .2s", boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+            <div style={{ width: 48, height: 48, background: "rgba(201,160,48,.1)", border: "1.5px solid rgba(201,160,48,.25)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              {Icon.user(T.gold, 22)}
+            </div>
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.individual}</div>
+            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>Trouvez un artisan qualifié rapidement. Suivi en temps réel de votre intervention.</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
+              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Commencer</span>
+              {Icon.arrow(T.accent, 13)}
+            </div>
+          </button>
+          <button onClick={() => onChoice("pro")} style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 18, padding: "22px 20px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", transition: "all .2s", boxShadow: "0 2px 12px rgba(0,0,0,.06)" }}>
+            <div style={{ width: 48, height: 48, background: "rgba(28,28,28,.06)", border: "1.5px solid rgba(28,28,28,.12)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+              {Icon.tool(T.accent, 22)}
+            </div>
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.craftsman}</div>
+            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>Recevez des missions près de chez vous. Gérez votre activité et vos revenus.</div>
+            <div style={{ color: T.textLo, fontSize: 11, marginTop: 6, fontStyle: "italic" }}>Documents professionnels requis (SIRET, assurance, pièce d'identité)</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
+              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Commencer</span>
+              {Icon.arrow(T.accent, 13)}
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── REGISTER CLIENT ─── */
+function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
@@ -876,7 +962,6 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr",
   const [ville, setVille] = useState("");
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [transport, setTransport] = useState("voiture");
   const [errs, setErrs] = useState({});
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
@@ -885,92 +970,294 @@ function RegisterScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr",
 
   const validate = () => {
     const e = {};
-    if (!prenom.trim()) e.prenom = "Prénom requis";
-    if (!nom.trim()) e.nom = "Nom requis";
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) e.email = "Email invalide";
-    if (accounts.some(a => a.email === email)) e.email = "Email déjà utilisé";
-    if (!tel || tel.replace(/\D/g, "").length < 6) e.tel = "Numéro de téléphone invalide";
-    if (pass.length < 6) e.pass = "6 caractères minimum";
-    if (pass !== confirm) e.confirm = "Les mots de passe ne correspondent pas";
+    if (!prenom.trim()) e.prenom = tr.firstnameRequired;
+    if (!nom.trim()) e.nom = tr.lastnameRequired;
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) e.email = tr.invalidEmail;
+    if (accounts.some(a => a.email === email)) e.email = tr.emailUsed;
+    if (!tel || tel.replace(/\D/g, "").length < 6) e.tel = tr.invalidPhone;
+    if (pass.length < 6) e.pass = tr.minChars;
+    if (pass !== confirm) e.confirm = tr.passMismatch;
     return e;
   };
 
   const submit = () => {
     const e = validate();
     if (Object.keys(e).length) { setErrs(e); return; }
-    const acc = { id: uid(), role: tab, nom: prenom + " " + nom, email, pass, verified: false, photo: null, ville };
-    if (tab === "pro") { acc.artisanId = "a" + uid(); acc.transport = transport; }
+    const acc = { id: uid(), role: "client", nom: prenom + " " + nom, email, pass, verified: false, photo: null, ville, tel };
     setPending(acc);
     setModal(true);
   };
 
   const onVerified = () => {
-    const v = { ...pending, verified: true };
-    setAccounts(p => [...p, v]);
+    setAccounts(p => [...p, { ...pending, verified: true }]);
     setModal(false);
-    onSuccess(v);
+    onSuccess({ ...pending, verified: true });
   };
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto" }}>
       <style>{CSS}</style>
       <div style={{ maxWidth: 440, margin: "0 auto", padding: "28px 18px 72px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
           <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>{tr.createAccount}</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>{tr.joinFree}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>Inscription Particulier</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>Trouvez un artisan en quelques secondes</div>
           </div>
         </div>
-        <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 12, padding: 4, marginBottom: 24 }}>
-          {[{ id: "client", label: tr.individual, sub: tr.findCraftsman }, { id: "pro", label: tr.craftsman, sub: tr.myMissions }].map(t => (
-            <button key={t.id} onClick={() => { setTab(t.id); setErrs({}); }} style={{ flex: 1, border: "none", borderRadius: 10, padding: "11px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
-              <div style={{ color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 13 }}>{t.label}</div>
-              <div style={{ color: tab === t.id ? "rgba(255,255,255,.55)" : T.textLo, fontSize: 11, marginTop: 2 }}>{t.sub}</div>
-            </button>
-          ))}
-        </div>
-        <div className="lk-card" style={{ borderRadius: 16, padding: "22px 18px", marginBottom: 16 }}>
+        <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             <div>
-              <label className="lk-label">Prénom</label>
-              <input className="lk-input" value={prenom} placeholder="Jean" autoComplete="off" onChange={e => { setPrenom(e.target.value); clr("prenom"); }} style={{ background: errs.prenom ? "rgba(240,101,101,.06)" : "", borderColor: errs.prenom ? "rgba(240,101,101,.4)" : "" }} />
-              {errs.prenom && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{errs.prenom}</div>}
+              <label className="lk-label">{tr.firstname}</label>
+              <input className="lk-input" value={prenom} placeholder="Jean" autoComplete="off" onChange={e => { setPrenom(e.target.value); clr("prenom"); }} style={{ borderColor: errs.prenom ? "rgba(220,38,38,.4)" : "" }} />
+              {errs.prenom && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.prenom}</div>}
             </div>
             <div>
-              <label className="lk-label">Nom</label>
-              <input className="lk-input" value={nom} placeholder="Dupont" autoComplete="off" onChange={e => { setNom(e.target.value); clr("nom"); }} style={{ background: errs.nom ? "rgba(240,101,101,.06)" : "", borderColor: errs.nom ? "rgba(240,101,101,.4)" : "" }} />
-              {errs.nom && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{errs.nom}</div>}
+              <label className="lk-label">{tr.lastname}</label>
+              <input className="lk-input" value={nom} placeholder="Dupont" autoComplete="off" onChange={e => { setNom(e.target.value); clr("nom"); }} style={{ borderColor: errs.nom ? "rgba(220,38,38,.4)" : "" }} />
+              {errs.nom && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.nom}</div>}
             </div>
           </div>
-          <Field label="Adresse email" value={email} onChange={e => { setEmail(e.target.value); clr("email"); }} placeholder="jean@email.fr" type="email" err={errs.email} />
+          <Field label={tr.email} value={email} onChange={e => { setEmail(e.target.value); clr("email"); }} placeholder="jean@email.fr" type="email" err={errs.email} />
           <div style={{ marginBottom: 14 }}>
-            <label className="lk-label">Téléphone</label>
-            <PhoneInput value={tel} onChange={v => { setTel(v); clr("tel"); }} placeholder="6 12 34 56 78" />
-            {errs.tel && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{errs.tel}</div>}
+            <label className="lk-label">{tr.phone}</label>
+            <PhoneInput value={tel} onChange={v => { setTel(v); clr("tel"); }} />
+            {errs.tel && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.tel}</div>}
           </div>
-          <Field label="Ville / Région" value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" err={errs.ville} />
-          {tab === "pro" && (
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Moyen de transport</label>
-              <select className="lk-input" value={transport} onChange={e => setTransport(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="voiture">Voiture</option>
-                <option value="scooter">Scooter</option>
-                <option value="moto">Moto</option>
-                <option value="velo">Vélo</option>
-                <option value="pied">À pied</option>
-              </select>
-            </div>
-          )}
+          <Field label={tr.city} value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" err={errs.ville} />
           <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
-            <Field label="Mot de passe" value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder="Minimum 6 caractères" type="password" err={errs.pass} />
-            <Field label="Confirmer le mot de passe" value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder="Répétez votre mot de passe" type="password" err={errs.confirm} />
+            <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder="6 caractères minimum" type="password" err={errs.pass} />
+            <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder="Répétez votre mot de passe" type="password" err={errs.confirm} />
           </div>
           <button onClick={submit} className="lk-btn">Créer mon compte {Icon.arrow("#fff", 14)}</button>
         </div>
-        <div style={{ textAlign: "center", marginTop: 18 }}>
-          <span style={{ color: T.textLo, fontSize: 13 }}>Déjà inscrit ? </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Se connecter</button>
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
+        </div>
+      </div>
+      {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} />}
+    </div>
+  );
+}
+
+/* ─── REGISTER PRO ─── */
+function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [step, setStep] = useState(1);
+  const [prenom, setPrenom] = useState("");
+  const [nom, setNom] = useState("");
+  const [email, setEmail] = useState("");
+  const [tel, setTel] = useState("");
+  const [ville, setVille] = useState("");
+  const [pass, setPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [transport, setTransport] = useState("voiture");
+  const [siret, setSiret] = useState("");
+  const [iban, setIban] = useState("");
+  const [certif, setCertif] = useState("aucune");
+  const [idCardFile, setIdCardFile] = useState(null);
+  const [insuranceFile, setInsuranceFile] = useState(null);
+  const [kbisFile, setKbisFile] = useState(null);
+  const [errs, setErrs] = useState({});
+  const [modal, setModal] = useState(false);
+  const [pending, setPending] = useState(null);
+  const idRef = useRef(null);
+  const insRef = useRef(null);
+  const kbisRef = useRef(null);
+
+  const clr = k => setErrs(p => { const e = { ...p }; delete e[k]; return e; });
+
+  const validateStep1 = () => {
+    const e = {};
+    if (!prenom.trim()) e.prenom = tr.firstnameRequired;
+    if (!nom.trim()) e.nom = tr.lastnameRequired;
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) e.email = tr.invalidEmail;
+    if (accounts.some(a => a.email === email)) e.email = tr.emailUsed;
+    if (!tel || tel.replace(/\D/g, "").length < 6) e.tel = tr.invalidPhone;
+    if (pass.length < 6) e.pass = tr.minChars;
+    if (pass !== confirm) e.confirm = tr.passMismatch;
+    setErrs(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const e = {};
+    if (!siret.replace(/\s/g, "").match(/^\d{14}$/)) e.siret = "SIRET invalide (14 chiffres requis)";
+    if (!idCardFile) e.idCard = "Carte d'identité requise";
+    if (!insuranceFile) e.insurance = "Attestation d'assurance requise";
+    setErrs(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const goStep2 = () => { if (validateStep1()) setStep(2); };
+
+  const submit = () => {
+    if (!validateStep2()) return;
+    const acc = {
+      id: uid(), role: "pro", artisanId: "a" + uid(),
+      nom: prenom + " " + nom, email, pass, verified: false,
+      photo: null, ville, tel, transport, siret, iban, certif,
+      hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile,
+    };
+    setPending(acc);
+    setModal(true);
+  };
+
+  const onVerified = () => {
+    setAccounts(p => [...p, { ...pending, verified: true }]);
+    setModal(false);
+    onSuccess({ ...pending, verified: true });
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto" }}>
+      <style>{CSS}</style>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "28px 18px 80px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+          <button onClick={step === 1 ? onBack : () => setStep(1)} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>Inscription Artisan Pro</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>Étape {step} sur 2</div>
+          </div>
+        </div>
+
+        {/* Barre de progression */}
+        <div style={{ height: 4, background: "rgba(0,0,0,.07)", borderRadius: 2, marginBottom: 24 }}>
+          <div style={{ height: "100%", borderRadius: 2, background: T.grad, width: step === 1 ? "50%" : "100%", transition: "width .4s ease" }} />
+        </div>
+
+        {step === 1 && (
+          <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
+              {Icon.user(T.accent, 16)} Informations personnelles
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+              <div>
+                <label className="lk-label">{tr.firstname}</label>
+                <input className="lk-input" value={prenom} placeholder="Jean" autoComplete="off" onChange={e => { setPrenom(e.target.value); clr("prenom"); }} style={{ borderColor: errs.prenom ? "rgba(220,38,38,.4)" : "" }} />
+                {errs.prenom && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.prenom}</div>}
+              </div>
+              <div>
+                <label className="lk-label">{tr.lastname}</label>
+                <input className="lk-input" value={nom} placeholder="Dupont" autoComplete="off" onChange={e => { setNom(e.target.value); clr("nom"); }} style={{ borderColor: errs.nom ? "rgba(220,38,38,.4)" : "" }} />
+                {errs.nom && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.nom}</div>}
+              </div>
+            </div>
+            <Field label={tr.email} value={email} onChange={e => { setEmail(e.target.value); clr("email"); }} placeholder="pro@email.fr" type="email" err={errs.email} />
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.phone}</label>
+              <PhoneInput value={tel} onChange={v => { setTel(v); clr("tel"); }} />
+              {errs.tel && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.tel}</div>}
+            </div>
+            <Field label={tr.city} value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" err={errs.ville} />
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.transport}</label>
+              <select className="lk-input" value={transport} onChange={e => setTransport(e.target.value)} style={{ cursor: "pointer" }}>
+                <option value="voiture">{tr.car}</option>
+                <option value="scooter">{tr.scooter}</option>
+                <option value="moto">{tr.motorcycle}</option>
+                <option value="velo">{tr.bicycle}</option>
+                <option value="pied">{tr.onFoot}</option>
+              </select>
+            </div>
+            <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
+              <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder="6 caractères minimum" type="password" err={errs.pass} />
+              <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder="Répétez votre mot de passe" type="password" err={errs.confirm} />
+            </div>
+            <button onClick={goStep2} className="lk-btn">Étape suivante — Documents {Icon.arrow("#fff", 14)}</button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+              {Icon.shield(T.accent, 16)} Documents professionnels
+            </div>
+            <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
+              Ces documents sont requis par la loi et seront vérifiés par notre équipe sous 48h.
+            </div>
+
+            {/* SIRET */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">Numéro SIRET *</label>
+              <input className="lk-input" value={siret} onChange={e => { setSiret(e.target.value); clr("siret"); }} placeholder="123 456 789 00015" maxLength={17} style={{ borderColor: errs.siret ? "rgba(220,38,38,.4)" : "" }} />
+              {errs.siret && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.siret}</div>}
+            </div>
+
+            {/* Certification */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">Certification professionnelle</label>
+              <select className="lk-input" value={certif} onChange={e => setCertif(e.target.value)} style={{ cursor: "pointer" }}>
+                <option value="aucune">Aucune certification</option>
+                <option value="rge">RGE — Reconnu Garant de l'Environnement</option>
+                <option value="qualibat">Qualibat</option>
+                <option value="qualifelec">Qualifelec</option>
+                <option value="artisan_agree">Artisan Agréé</option>
+              </select>
+            </div>
+
+            {/* Carte d'identité */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">Pièce d'identité * (CNI ou Passeport)</label>
+              <input type="file" accept="image/*,.pdf" ref={idRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setIdCardFile(f); clr("idCard"); } }} style={{ display: "none" }} />
+              <button type="button" onClick={() => idRef.current?.click()} style={{ width: "100%", background: idCardFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.idCard ? "rgba(220,38,38,.5)" : idCardFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
+                {idCardFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
+                <span style={{ color: idCardFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
+                  {idCardFile ? idCardFile.name : "Téléverser CNI / Passeport"}
+                </span>
+              </button>
+              {errs.idCard && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.idCard}</div>}
+            </div>
+
+            {/* Assurance RC Pro */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">Attestation assurance RC Pro * </label>
+              <input type="file" accept="image/*,.pdf" ref={insRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setInsuranceFile(f); clr("insurance"); } }} style={{ display: "none" }} />
+              <button type="button" onClick={() => insRef.current?.click()} style={{ width: "100%", background: insuranceFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.insurance ? "rgba(220,38,38,.5)" : insuranceFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
+                {insuranceFile ? Icon.check(T.success, 18) : Icon.shield(T.textLo, 18)}
+                <span style={{ color: insuranceFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
+                  {insuranceFile ? insuranceFile.name : "Téléverser attestation d'assurance"}
+                </span>
+              </button>
+              {errs.insurance && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.insurance}</div>}
+            </div>
+
+            {/* Kbis (optionnel) */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">Extrait Kbis <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>(optionnel)</span></label>
+              <input type="file" accept="image/*,.pdf" ref={kbisRef} onChange={e => { const f = e.target.files?.[0]; if (f) setKbisFile(f); }} style={{ display: "none" }} />
+              <button type="button" onClick={() => kbisRef.current?.click()} style={{ width: "100%", background: kbisFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${kbisFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
+                {kbisFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
+                <span style={{ color: kbisFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
+                  {kbisFile ? kbisFile.name : "Téléverser extrait Kbis"}
+                </span>
+              </button>
+            </div>
+
+            {/* IBAN */}
+            <div style={{ marginBottom: 20 }}>
+              <label className="lk-label">IBAN (pour vos paiements) <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>(optionnel)</span></label>
+              <input className="lk-input" value={iban} onChange={e => setIban(e.target.value.toUpperCase())} placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" />
+            </div>
+
+            {/* Avertissement légal */}
+            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                {Icon.warning(T.warn, 16)}
+                <div style={{ color: T.textMid, fontSize: 12, lineHeight: 1.6 }}>
+                  En soumettant votre dossier, vous certifiez être en règle avec la législation française (auto-entrepreneur, société ou artisan enregistré). LOCKR se réserve le droit de vérifier et rejeter tout dossier incomplet.
+                </div>
+              </div>
+            </div>
+
+            <button onClick={submit} className="lk-btn">Soumettre mon dossier {Icon.check("#fff", 14)}</button>
+          </div>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 16 }}>
+          <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
         </div>
       </div>
       {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} />}
@@ -1404,14 +1691,85 @@ function EarningsChart({ bookings, artisanId }) {
   );
 }
 
+/* ─── CHAT INTERVENTION (pro ↔ client) ─── */
+function ChatIntervention({ bookingId, account, interventionChats, setInterventionChats, otherNom, onClose }) {
+  const [msg, setMsg] = useState("");
+  const bottomRef = useRef(null);
+  const messages = interventionChats[bookingId] || [];
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const send = () => {
+    if (!msg.trim()) return;
+    const m = { id: uid(), auteurId: account.id, auteurNom: account.nom, texte: msg.trim(), createdAt: ts() };
+    setInterventionChats(p => ({ ...p, [bookingId]: [...(p[bookingId] || []), m] }));
+    setMsg("");
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 900, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, height: "72vh", display: "flex", flexDirection: "column", animation: "slideUp .3s ease", boxShadow: "0 -8px 40px rgba(0,0,0,.15)" }}>
+        {/* Header */}
+        <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(201,160,48,.1)", border: "1.5px solid rgba(201,160,48,.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span style={{ fontWeight: 700, fontSize: 15, color: T.gold }}>{(otherNom || "?").charAt(0)}</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{otherNom}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.success }} />
+              <span style={{ color: T.textLo, fontSize: 11 }}>Intervention en cours</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="lk-ghost" style={{ padding: "7px 10px" }}>{Icon.x()}</button>
+        </div>
+
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10, background: "#fafaf8" }}>
+          {messages.length === 0 && (
+            <div style={{ textAlign: "center", padding: "32px 20px" }}>
+              {Icon.chat(T.textLo, 32)}
+              <div style={{ color: T.textLo, fontSize: 13, marginTop: 10 }}>Début de la conversation</div>
+            </div>
+          )}
+          {messages.map(m => {
+            const isMe = m.auteurId === account.id;
+            return (
+              <div key={m.id} style={{ display: "flex", flexDirection: isMe ? "row-reverse" : "row", gap: 8, alignItems: "flex-end" }}>
+                <div style={{ maxWidth: "75%" }}>
+                  {!isMe && <div style={{ color: T.textLo, fontSize: 10, marginBottom: 3, fontWeight: 600 }}>{m.auteurNom}</div>}
+                  <div style={{ background: isMe ? T.accent : "#fff", borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", color: isMe ? "#fff" : T.textHi, fontSize: 14, lineHeight: 1.5, boxShadow: "0 1px 4px rgba(0,0,0,.08)" }}>
+                    {m.texte}
+                  </div>
+                  <div style={{ color: T.textLo, fontSize: 10, marginTop: 3, textAlign: isMe ? "right" : "left" }}>{fmtTime(m.createdAt)}</div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <div style={{ padding: "12px 14px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, alignItems: "center", background: T.surface }}>
+          <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} className="lk-input" placeholder="Votre message…" style={{ flex: 1 }} />
+          <button onClick={send} disabled={!msg.trim()} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer", flexShrink: 0, opacity: msg.trim() ? 1 : .4 }}>
+            {Icon.send("#fff", 16)}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── PRO APP ─── */
-function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, onLogout, lang = "fr", setLang }) {
+function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [tab, setTab] = useState("missions");
   const [activeMission, setActiveMission] = useState(null);
   const [progress, setProgress] = useState(0);
   const [dispo, setDispo] = useState(true);
   const [clotureModal, setClotureModal] = useState(false);
+  const [chatMission, setChatMission] = useState(null);
   const raf = useRef(null);
   const t0 = useRef(null);
   const JOURNEY = 38000;
@@ -1514,6 +1872,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     {!isActive ? (
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
+                        <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                          {Icon.chat(T.gold, 13)} Chat
+                        </button>
                         <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
                       </div>
                     ) : (
@@ -1591,12 +1952,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
         )}
       </div>
       {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} />}
+      {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} />}
     </div>
   );
 }
 
 /* ─── CLIENT APP ─── */
-function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, lang = "fr", setLang }) {
+function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, interventionChats, setInterventionChats, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [screen, setScreen] = useState("home");
   const [selProb, setSelProb] = useState(null);
@@ -1605,6 +1967,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, lang
   const [progress, setProgress] = useState(0);
   const [payModal, setPayModal] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
+  const [showChat, setShowChat] = useState(false);
   // Position GPS réelle de l'artisan (depuis son compte pro)
   const [artisanGpsPos, setArtisanGpsPos] = useState(null);
   const raf = useRef(null);
@@ -1904,7 +2267,12 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, lang
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{art.nom}</div>
               <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
             </div>
-            {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
+            <div style={{ display: "flex", gap: 8 }}>
+              {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
+              <button onClick={() => setShowChat(true)} style={{ flex: 1, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 12, padding: "12px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                {Icon.chat(T.gold, 15)} Chat
+              </button>
+            </div>
           </div>
         )}
         {phase === "arrived" && bk?.montantFinal && (
@@ -1914,6 +2282,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, lang
         )}
       </div>
       {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} />}
+      {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} />}
     </div>
   );
 
@@ -2130,14 +2499,17 @@ export default function App() {
   const [accounts, setAccounts] = useState(INIT_ACCOUNTS);
   const [bons, setBons] = useState(INIT_BONS);
   const [chatMessages, setChatMessages] = useState(INIT_CHAT);
+  const [interventionChats, setInterventionChats] = useState({});
   const [lang, setLang] = useState("fr");
   const logout = () => { setAccount(null); setScreen("login"); };
 
   if (account) {
-    if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} lang={lang} setLang={setLang} />;
-    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} onLogout={logout} lang={lang} setLang={setLang} />;
-    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
+    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} />;
   }
-  if (screen === "register") return <RegisterScreen onBack={() => setScreen("login")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} setLang={setLang} />;
-  return <LoginScreen onLogin={setAccount} onRegister={() => setScreen("register")} accounts={accounts} lang={lang} setLang={setLang} />;
+  if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
+  if (screen === "register-client") return <RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
+  if (screen === "register-pro") return <RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
+  return <LoginScreen onLogin={setAccount} onRegister={() => setScreen("register-choice")} accounts={accounts} lang={lang} setLang={setLang} />;
 }
