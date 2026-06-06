@@ -6,6 +6,17 @@ const fmtTime = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", 
 const fmtDate = d => new Date(d).toLocaleDateString("fr-FR");
 const ts = () => new Date().toISOString();
 
+function useWindowSize() {
+  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => {
+    const h = () => setW(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return w;
+}
+const BP = 768; // breakpoint desktop
+
 /* ─── TRANSLATIONS ─── */
 const TRANS = {
   fr: {
@@ -462,6 +473,23 @@ body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;backgroun
 .lk-badge-off{background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.15);color:#dc2626;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
 .notif-banner{animation:notif 5s ease forwards;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:9999;max-width:420px;width:95%}
 select.lk-input option{background:#ffffff;color:#1c1c1c}
+/* ─── RESPONSIVE ─── */
+@media (min-width: 768px) {
+  .lk-desktop-sidebar{width:240px;flex-shrink:0;height:100vh;position:sticky;top:0;background:#fff;border-right:1px solid rgba(0,0,0,.08);display:flex;flex-direction:column;overflow-y:auto}
+  .lk-desktop-content{flex:1;overflow-y:auto;min-width:0}
+  .lk-desktop-shell{display:flex;min-height:100vh}
+  .lk-desktop-main{max-width:900px;margin:0 auto;padding:28px 32px}
+  .lk-desktop-2col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .lk-desktop-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .lk-card:hover{transform:translateY(-1px)}
+}
+@media (max-width: 767px) {
+  .lk-desktop-sidebar{display:none!important}
+  .lk-desktop-shell{display:block}
+  .lk-desktop-main{padding:14px}
+  .lk-desktop-2col{display:block}
+  .lk-desktop-3col{display:block}
+}
 `;
 
 /* ─── MAP HELPERS ─── */
@@ -770,20 +798,8 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
   const refs = useRef([]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const ejs = await loadEmailJS();
-        await ejs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
-          to_email: account.email,
-          to_name: account.nom,
-          verification_code: realCode,
-          app_name: "LOCKR",
-        });
-      } catch (err) {
-        console.warn("EmailJS non configuré — code en console:", realCode);
-      }
-      setStep("input");
-    })();
+    // Mode démo : affichage direct du code — à remplacer par EmailJS en production
+    setStep("input");
   }, []);
 
   const setDigit = (i, val) => {
@@ -830,14 +846,16 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
               <div style={{ width: 64, height: 64, background: "rgba(201,160,48,.1)", border: "1.5px solid rgba(201,160,48,.25)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                 {Icon.mail(T.gold, 28)}
               </div>
-              <div style={{ color: T.textHi, fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Email envoyé !</div>
-              <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6 }}>
-                Un code de vérification a été envoyé à<br />
+              <div style={{ color: T.textHi, fontWeight: 800, fontSize: 18, marginBottom: 6 }}>Vérification du compte</div>
+              <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>
+                Votre code de vérification pour<br />
                 <strong style={{ color: T.accent }}>{account.email}</strong>
               </div>
-              <div style={{ marginTop: 10, background: "rgba(0,0,0,.03)", border: "1px solid rgba(0,0,0,.07)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: T.textLo }}>
-                🔒 Le code n'apparaît pas dans l'application
+              <div style={{ background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", borderRadius: 14, padding: "18px 20px", marginBottom: 4 }}>
+                <div style={{ color: "rgba(255,255,255,.5)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".8px", marginBottom: 8 }}>Votre code</div>
+                <div style={{ color: "#fff", fontWeight: 900, fontSize: 34, letterSpacing: "10px", fontFamily: "monospace" }}>{realCode}</div>
               </div>
+              <div style={{ fontSize: 11, color: T.textLo, marginBottom: 4 }}>⚠️ Mode démo — sera envoyé par email en production</div>
             </div>
             <div style={{ marginBottom: 20 }}>
               <div style={{ color: T.textLo, fontSize: 12, textAlign: "center", marginBottom: 14, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".5px" }}>
@@ -859,9 +877,6 @@ function EmailConfirmModal({ account, onVerified, onClose }) {
             )}
             <button onClick={verify} disabled={digits.join("").length < 6} className="lk-btn" style={{ marginBottom: 10 }}>
               Vérifier le code
-            </button>
-            <button onClick={() => { setStep("sending"); setDigits(["","","","","",""]); loadEmailJS().then(ejs => ejs.send("YOUR_SERVICE_ID","YOUR_TEMPLATE_ID",{ to_email: account.email, to_name: account.nom, verification_code: realCode, app_name: "LOCKR" }).catch(()=>{})).finally(()=>setStep("input")); }} style={{ width: "100%", background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", padding: "8px", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>
-              Renvoyer le code
             </button>
             <button onClick={onClose} style={{ width: "100%", background: "none", border: "none", color: T.textLo, fontSize: 13, cursor: "pointer", padding: "6px", fontFamily: "'Inter',sans-serif" }}>
               Annuler
@@ -911,9 +926,21 @@ function Field({ label, value, onChange, placeholder, type = "text", err }) {
 /* ─── REGISTER CHOICE ─── */
 function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: isDesktop ? "row" : "column", alignItems: isDesktop ? "stretch" : "center", justifyContent: isDesktop ? "flex-start" : "center", padding: isDesktop ? "0" : "28px 18px" }}>
       <style>{CSS}</style>
+      {isDesktop && (
+        <div style={{ width: 360, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px" }}>
+          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            {Icon.lock("#c9a030", 26)}
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
+          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
+        </div>
+      )}
+      <div style={{ flex: isDesktop ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", padding: isDesktop ? "40px" : "0", width: isDesktop ? undefined : "100%" }}>
       <div style={{ width: "100%", maxWidth: 420 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 40 }}>
           <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
@@ -948,6 +975,7 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
           </button>
         </div>
       </div>
+      </div>
     </div>
   );
 }
@@ -955,6 +983,8 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
 /* ─── REGISTER CLIENT ─── */
 function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
@@ -995,9 +1025,19 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto", display: "flex", flexDirection: isDesktop ? "row" : "column" }}>
       <style>{CSS}</style>
-      <div style={{ maxWidth: 440, margin: "0 auto", padding: "28px 18px 72px" }}>
+      {isDesktop && (
+        <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh" }}>
+          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            {Icon.lock("#c9a030", 26)}
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
+          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
+        </div>
+      )}
+      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+      <div style={{ maxWidth: isDesktop ? 520 : 440, width: "100%", margin: "0 auto", padding: "28px 18px 72px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
           <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div>
@@ -1036,6 +1076,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
           <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
         </div>
       </div>
+      </div>
       {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} />}
     </div>
   );
@@ -1044,6 +1085,8 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
 /* ─── REGISTER PRO ─── */
 function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   const [step, setStep] = useState(1);
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
@@ -1111,9 +1154,19 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto", display: "flex", flexDirection: isDesktop ? "row" : "column" }}>
       <style>{CSS}</style>
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "28px 18px 80px" }}>
+      {isDesktop && (
+        <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh", position: "sticky", top: 0, alignSelf: "flex-start" }}>
+          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+            {Icon.lock("#c9a030", 26)}
+          </div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
+          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>Rejoignez les pros LOCKR</div>
+        </div>
+      )}
+      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+      <div style={{ maxWidth: isDesktop ? 520 : 480, width: "100%", margin: "0 auto", padding: "28px 18px 80px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
           <button onClick={step === 1 ? onBack : () => setStep(1)} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div style={{ flex: 1 }}>
@@ -1260,6 +1313,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
           <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
         </div>
       </div>
+      </div>
       {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} />}
     </div>
   );
@@ -1272,6 +1326,8 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
 
   const demos = tab === "client"
     ? [{ email: "client@demo.fr", label: "Martin D." }, { email: "sophie@demo.fr", label: "Sophie B." }]
@@ -1287,67 +1343,79 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 18px", fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
-      <div style={{ width: "100%", maxWidth: 390, animation: "fadeUp .45s ease" }}>
-        <div style={{ textAlign: "center", marginBottom: 42 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 40, height: 40, background: T.grad, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 20)}</div>
-            <span style={{ fontSize: 28, fontWeight: 800, color: T.textHi, letterSpacing: "-1.2px" }}>LOCKR</span>
+      {isDesktop && (
+        <div style={{ flex: 1, background: "linear-gradient(135deg,#1c1c1c 0%,#2e2e2e 60%,#1a1a1a 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 30% 50%, rgba(201,160,48,.15) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(201,160,48,.08) 0%, transparent 50%)" }} />
+          <div style={{ position: "relative", textAlign: "center", maxWidth: 360 }}>
+            <div style={{ width: 72, height: 72, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+              {Icon.lock("#c9a030", 32)}
+            </div>
+            <div style={{ fontSize: 48, fontWeight: 900, color: "#fff", letterSpacing: "-2px", marginBottom: 12 }}>LOCKR</div>
+            <div style={{ color: "rgba(255,255,255,.55)", fontSize: 16, lineHeight: 1.7, marginBottom: 40 }}>{tr.appTagline}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {[{ icon: Icon.shield, text: "Artisans certifiés & vérifiés" }, { icon: Icon.map, text: "Suivi GPS en temps réel" }, { icon: Icon.check, text: "Intervention en moins de 30 min" }].map((f, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 32, height: 32, background: "rgba(201,160,48,.12)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {f.icon("rgba(201,160,48,.9)", 16)}
+                  </div>
+                  <span style={{ color: "rgba(255,255,255,.7)", fontSize: 14 }}>{f.text}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div style={{ color: T.textLo, fontSize: 14 }}>{tr.appTagline}</div>
         </div>
-        <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
-          {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }].map(t => (
-            <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 12, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
-              {t.label}
+      )}
+      <div style={{ width: isDesktop ? 440 : "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: isDesktop ? "48px 40px" : "20px 18px", overflowY: "auto" }}>
+        <div style={{ width: "100%", maxWidth: 390, animation: "fadeUp .45s ease" }}>
+          {!isDesktop && (
+            <div style={{ textAlign: "center", marginBottom: 42 }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, background: T.grad, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 20)}</div>
+                <span style={{ fontSize: 28, fontWeight: 800, color: T.textHi, letterSpacing: "-1.2px" }}>LOCKR</span>
+              </div>
+              <div style={{ color: T.textLo, fontSize: 14 }}>{tr.appTagline}</div>
+            </div>
+          )}
+          {isDesktop && <div style={{ fontSize: 24, fontWeight: 800, color: T.textHi, marginBottom: 28, letterSpacing: "-.5px" }}>Connexion</div>}
+          <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
+            {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }].map(t => (
+              <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 12, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="lk-card" style={{ borderRadius: 16, padding: "24px 20px", marginBottom: 18 }}>
+            <div style={{ marginBottom: 16 }}>
+              <label className="lk-label">{tr.email}</label>
+              <input className="lk-input" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} placeholder="email@exemple.fr" type="email" autoComplete="email" />
+            </div>
+            <div style={{ marginBottom: err ? 12 : 20 }}>
+              <label className="lk-label">{tr.password}</label>
+              <input className="lk-input" type="password" value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} placeholder="••••••••" autoComplete="current-password" onKeyDown={e => e.key === "Enter" && login()} />
+            </div>
+            {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>{Icon.x(T.danger, 13)} {err}</div>}
+            <button onClick={login} className="lk-btn" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {tab === "client" ? tr.findCraftsman : tr.myMissions} {Icon.arrow("#fff", 15)}
             </button>
-          ))}
-        </div>
-        <div className="lk-card" style={{ borderRadius: 16, padding: "24px 20px", marginBottom: 18 }}>
-          <div style={{ marginBottom: 16 }}>
-            <label className="lk-label">{tr.email}</label>
-            <input
-              className="lk-input"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setErr(""); }}
-              placeholder="email@exemple.fr"
-              type="email"
-              autoComplete="email"
-            />
           </div>
-          <div style={{ marginBottom: err ? 12 : 20 }}>
-            <label className="lk-label">{tr.password}</label>
-            <input
-              className="lk-input"
-              type="password"
-              value={pass}
-              onChange={e => { setPass(e.target.value); setErr(""); }}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              onKeyDown={e => e.key === "Enter" && login()}
-            />
+          <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            {demos.map(d => (
+              <button key={d.email} onClick={() => { setEmail(d.email); setPass("1234"); }} style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 14px", cursor: "pointer", color: T.textMid, fontSize: 12, fontWeight: 500, fontFamily: "'Inter',sans-serif" }}>
+                {d.label}
+              </button>
+            ))}
           </div>
-          {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>{Icon.x(T.danger, 13)} {err}</div>}
-          <button onClick={login} className="lk-btn" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            {tab === "client" ? tr.findCraftsman : tr.myMissions} {Icon.arrow("#fff", 15)}
-          </button>
-        </div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          {demos.map(d => (
-            <button key={d.email} onClick={() => { setEmail(d.email); setPass("1234"); }} style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 14px", cursor: "pointer", color: T.textMid, fontSize: 12, fontWeight: 500, fontFamily: "'Inter',sans-serif" }}>
-              {d.label}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
+          </div>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px", textAlign: "center" }}>
+            <div style={{ color: T.textMid, fontSize: 13, marginBottom: 10 }}>{tr.notMember}</div>
+            <button onClick={onRegister} className="lk-ghost" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {tr.freeAccount} {Icon.arrow(T.accent, 14)}
             </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-          {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
-        </div>
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px", textAlign: "center" }}>
-          <div style={{ color: T.textMid, fontSize: 13, marginBottom: 10 }}>{tr.notMember}</div>
-          <button onClick={onRegister} className="lk-ghost" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            {tr.freeAccount} {Icon.arrow(T.accent, 14)}
-          </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1764,6 +1832,8 @@ function ChatIntervention({ bookingId, account, interventionChats, setInterventi
 /* ─── PRO APP ─── */
 function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   const [tab, setTab] = useState("missions");
   const [activeMission, setActiveMission] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -1806,150 +1876,226 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
-      <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(28,28,28,.06)", border: "2px solid rgba(28,28,28,.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: T.accent, fontWeight: 700, fontSize: 16 }}>{account.nom.charAt(0)}</span>
-            </div>
-            <div>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{artisan?.nom || account.nom}</div>
-              <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || "Artisan Pro"}</div>
+
+      {/* SIDEBAR DESKTOP */}
+      {isDesktop && (
+        <div style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0, background: "#fff", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          {/* Logo */}
+          <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, background: T.grad, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 14)}</div>
+              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(30,158,107,.1)" : "rgba(220,38,38,.1)", border: `1px solid ${dispo ? "rgba(30,158,107,.3)" : "rgba(220,38,38,.3)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: dispo ? T.success : T.danger, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+          {/* Pro info */}
+          <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>{account.nom.charAt(0)}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artisan?.nom || account.nom}</div>
+                <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || "Artisan Pro"}</div>
+              </div>
+            </div>
+            <button onClick={() => setDispo(d => !d)} style={{ width: "100%", marginTop: 10, background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: dispo ? T.success : T.danger, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: dispo ? T.success : T.danger }} />
-              {dispo ? tr.available : tr.unavailable}
+              {dispo ? "Disponible" : "Indisponible"}
             </button>
-            <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
+          </div>
+          {/* Stats rapides */}
+          <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ background: "rgba(28,28,28,.03)", borderRadius: 10, padding: "8px 10px" }}>
+              <div style={{ color: T.accent, fontWeight: 800, fontSize: 18 }}>{active.length}</div>
+              <div style={{ color: T.textLo, fontSize: 10 }}>En attente</div>
+            </div>
+            <div style={{ background: "rgba(30,158,107,.06)", borderRadius: 10, padding: "8px 10px" }}>
+              <div style={{ color: T.success, fontWeight: 800, fontSize: 15 }}>{fmt(earnings)}</div>
+              <div style={{ color: T.textLo, fontSize: 10 }}>Gains</div>
+            </div>
+          </div>
+          {/* Navigation */}
+          <nav style={{ flex: 1, padding: "8px 10px" }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", border: "none", background: tab === t.id ? "rgba(28,28,28,.06)" : "transparent", borderRadius: 10, padding: "11px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: 2, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
+                {t.icon(tab === t.id ? T.accent : T.textLo, 16)}
+                <span style={{ color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13 }}>{t.l}</span>
+              </button>
+            ))}
+          </nav>
+          {/* Logout */}
+          <div style={{ padding: "12px 10px", borderTop: `1px solid ${T.border}` }}>
+            <button onClick={onLogout} style={{ width: "100%", border: "none", background: "transparent", borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
+              {Icon.sign(T.danger, 16)}
+              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>Déconnexion</span>
+            </button>
           </div>
         </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: T.border }}>
-        {[{ l: "En attente", v: active.length, c: T.accent }, { l: "Terminées", v: done.length, c: T.success }, { l: "Gains net", v: fmt(earnings), c: T.success }].map(k => (
-          <div key={k.l} style={{ background: T.bg, padding: "14px 10px", textAlign: "center" }}>
-            <div style={{ color: k.c, fontWeight: 800, fontSize: k.l === "Gains net" ? 12 : 22 }}>{k.v}</div>
-            <div style={{ color: T.textLo, fontSize: 10, marginTop: 3, textTransform: "uppercase" }}>{k.l}</div>
+      )}
+
+      {/* MAIN CONTENT */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* Header mobile uniquement */}
+        {!isDesktop && (
+          <div style={{ background: "#fff", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: T.accent, fontWeight: 700, fontSize: 15 }}>{account.nom.charAt(0)}</span>
+                </div>
+                <div>
+                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{artisan?.nom || account.nom}</div>
+                  <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || "Artisan Pro"}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: dispo ? T.success : T.danger, fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: dispo ? T.success : T.danger }} />{dispo ? "Dispo" : "Indispo"}
+                </button>
+                <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 10px" }}>{Icon.sign()}</button>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif" }}>
-            {t.icon(tab === t.id ? T.accent : T.textLo, 14)}
-            <span style={{ color: tab === t.id ? T.accent : T.textLo, fontSize: 10, fontWeight: 600 }}>{t.l}</span>
-          </button>
-        ))}
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-        {tab === "missions" && (
-          <div style={{ padding: "14px" }}>
-            {active.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noMissionPending}</div>}
-            {active.map(b => {
-              const pr = PROBLEMES.find(p => p.id === b.probleme);
-              const IC = PROB_ICONS[b.probleme] || Icon.tool;
-              const isActive = activeMission?.id === b.id;
-              return (
-                <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
+        )}
+        {/* Stats bar mobile */}
+        {!isDesktop && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: T.border }}>
+            {[{ l: "En attente", v: active.length, c: T.accent }, { l: "Terminées", v: done.length, c: T.success }, { l: "Gains net", v: fmt(earnings), c: T.success }].map(k => (
+              <div key={k.l} style={{ background: T.bg, padding: "12px 8px", textAlign: "center" }}>
+                <div style={{ color: k.c, fontWeight: 800, fontSize: k.l === "Gains net" ? 11 : 20 }}>{k.v}</div>
+                <div style={{ color: T.textLo, fontSize: 9, marginTop: 2, textTransform: "uppercase" }}>{k.l}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Tabs mobile */}
+        {!isDesktop && (
+          <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif" }}>
+                {t.icon(tab === t.id ? T.accent : T.textLo, 14)}
+                <span style={{ color: tab === t.id ? T.accent : T.textLo, fontSize: 10, fontWeight: 600 }}>{t.l}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Desktop header avec titre du tab */}
+        {isDesktop && (
+          <div style={{ background: "#fff", padding: "18px 32px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 20 }}>{tabs.find(t => t.id === tab)?.l || ""}</div>
+            <div style={{ color: T.success, fontWeight: 700, fontSize: 14 }}>{fmt(earnings)} gagnés</div>
+          </div>
+        )}
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined }}>
+          {tab === "missions" && (
+            <div style={{ padding: "14px" }}>
+              {active.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noMissionPending}</div>}
+              {active.map(b => {
+                const pr = PROBLEMES.find(p => p.id === b.probleme);
+                const IC = PROB_ICONS[b.probleme] || Icon.tool;
+                const isActive = activeMission?.id === b.id;
+                return (
+                  <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
+                        <div>
+                          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pr?.label}</div>
+                          <div style={{ color: T.textLo, fontSize: 12 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
+                        </div>
+                      </div>
+                      <div style={{ color: T.accent, fontWeight: 800, fontSize: 17 }}>{fmt(b.montant)}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <div style={{ flex: 1, background: T.bg, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 12)}<span style={{ color: T.textLo, fontSize: 12 }}>{b.adresse}</span></div>
+                      <div style={{ background: "rgba(62,207,142,.06)", borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.euro(T.success, 12)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{fmt(b.montant * 0.40)}</span></div>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      {!isActive ? (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
+                          <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                            {Icon.chat(T.gold, 13)} Chat
+                          </button>
+                          <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setActiveMission(b); setTab("active"); }} style={{ width: "100%", background: "rgba(28,28,28,.04)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                          {tr.viewMission} {Icon.arrow(T.accent, 13)}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {tab === "active" && (
+            <div style={{ padding: "14px" }}>
+              {!activeMission ? (
+                <div style={{ textAlign: "center", padding: "52px 20px" }}>
+                  <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>{tr.noMissionActive}</div>
+                  <button onClick={() => setTab("missions")} className="lk-btn">{tr.missions}</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 12, border: `1px solid ${T.border}` }}>
+                    <LiveMap progress={progress} artisanColor={artisan?.color || T.accent} compact artisanPos={artisan ? [artisan.lat, artisan.lng] : null} />
+                  </div>
+                  <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ color: T.textLo, fontSize: 12 }}>Progression</span>
+                      <span style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{Math.round(progress * 100)}%</span>
+                    </div>
+                    <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 3, height: 3 }}>
+                      <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <a href="tel:0600000000" className="lk-ghost" style={{ flex: 1, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} Appeler</a>
+                    <button onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                      {Icon.check("#fff", 15)} Terminer et facturer
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {tab === "bons" && <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} />}
+          {tab === "chat" && <ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} />}
+          {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} /></div>}
+          {tab === "history" && (
+            <div style={{ padding: "14px" }}>
+              {done.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>Aucune mission terminée</div>}
+              {done.map(b => {
+                const isPaid = b.statutPaiement === "payé";
+                const pr = PROBLEMES.find(p => p.id === b.probleme);
+                return (
+                  <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <div>
-                        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pr?.label}</div>
-                        <div style={{ color: T.textLo, fontSize: 12 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
+                        <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                        <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 700, fontSize: 15 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
+                        <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? "Payé" : "En attente"}</div>
                       </div>
                     </div>
-                    <div style={{ color: T.accent, fontWeight: 800, fontSize: 17 }}>{fmt(b.montant)}</div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <div style={{ flex: 1, background: T.bg, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 12)}<span style={{ color: T.textLo, fontSize: 12 }}>{b.adresse}</span></div>
-                    <div style={{ background: "rgba(62,207,142,.06)", borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.euro(T.success, 12)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{fmt(b.montant * 0.40)}</span></div>
-                  </div>
-                  <div style={{ marginTop: 10 }}>
-                    {!isActive ? (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
-                        <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-                          {Icon.chat(T.gold, 13)} Chat
-                        </button>
-                        <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => { setActiveMission(b); setTab("active"); }} style={{ width: "100%", background: "rgba(28,28,28,.04)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                        {tr.viewMission} {Icon.arrow(T.accent, 13)}
+                    {!isPaid && (
+                      <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statutPaiement: "payé", payeLe: ts() } : x))} style={{ width: "100%", background: "rgba(245,166,35,.08)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                        {Icon.check(T.warn, 12)} Marquer comme payé
                       </button>
                     )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {tab === "active" && (
-          <div style={{ padding: "14px" }}>
-            {!activeMission ? (
-              <div style={{ textAlign: "center", padding: "52px 20px" }}>
-                <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>{tr.noMissionActive}</div>
-                <button onClick={() => setTab("missions")} className="lk-btn">{tr.missions}</button>
-              </div>
-            ) : (
-              <>
-                <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 12, border: `1px solid ${T.border}` }}>
-                  <LiveMap progress={progress} artisanColor={artisan?.color || T.accent} compact artisanPos={artisan ? [artisan.lat, artisan.lng] : null} />
-                </div>
-                <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span style={{ color: T.textLo, fontSize: 12 }}>Progression</span>
-                    <span style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{Math.round(progress * 100)}%</span>
-                  </div>
-                  <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 3, height: 3 }}>
-                    <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                  <a href="tel:0600000000" className="lk-ghost" style={{ flex: 1, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} Appeler</a>
-                  <button onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                    {Icon.check("#fff", 15)} Terminer et facturer
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        {tab === "bons" && <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} />}
-        {tab === "chat" && <ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} />}
-        {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} /></div>}
-        {tab === "history" && (
-          <div style={{ padding: "14px" }}>
-            {done.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>Aucune mission terminée</div>}
-            {done.map(b => {
-              const isPaid = b.statutPaiement === "payé";
-              const pr = PROBLEMES.find(p => p.id === b.probleme);
-              return (
-                <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
-                      <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 700, fontSize: 15 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
-                      <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? "Payé" : "En attente"}</div>
-                    </div>
-                  </div>
-                  {!isPaid && (
-                    <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statutPaiement: "payé", payeLe: ts() } : x))} style={{ width: "100%", background: "rgba(245,166,35,.08)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                      {Icon.check(T.warn, 12)} Marquer comme payé
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
       {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} />}
       {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} />}
@@ -1960,6 +2106,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
 /* ─── CLIENT APP ─── */
 function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, interventionChats, setInterventionChats, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   const [screen, setScreen] = useState("home");
   const [selProb, setSelProb] = useState(null);
   const [selArt, setSelArt] = useState(null);
@@ -2087,7 +2235,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         </div>
       </div>
       {liveBk && (
-        <div onClick={() => setScreen("tracking")} style={{ margin: "14px 14px 0", background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div onClick={() => setScreen("tracking")} style={{ margin: isDesktop ? "20px auto 0" : "14px 14px 0", maxWidth: isDesktop ? 1100 : undefined, background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.accent, animation: "blink 1.2s infinite" }} />
             <div>
@@ -2098,46 +2246,76 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           {Icon.arrow(T.accent, 14)}
         </div>
       )}
-      <div style={{ padding: "18px 14px" }}>
-        <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.12)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
-          <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {account.nom.split(" ")[0]} 👋</div>
-          <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
-          <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
-        </div>
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {PROBLEMES.slice(0, 4).map(p => { const IC = PROB_ICONS[p.id]; return (
-              <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>{IC ? IC(T.accent, 16) : null}</div>
-                <div style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{p.label}</div>
-                {p.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginTop: 4 }}>URGENT</div>}
-              </button>
-            ); })}
-          </div>
-        </div>
-        {myBk.length > 0 && (
-          <>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.myInterventions}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {myBk.slice(-3).reverse().map(b => {
-                const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
-                return (
-                  <div key={b.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
-                      <div>
-                        <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
-                        <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
-                      </div>
-                    </div>
-                    <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
-                  </div>
-                );
-              })}
+      <div style={{ padding: isDesktop ? "32px" : "18px 14px", maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? "0 auto" : undefined, width: "100%" }}>
+        <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 380px", gap: 28 }}>
+          {/* Colonne principale */}
+          <div>
+            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.12)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
+              <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {account.nom.split(" ")[0]} 👋</div>
+              <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
+              <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
             </div>
-          </>
-        )}
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
+              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3,1fr)" : "1fr 1fr", gap: 10 }}>
+                {PROBLEMES.slice(0, isDesktop ? 6 : 4).map(p => { const IC = PROB_ICONS[p.id]; return (
+                  <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>{IC ? IC(T.accent, 16) : null}</div>
+                    <div style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{p.label}</div>
+                    {p.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginTop: 4 }}>URGENT</div>}
+                  </button>
+                ); })}
+              </div>
+            </div>
+            {/* Mes interventions — mobile only dans la colonne principale */}
+            {!isDesktop && myBk.length > 0 && (
+              <>
+                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.myInterventions}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {myBk.slice(-3).reverse().map(b => {
+                    const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
+                    return (
+                      <div key={b.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
+                          <div>
+                            <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                            <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
+                          </div>
+                        </div>
+                        <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+          {/* Colonne droite desktop = mes interventions */}
+          {isDesktop && (
+            <div>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 14 }}>{tr.myInterventions}</div>
+              {myBk.length === 0 && <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", padding: "32px 0" }}>Aucune intervention</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {myBk.slice().reverse().map(b => {
+                  const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
+                  return (
+                    <div key={b.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
+                        <div>
+                          <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                          <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
+                        </div>
+                      </div>
+                      <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2149,58 +2327,79 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         <button onClick={() => { setSelProb(null); setScreen("home"); }} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <span style={{ color: T.textHi, fontWeight: 700 }}>{tr.newRequest}</span>
       </div>
-      <div style={{ padding: "18px 14px" }}>
-        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
-          {PROBLEMES.map(p => { const IC = PROB_ICONS[p.id]; return (
-            <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selProb?.id === p.id ? T.borderHi : T.border}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(28,28,28,.07)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.textLo, 18) : null}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{p.label}</div>
-                <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{p.desc}</div>
-              </div>
-              {p.urgence && <span className="lk-tag-urgent">URGENT</span>}
-              {selProb?.id === p.id && Icon.check(T.accent, 16)}
-            </button>
-          ); })}
-        </div>
-        {selProb && (
-          <div style={{ animation: "fadeUp .25s ease" }}>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
-              {tr.availableCraftsmen}
-              {artisanList.length === 0 && <span style={{ color: T.textLo, fontWeight: 400, fontSize: 12, marginLeft: 8 }}>{tr.noAvailable}</span>}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {artisanList.map(a => (
-                <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selArt?.id === a.id ? T.borderHi : T.border}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s" }}>
-                  <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ width: 46, height: 46, borderRadius: 12, background: `${a.color}15`, border: `1px solid ${a.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ color: a.color, fontWeight: 800, fontSize: 18 }}>{a.nom.charAt(0)}</span>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <div>
-                          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{a.nom}</div>
-                          <div style={{ color: T.textLo, fontSize: 12 }}>{a.certif}</div>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ color: T.accent, fontWeight: 800, fontSize: 16 }}>{a.tarif + (selProb.urgence ? 40 : 0)}€</div>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-                        {a.avis > 0 && <span style={{ color: T.textLo, fontSize: 11 }}>{a.note}★ · {a.avis} avis</span>}
-                        {a.isReal && <span style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", color: T.success, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>✓ Pro vérifié</span>}
-                        <span className={a.dispo ? "lk-badge-ok" : "lk-badge-off"}>{a.dispo ? "Disponible" : "Indisponible"}</span>
-                      </div>
-                      {a.ville && <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: T.textLo, fontSize: 12 }}>{Icon.pin(T.textLo, 12)} {a.ville}</div>}
-                    </div>
+      <div style={{ padding: isDesktop ? "28px 32px" : "18px 14px", maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? "0 auto" : undefined }}>
+        <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+          {/* Colonne gauche : sélection du problème */}
+          <div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
+              {PROBLEMES.map(p => { const IC = PROB_ICONS[p.id]; return (
+                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selProb?.id === p.id ? T.borderHi : T.border}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(28,28,28,.07)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.textLo, 18) : null}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{p.label}</div>
+                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{p.desc}</div>
                   </div>
-                </div>
-              ))}
+                  {p.urgence && <span className="lk-tag-urgent">URGENT</span>}
+                  {selProb?.id === p.id && Icon.check(T.accent, 16)}
+                </button>
+              ); })}
             </div>
           </div>
-        )}
-        {selArt && selProb && (
+          {/* Colonne droite : liste artisans */}
+          <div>
+            {selProb && (
+              <div style={{ animation: "fadeUp .25s ease" }}>
+                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
+                  {tr.availableCraftsmen}
+                  {artisanList.length === 0 && <span style={{ color: T.textLo, fontWeight: 400, fontSize: 12, marginLeft: 8 }}>{tr.noAvailable}</span>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {artisanList.map(a => (
+                    <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selArt?.id === a.id ? T.borderHi : T.border}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s" }}>
+                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                        <div style={{ width: 46, height: 46, borderRadius: 12, background: `${a.color}15`, border: `1px solid ${a.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ color: a.color, fontWeight: 800, fontSize: 18 }}>{a.nom.charAt(0)}</span>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <div>
+                              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{a.nom}</div>
+                              <div style={{ color: T.textLo, fontSize: 12 }}>{a.certif}</div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ color: T.accent, fontWeight: 800, fontSize: 16 }}>{a.tarif + (selProb.urgence ? 40 : 0)}€</div>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                            {a.avis > 0 && <span style={{ color: T.textLo, fontSize: 11 }}>{a.note}★ · {a.avis} avis</span>}
+                            {a.isReal && <span style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", color: T.success, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>✓ Pro vérifié</span>}
+                            <span className={a.dispo ? "lk-badge-ok" : "lk-badge-off"}>{a.dispo ? "Disponible" : "Indisponible"}</span>
+                          </div>
+                          {a.ville && <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: T.textLo, fontSize: 12 }}>{Icon.pin(T.textLo, 12)} {a.ville}</div>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {selArt && selProb && isDesktop && (
+                  <div style={{ marginTop: 20 }}>
+                    <button onClick={book} className="lk-btn">
+                      Réserver {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {!selProb && isDesktop && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 300, color: T.textLo, fontSize: 14, gap: 12 }}>
+                {Icon.key(T.textLo, 36)}
+                <span>Sélectionnez un type d'intervention</span>
+              </div>
+            )}
+          </div>
+        </div>
+        {selArt && selProb && !isDesktop && (
           <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, padding: "16px 14px", background: "linear-gradient(0deg,rgba(8,11,20,.98),transparent)", paddingTop: 24 }}>
             <button onClick={book} className="lk-btn">
               Réserver {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
@@ -2225,62 +2424,131 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           <span style={{ color: T.danger, fontSize: 11, fontWeight: 600 }}>LIVE</span>
         </div>
       </div>
-      <div style={{ overflow: "hidden", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
-        {geoLoading && !bk?.clientPos ? (
-          <div style={{ height: 300, background: "#e8e8e4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
-            <div style={{ width: 38, height: 38, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-            <div style={{ color: T.textLo, fontSize: 13 }}>Localisation en cours…</div>
+      {isDesktop ? (
+        /* Desktop: 2 colonnes */
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "55% 45%", overflow: "hidden" }}>
+          {/* Gauche: carte GPS */}
+          <div style={{ overflow: "hidden", borderRight: `1px solid ${T.border}` }}>
+            {geoLoading && !bk?.clientPos ? (
+              <div style={{ height: "100%", background: "#e8e8e4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
+                <div style={{ width: 38, height: 38, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                <div style={{ color: T.textLo, fontSize: 13 }}>Localisation en cours…</div>
+              </div>
+            ) : (
+              <div style={{ height: "100%" }}>
+                <LiveMap
+                  progress={progress}
+                  artisanColor={art?.color || T.accent}
+                  clientPos={bk?.clientPos}
+                  artisanPos={artisanGpsPos || bk?.artisanPos}
+                  onRouteReady={setRouteInfo}
+                />
+              </div>
+            )}
           </div>
-        ) : (
-          <LiveMap
-            progress={progress}
-            artisanColor={art?.color || T.accent}
-            clientPos={bk?.clientPos}
-            artisanPos={artisanGpsPos || bk?.artisanPos}
-            onRouteReady={setRouteInfo}
-          />
-        )}
-      </div>
-      <div style={{ flex: 1, background: T.bg, padding: "16px 14px", overflowY: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, background: phase === "arrived" ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.03)", border: `1px solid ${phase === "arrived" ? "rgba(62,207,142,.2)" : T.border}`, borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 11, background: phase === "arrived" ? "rgba(62,207,142,.12)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {phase === "arrived" ? Icon.check(T.success, 20) : Icon.phone(T.textMid, 20)}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: phase === "arrived" ? T.success : T.textHi, fontWeight: 700, fontSize: 14 }}>
-              {phase === "arrived" ? tr.arrived : `${tr.onRoute} · ${routeInfo ? Math.max(0, Math.round((1 - progress) * routeInfo.durationSec / 60)) : Math.max(0, Math.round((1 - progress) * 12))} ${tr.min}`}
+          {/* Droite: infos artisan + progression + boutons */}
+          <div style={{ background: T.bg, padding: "24px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: phase === "arrived" ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.03)", border: `1px solid ${phase === "arrived" ? "rgba(62,207,142,.2)" : T.border}`, borderRadius: 14, padding: "12px 14px" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 11, background: phase === "arrived" ? "rgba(62,207,142,.12)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {phase === "arrived" ? Icon.check(T.success, 20) : Icon.phone(T.textMid, 20)}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: phase === "arrived" ? T.success : T.textHi, fontWeight: 700, fontSize: 14 }}>
+                  {phase === "arrived" ? tr.arrived : `${tr.onRoute} · ${routeInfo ? Math.max(0, Math.round((1 - progress) * routeInfo.durationSec / 60)) : Math.max(0, Math.round((1 - progress) * 12))} ${tr.min}`}
+                </div>
+                <div style={{ color: T.textLo, fontSize: 12 }}>{phase === "arrived" ? tr.openDoor : tr.artisanArriving}</div>
+              </div>
             </div>
-            <div style={{ color: T.textLo, fontSize: 12 }}>{phase === "arrived" ? tr.openDoor : tr.artisanArriving}</div>
-          </div>
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 4, height: 4, overflow: "hidden" }}>
-            <div style={{ height: "100%", borderRadius: 4, background: phase === "arrived" ? T.success : `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
-          </div>
-        </div>
-        {art && (
-          <div className="lk-card" style={{ padding: "13px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
-            <div style={{ width: 46, height: 46, borderRadius: 12, background: `${art.color}15`, border: `1px solid ${art.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: art.color, fontWeight: 800, fontSize: 20 }}>{art.nom.charAt(0)}</span>
+            <div>
+              <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 4, height: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 4, background: phase === "arrived" ? T.success : `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{art.nom}</div>
-              <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
-              <button onClick={() => setShowChat(true)} style={{ flex: 1, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 12, padding: "12px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                {Icon.chat(T.gold, 15)} Chat
+            {art && (
+              <div className="lk-card" style={{ padding: "13px 14px", display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ width: 46, height: 46, borderRadius: 12, background: `${art.color}15`, border: `1px solid ${art.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: art.color, fontWeight: 800, fontSize: 20 }}>{art.nom.charAt(0)}</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{art.nom}</div>
+                  <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
+                  <button onClick={() => setShowChat(true)} style={{ flex: 1, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 12, padding: "12px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                    {Icon.chat(T.gold, 15)} Chat
+                  </button>
+                </div>
+              </div>
+            )}
+            {phase === "arrived" && bk?.montantFinal && (
+              <button onClick={() => setPayModal(true)} className="lk-btn">
+                {Icon.card("#fff", 16)} Payer la facture — {fmt(bk.montantFinal)}
               </button>
-            </div>
+            )}
           </div>
-        )}
-        {phase === "arrived" && bk?.montantFinal && (
-          <button onClick={() => setPayModal(true)} className="lk-btn">
-            {Icon.card("#fff", 16)} Payer la facture — {fmt(bk.montantFinal)}
-          </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* Mobile: layout vertical */
+        <>
+          <div style={{ overflow: "hidden", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
+            {geoLoading && !bk?.clientPos ? (
+              <div style={{ height: 300, background: "#e8e8e4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
+                <div style={{ width: 38, height: 38, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                <div style={{ color: T.textLo, fontSize: 13 }}>Localisation en cours…</div>
+              </div>
+            ) : (
+              <LiveMap
+                progress={progress}
+                artisanColor={art?.color || T.accent}
+                clientPos={bk?.clientPos}
+                artisanPos={artisanGpsPos || bk?.artisanPos}
+                onRouteReady={setRouteInfo}
+              />
+            )}
+          </div>
+          <div style={{ flex: 1, background: T.bg, padding: "16px 14px", overflowY: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: phase === "arrived" ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.03)", border: `1px solid ${phase === "arrived" ? "rgba(62,207,142,.2)" : T.border}`, borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 11, background: phase === "arrived" ? "rgba(62,207,142,.12)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {phase === "arrived" ? Icon.check(T.success, 20) : Icon.phone(T.textMid, 20)}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: phase === "arrived" ? T.success : T.textHi, fontWeight: 700, fontSize: 14 }}>
+                  {phase === "arrived" ? tr.arrived : `${tr.onRoute} · ${routeInfo ? Math.max(0, Math.round((1 - progress) * routeInfo.durationSec / 60)) : Math.max(0, Math.round((1 - progress) * 12))} ${tr.min}`}
+                </div>
+                <div style={{ color: T.textLo, fontSize: 12 }}>{phase === "arrived" ? tr.openDoor : tr.artisanArriving}</div>
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 4, height: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 4, background: phase === "arrived" ? T.success : `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
+              </div>
+            </div>
+            {art && (
+              <div className="lk-card" style={{ padding: "13px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ width: 46, height: 46, borderRadius: 12, background: `${art.color}15`, border: `1px solid ${art.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: art.color, fontWeight: 800, fontSize: 20 }}>{art.nom.charAt(0)}</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{art.nom}</div>
+                  <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
+                  <button onClick={() => setShowChat(true)} style={{ flex: 1, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 12, padding: "12px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                    {Icon.chat(T.gold, 15)} Chat
+                  </button>
+                </div>
+              </div>
+            )}
+            {phase === "arrived" && bk?.montantFinal && (
+              <button onClick={() => setPayModal(true)} className="lk-btn">
+                {Icon.card("#fff", 16)} Payer la facture — {fmt(bk.montantFinal)}
+              </button>
+            )}
+          </div>
+        </>
+      )}
       {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} />}
       {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} />}
     </div>
@@ -2292,6 +2560,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
 /* ─── ADMIN APP ─── */
 function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   const [tab, setTab] = useState("dashboard");
   const [postModal, setPostModal] = useState(false);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 40, region: "Paris" });
@@ -2323,27 +2593,78 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
   })();
   const maxVal = Math.max(...byMonth.map(d => d.value), 1);
 
+  const adminTabs = [
+    { id: "dashboard", l: tr.dashboard },
+    { id: "bons", l: `${tr.adminBonuses} (${adminBons.length})` },
+    { id: "pros", l: tr.craftsmen },
+    { id: "missions", l: tr.allMissions },
+  ];
+
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
-      <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, background: T.grad, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.admin("#fff", 16)}</div>
-          <div>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 15 }}>Admin LOCKR</div>
-            <div style={{ color: T.textLo, fontSize: 11 }}>{tr.dashboard}</div>
+
+      {/* SIDEBAR DESKTOP */}
+      {isDesktop && (
+        <div style={{ width: 200, flexShrink: 0, height: "100vh", position: "sticky", top: 0, background: "#fff", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, background: T.grad, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.admin("#fff", 14)}</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi }}>Admin</div>
+                <div style={{ color: T.textLo, fontSize: 11 }}>LOCKR</div>
+              </div>
+            </div>
+          </div>
+          <nav style={{ flex: 1, padding: "8px 10px" }}>
+            {adminTabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", border: "none", background: tab === t.id ? "rgba(28,28,28,.06)" : "transparent", borderRadius: 10, padding: "11px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: 2, fontFamily: "'Inter',sans-serif", transition: "all .15s", textAlign: "left" }}>
+                <span style={{ color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13 }}>{t.l}</span>
+              </button>
+            ))}
+          </nav>
+          <div style={{ padding: "12px 10px", borderTop: `1px solid ${T.border}` }}>
+            <button onClick={onLogout} style={{ width: "100%", border: "none", background: "transparent", borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
+              {Icon.sign(T.danger, 16)}
+              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>Déconnexion</span>
+            </button>
           </div>
         </div>
-        <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
-      </div>
-      <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
-        {[{ id: "dashboard", l: tr.dashboard }, { id: "bons", l: `${tr.adminBonuses} (${adminBons.length})` }, { id: "pros", l: tr.craftsmen }, { id: "missions", l: tr.allMissions }].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", color: tab === t.id ? T.accent : T.textLo, fontWeight: tab === t.id ? 700 : 400, fontSize: 12, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
-            {t.l}
-          </button>
-        ))}
-      </div>
-      <div style={{ padding: "14px", overflowY: "auto", maxHeight: "calc(100vh - 130px)" }}>
+      )}
+
+      {/* MAIN */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* Header mobile */}
+        {!isDesktop && (
+          <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 32, height: 32, background: T.grad, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.admin("#fff", 16)}</div>
+              <div>
+                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 15 }}>Admin LOCKR</div>
+                <div style={{ color: T.textLo, fontSize: 11 }}>{tr.dashboard}</div>
+              </div>
+            </div>
+            <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
+          </div>
+        )}
+        {/* Desktop header */}
+        {isDesktop && (
+          <div style={{ background: "#fff", padding: "18px 32px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 20 }}>{adminTabs.find(t => t.id === tab)?.l || tr.dashboard}</div>
+            <div style={{ color: T.textMid, fontSize: 13 }}>Admin LOCKR</div>
+          </div>
+        )}
+        {/* Tabs mobile */}
+        {!isDesktop && (
+          <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
+            {adminTabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", color: tab === t.id ? T.accent : T.textLo, fontWeight: tab === t.id ? 700 : 400, fontSize: 12, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, fontFamily: "'Inter',sans-serif", whiteSpace: "nowrap" }}>
+                {t.l}
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={{ padding: "14px", overflowY: "auto", maxWidth: isDesktop ? 1000 : undefined, margin: isDesktop ? "0 auto" : undefined, width: "100%" }}>
         {tab === "dashboard" && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
@@ -2487,6 +2808,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
