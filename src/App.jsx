@@ -191,6 +191,28 @@ const TRANS = {
     missionList: "Missions", subtotal: "Sous-total", yourShare40pct: "Votre part (40%)", totalLabel: "Total",
     // Feature 11 - photo profil
     uploadProfilePhoto: "Uploader une photo de profil",
+    // Pro profil
+    proProfile: "Mon Profil", editProfile: "Modifier mon profil", saveProfile: "Enregistrer les modifications",
+    coverageRadius: "Rayon d'intervention (km)", workSchedule: "Horaires de travail",
+    scheduleUpdated: "Profil mis à jour !", profileDays: "Jours disponibles",
+    monday: "Lun", tuesday: "Mar", wednesday: "Mer", thursday: "Jeu",
+    friday: "Ven", saturday: "Sam", sunday: "Dim",
+    startHour: "Heure de début", endHour: "Heure de fin",
+    myRatings: "Mes évaluations clients", noRatings: "Aucun avis pour l'instant",
+    dossierStatus: "Statut du dossier", dossierApproved: "Dossier validé ✓", dossierRejected: "Dossier rejeté ✗", dossierPending: "En attente de validation",
+    // Admin validations + clients
+    validations: "Validations", pendingPros: "Pros en attente", noPendingPros: "Aucun dossier en attente de validation",
+    approveDossier: "Valider le dossier", rejectDossier: "Rejeter", rejectReason: "Raison du rejet",
+    rejectReasonPlaceholder: "Pourquoi ce dossier est-il rejeté ?", confirmReject: "Confirmer le rejet",
+    allClients: "Clients", clientsCount: "clients inscrits",
+    searchPlaceholder: "Rechercher…",
+    // Litige client + annulation
+    openLitige: "Ouvrir un litige", litigeTitle: "Motif du litige",
+    litigePlaceholder: "Décrivez le problème…", litigeSubmit: "Envoyer le litige",
+    litigeSubmitted: "Litige envoyé — notre équipe vous contactera sous 48h",
+    myLitiges: "Mes litiges", noLitige: "Aucun litige en cours",
+    cancelBooking: "Annuler", bookingCancelled: "Réservation annulée",
+    myProfile: "Mon Profil", saveChanges: "Enregistrer",
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -363,6 +385,28 @@ const TRANS = {
     missionList: "Missions", subtotal: "Subtotal", yourShare40pct: "Your share (40%)", totalLabel: "Total",
     // Feature 11 - profile photo
     uploadProfilePhoto: "Upload profile photo",
+    // Pro profile
+    proProfile: "My Profile", editProfile: "Edit my profile", saveProfile: "Save changes",
+    coverageRadius: "Coverage radius (km)", workSchedule: "Work schedule",
+    scheduleUpdated: "Profile updated!", profileDays: "Available days",
+    monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
+    friday: "Fri", saturday: "Sat", sunday: "Sun",
+    startHour: "Start time", endHour: "End time",
+    myRatings: "Client ratings", noRatings: "No reviews yet",
+    dossierStatus: "Dossier status", dossierApproved: "Dossier approved ✓", dossierRejected: "Dossier rejected ✗", dossierPending: "Pending validation",
+    // Admin
+    validations: "Validations", pendingPros: "Pending pros", noPendingPros: "No dossiers pending validation",
+    approveDossier: "Approve dossier", rejectDossier: "Reject", rejectReason: "Reason for rejection",
+    rejectReasonPlaceholder: "Why is this dossier rejected?", confirmReject: "Confirm rejection",
+    allClients: "Clients", clientsCount: "registered clients",
+    searchPlaceholder: "Search…",
+    // Client litige + cancel
+    openLitige: "Open a dispute", litigeTitle: "Reason for dispute",
+    litigePlaceholder: "Describe the issue…", litigeSubmit: "Submit dispute",
+    litigeSubmitted: "Dispute submitted — our team will contact you within 48h",
+    myLitiges: "My disputes", noLitige: "No open disputes",
+    cancelBooking: "Cancel", bookingCancelled: "Booking cancelled",
+    myProfile: "My Profile", saveChanges: "Save",
   }
 };
 
@@ -551,8 +595,8 @@ const PROBLEMES = [
 const INIT_ACCOUNTS = [
   { id: "c1", role: "client", nom: "Martin Dupont", email: "client@demo.fr", pass: "1234", verified: true, isDemo: true },
   { id: "c2", role: "client", nom: "Sophie Bernard", email: "sophie@demo.fr", pass: "1234", verified: true, isDemo: true },
-  { id: "p1", role: "pro", artisanId: "a1", nom: "Karim Benali", email: "karim@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true },
-  { id: "p2", role: "pro", artisanId: "a2", nom: "Youssef Mrani", email: "youssef@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true },
+  { id: "p1", role: "pro", artisanId: "a1", nom: "Karim Benali", email: "karim@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true, dossierStatus: "approved" },
+  { id: "p2", role: "pro", artisanId: "a2", nom: "Youssef Mrani", email: "youssef@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true, dossierStatus: "approved" },
   { id: "admin1", role: "admin", nom: "Admin LOCKR", email: "admin@lockr.fr", pass: "admin2024", verified: true },
   { id: "admin2", role: "admin", nom: "Soze", email: "soze@lockr.fr", pass: "soze2024", verified: true },
   { id: "admin3", role: "admin", nom: "Emma", email: "emma@lockr.fr", pass: "emma2024", verified: true },
@@ -1329,7 +1373,8 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
       id: uid(), role: "pro", artisanId: "a" + uid(),
       nom: prenom + " " + nom, email, pass, verified: false,
       photo: null, ville, tel, transport, siret, iban, certif,
-      hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile,
+      hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile, dossierStatus: "pending",
+      dossierStatus: "pending",
     };
     setPending(acc);
     setModal(true);
@@ -2469,6 +2514,135 @@ function ChatIntervention({ bookingId, account, interventionChats, setInterventi
   );
 }
 
+/* ─── PRO PROFILE TAB ─── */
+function ProProfileTab({ account, setAccounts, bookings, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [ville, setVille] = useState(account.ville || "");
+  const [transport, setTransport] = useState(account.transport || "voiture");
+  const [iban, setIban] = useState(account.iban || "");
+  const [radius, setRadius] = useState(account.radius || 10);
+  const [saved, setSaved] = useState(false);
+  const DAYS_DEF = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false, start: "08:00", end: "19:00" };
+  const [schedule, setSchedule] = useState(account.schedule || DAYS_DEF);
+  const DAYS = [
+    { id: "mon", l: tr.monday }, { id: "tue", l: tr.tuesday }, { id: "wed", l: tr.wednesday },
+    { id: "thu", l: tr.thursday }, { id: "fri", l: tr.friday }, { id: "sat", l: tr.saturday },
+    { id: "sun", l: tr.sunday },
+  ];
+  const myDone = bookings.filter(b => b.artisanId === account.artisanId && b.statut === "terminée");
+  const ratings = myDone.filter(b => b.satisfactionNote);
+  const avgNote = ratings.length ? (ratings.reduce((s, b) => s + b.satisfactionNote, 0) / ratings.length).toFixed(1) : null;
+  const dossierStatus = account.dossierStatus || "approved";
+  const statusColor = dossierStatus === "approved" ? T.success : dossierStatus === "rejected" ? T.danger : T.warn;
+  const statusLabel = dossierStatus === "approved" ? tr.dossierApproved : dossierStatus === "rejected" ? tr.dossierRejected : tr.dossierPending;
+
+  const save = () => {
+    setAccounts(p => p.map(a => a.id === account.id ? { ...a, ville, transport, iban, radius, schedule } : a));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  return (
+    <div style={{ padding: "14px", overflowY: "auto" }}>
+      {saved && (
+        <div style={{ background: "rgba(30,158,107,.1)", border: "1px solid rgba(30,158,107,.25)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, color: T.success, fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 8, animation: "fadeUp .2s ease" }}>
+          {Icon.check(T.success, 14)} {tr.scheduleUpdated}
+        </div>
+      )}
+      {/* Statut dossier */}
+      <div className="lk-card" style={{ padding: "14px", marginBottom: 14 }}>
+        <div style={{ color: T.textLo, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".7px", marginBottom: 8 }}>{tr.dossierStatus}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: statusColor }} />
+          <span style={{ color: statusColor, fontWeight: 700, fontSize: 14 }}>{statusLabel}</span>
+        </div>
+        {dossierStatus === "rejected" && account.rejectReason && (
+          <div style={{ color: T.textMid, fontSize: 12, marginTop: 8, background: "rgba(220,38,38,.05)", borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}>{account.rejectReason}</div>
+        )}
+        {dossierStatus === "pending" && (
+          <div style={{ color: T.textMid, fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>Notre équipe vérifie votre dossier sous 48h.</div>
+        )}
+      </div>
+
+      {/* Avis clients */}
+      <div className="lk-card" style={{ padding: "14px", marginBottom: 14 }}>
+        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.myRatings}</div>
+        {ratings.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "16px 0", color: T.textLo, fontSize: 13 }}>{Icon.star(T.textLo, 26)}<div style={{ marginTop: 8 }}>{tr.noRatings}</div></div>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+              <div style={{ fontSize: 36, fontWeight: 900, color: T.gold }}>{avgNote}</div>
+              <div>
+                <div style={{ display: "flex", gap: 3 }}>{[1,2,3,4,5].map(s => <span key={s}>{Icon.star(parseFloat(avgNote) >= s ? T.gold : "rgba(0,0,0,.12)", 18)}</span>)}</div>
+                <div style={{ color: T.textLo, fontSize: 12, marginTop: 3 }}>{ratings.length} {tr.reviews}</div>
+              </div>
+            </div>
+            {ratings.slice(-3).reverse().map(b => (
+              <div key={b.id} style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 10 }}>
+                <div style={{ display: "flex", gap: 2, marginBottom: 4 }}>{[1,2,3,4,5].map(s => <span key={s}>{Icon.star(b.satisfactionNote >= s ? T.gold : "rgba(0,0,0,.12)", 13)}</span>)}</div>
+                {b.satisfactionComment && <div style={{ color: T.textMid, fontSize: 12, fontStyle: "italic", lineHeight: 1.5 }}>"{b.satisfactionComment}"</div>}
+                <div style={{ color: T.textLo, fontSize: 11, marginTop: 4 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* Infos modifiables */}
+      <div className="lk-card" style={{ padding: "14px", marginBottom: 14 }}>
+        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>{Icon.user(T.accent, 15)} {tr.editProfile}</div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="lk-label">{tr.city}</label>
+          <input className="lk-input" value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="lk-label">{tr.transport}</label>
+          <select className="lk-input" value={transport} onChange={e => setTransport(e.target.value)} style={{ cursor: "pointer" }}>
+            <option value="voiture">{tr.car}</option>
+            <option value="scooter">{tr.scooter}</option>
+            <option value="moto">{tr.motorcycle}</option>
+            <option value="velo">{tr.bicycle}</option>
+            <option value="pied">{tr.onFoot}</option>
+          </select>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label className="lk-label">{tr.ibanLabel}</label>
+          <input className="lk-input" value={iban} onChange={e => setIban(e.target.value.toUpperCase())} placeholder="FR76 XXXX XXXX XXXX" />
+        </div>
+        <div style={{ marginBottom: 4 }}>
+          <label className="lk-label">{tr.coverageRadius} : {radius} km</label>
+          <input type="range" min={5} max={50} step={5} value={radius} onChange={e => setRadius(parseInt(e.target.value))} style={{ width: "100%", accentColor: T.accent }} />
+          <div style={{ display: "flex", justifyContent: "space-between", color: T.textLo, fontSize: 11, marginTop: 2 }}>
+            <span>5 km</span><span style={{ color: T.accent, fontWeight: 600 }}>{radius} km</span><span>50 km</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Planning */}
+      <div className="lk-card" style={{ padding: "14px", marginBottom: 14 }}>
+        <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>{Icon.calendar(T.accent, 15)} {tr.workSchedule}</div>
+        <div style={{ marginBottom: 14 }}>
+          <label className="lk-label">{tr.profileDays}</label>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+            {DAYS.map(d => (
+              <button key={d.id} onClick={() => setSchedule(s => ({ ...s, [d.id]: !s[d.id] }))} style={{ background: schedule[d.id] ? T.grad : "rgba(0,0,0,.04)", border: `1px solid ${schedule[d.id] ? T.accent : "rgba(0,0,0,.1)"}`, borderRadius: 8, padding: "7px 11px", color: schedule[d.id] ? "#fff" : T.textMid, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
+                {d.l}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div><label className="lk-label">{tr.startHour}</label><input type="time" className="lk-input" value={schedule.start} onChange={e => setSchedule(s => ({ ...s, start: e.target.value }))} /></div>
+          <div><label className="lk-label">{tr.endHour}</label><input type="time" className="lk-input" value={schedule.end} onChange={e => setSchedule(s => ({ ...s, end: e.target.value }))} /></div>
+        </div>
+      </div>
+
+      <button onClick={save} className="lk-btn">{Icon.check("#fff", 15)} {tr.saveProfile}</button>
+    </div>
+  );
+}
+
 /* ─── PRO APP ─── */
 function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -2570,6 +2744,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     { id: "calendar", icon: Icon.calendar, l: tr.calendarTab },
     { id: "stats", icon: Icon.chart, l: tr.stats },
     { id: "history", icon: Icon.hist, l: tr.history },
+    { id: "profil", icon: Icon.user, l: tr.proProfile },
   ];
 
   return (
@@ -2883,6 +3058,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               </div>
             </div>
           ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />)}
+          {tab === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
           {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
           {tab === "history" && (
@@ -2938,6 +3114,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [payModal, setPayModal] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  // Litige + profil
+  const [litigeModal, setLitigeModal] = useState(null);
+  const [litigeText, setLitigeText] = useState("");
+  const [litigeSubmitted, setLitigeSubmitted] = useState(false);
+  const [litiges, setLitiges] = useState([]);
+  const [profileModal, setProfileModal] = useState(false);
+  const [editNom, setEditNom] = useState(account.nom || "");
+  const [editVille, setEditVille] = useState(account.ville || "");
   // Feature 3 & 4: devis + acompte
   const [devisModal, setDevisModal] = useState(false);
   const [pendingBookData, setPendingBookData] = useState(null);
@@ -3086,6 +3270,50 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           onClose={() => { setBookings(p => p.map(b => b.id === satisfactionBk.id ? { ...b, satisfactionDone: true } : b)); setSatisfactionBk(null); }}
         />
       )}
+      {profileModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 20 }}>{tr.myProfile}</div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.firstname + " / " + tr.lastname}</label>
+              <input className="lk-input" value={editNom} onChange={e => setEditNom(e.target.value)} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label className="lk-label">{tr.city}</label>
+              <input className="lk-input" value={editVille} onChange={e => setEditVille(e.target.value)} placeholder="Paris" />
+            </div>
+            <div style={{ background: "rgba(0,0,0,.03)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
+              <div style={{ color: T.textLo, fontSize: 12, marginBottom: 4 }}>{tr.email}</div>
+              <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{account.email}</div>
+            </div>
+            <button onClick={() => setProfileModal(false)} className="lk-btn" style={{ marginBottom: 10 }}>{tr.saveChanges}</button>
+            <button onClick={() => setProfileModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>
+      )}
+      {litigeModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            {!litigeSubmitted ? (
+              <>
+                <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 4 }}>{tr.openLitige}</div>
+                <div style={{ color: T.textLo, fontSize: 13, marginBottom: 16 }}>{PROBLEMES.find(p => p.id === litigeModal.probleme)?.label} · {litigeModal.clientNom}</div>
+                <label className="lk-label">{tr.litigeTitle}</label>
+                <textarea className="lk-input" value={litigeText} onChange={e => setLitigeText(e.target.value)} placeholder={tr.litigePlaceholder} rows={4} style={{ resize: "none", marginBottom: 16 }} />
+                <button onClick={() => { setLitiges(p => [...p, { id: uid(), bookingId: litigeModal.id, text: litigeText, createdAt: ts() }]); setLitigeSubmitted(true); setTimeout(() => { setLitigeModal(null); setLitigeSubmitted(false); }, 2500); }} disabled={!litigeText.trim()} className="lk-btn" style={{ marginBottom: 10 }}>{tr.litigeSubmit}</button>
+                <button onClick={() => setLitigeModal(null)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "20px 10px" }}>
+                <div style={{ width: 72, height: 72, background: "rgba(62,207,142,.1)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>{Icon.check(T.success, 30)}</div>
+                <div style={{ color: T.success, fontWeight: 700, fontSize: 15, lineHeight: 1.5 }}>{tr.litigeSubmitted}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -3100,6 +3328,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {clientPos && <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(30,158,107,.08)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 20, padding: "4px 10px" }}>{Icon.pin(T.success, 11)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.gpsActive}</span></div>}
           {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
+          <button onClick={() => setProfileModal(true)} style={{ background: "none", border: "1px solid rgba(124,58,237,.2)", borderRadius: 8, padding: "6px 9px", cursor: "pointer", display: "flex", alignItems: "center", color: T.accent, fontFamily: "'Inter',sans-serif" }}>{Icon.user(T.accent, 15)}</button>
           <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
         </div>
       </div>
@@ -3143,16 +3372,28 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {myBk.slice(-3).reverse().map(b => {
                     const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
+                    const hasLitige = litiges.find(l => l.bookingId === b.id);
                     return (
-                      <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                          <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
-                          <div>
-                            <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
-                            <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
+                      <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (b.statut === "assignée" || (b.statut === "terminée" && !hasLitige)) ? 8 : 0 }}>
+                          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
+                            <div>
+                              <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                              <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
+                            </div>
                           </div>
+                          <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
                         </div>
-                        <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
+                        {b.statut === "assignée" && (
+                          <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée" } : x))} style={{ width: "100%", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.cancelBooking}</button>
+                        )}
+                        {b.statut === "terminée" && !hasLitige && (
+                          <button onClick={() => { setLitigeModal(b); setLitigeText(""); setLitigeSubmitted(false); }} style={{ width: "100%", background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.15)", borderRadius: 8, padding: "7px", color: T.warn, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.openLitige}</button>
+                        )}
+                        {b.statut === "terminée" && hasLitige && (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0" }}>{Icon.check(T.success, 12)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>Litige ouvert</span></div>
+                        )}
                       </div>
                     );
                   })}
@@ -3168,16 +3409,28 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {myBk.slice().reverse().map(b => {
                   const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
+                  const hasLitige = litiges.find(l => l.bookingId === b.id);
                   return (
-                    <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
-                        <div>
-                          <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
-                          <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
+                    <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (b.statut === "assignée" || (b.statut === "terminée" && !hasLitige)) ? 8 : 0 }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
+                          <div>
+                            <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                            <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
+                          </div>
                         </div>
+                        <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
                       </div>
-                      <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
+                      {b.statut === "assignée" && (
+                        <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée" } : x))} style={{ width: "100%", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.cancelBooking}</button>
+                      )}
+                      {b.statut === "terminée" && !hasLitige && (
+                        <button onClick={() => { setLitigeModal(b); setLitigeText(""); setLitigeSubmitted(false); }} style={{ width: "100%", background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.15)", borderRadius: 8, padding: "7px", color: T.warn, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.openLitige}</button>
+                      )}
+                      {b.statut === "terminée" && hasLitige && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{Icon.check(T.success, 12)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.litigeSubmitted.split("—")[0].trim()}</span></div>
+                      )}
                     </div>
                   );
                 })}
@@ -3441,6 +3694,11 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   // Feature 7: ban
   const [banTarget, setBanTarget] = useState(null);
   const [banReason, setBanReason] = useState("");
+  // Nouvelles fonctions
+  const [searchPros, setSearchPros] = useState("");
+  const [searchMissions, setSearchMissions] = useState("");
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const allDone = bookings.filter(b => b.statut === "terminée");
   const totalCA = allDone.reduce((s, b) => s + (b.montantFinal || 0), 0);
@@ -3474,6 +3732,8 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     { id: "pros", l: tr.craftsmen },
     { id: "missions", l: tr.allMissions },
     { id: "bannissements", l: tr.bannissements },
+    { id: "validations", l: `${tr.validations} (${accounts.filter(a => a.role === "pro" && a.dossierStatus === "pending").length})` },
+    { id: "clients", l: tr.allClients },
   ];
 
   return (
@@ -3597,7 +3857,8 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
         {tab === "pros" && (
           <>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.registeredCraftsmen} ({proAccounts.length})</div>
-            {proAccounts.map(pro => {
+            <div style={{ marginBottom: 14 }}><input className="lk-input" value={searchPros} onChange={e => setSearchPros(e.target.value)} placeholder={tr.searchPlaceholder} /></div>
+            {proAccounts.filter(pro => !searchPros || pro.nom.toLowerCase().includes(searchPros.toLowerCase()) || (pro.email || "").toLowerCase().includes(searchPros.toLowerCase())).map(pro => {
               const proMissions = allDone.filter(b => b.artisanId === pro.artisanId);
               const isBanned = bannedList.some(b => b.email === pro.email);
               return (
@@ -3642,6 +3903,158 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             ))}
           </>
         )}
+        {tab === "validations" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.pendingPros}</div>
+            {(() => {
+              const pendingPros = accounts.filter(a => a.role === "pro" && a.dossierStatus === "pending");
+              if (pendingPros.length === 0) return (
+                <div style={{ textAlign: "center", padding: "48px 20px" }}>
+                  {Icon.check(T.success, 36)}
+                  <div style={{ color: T.success, fontWeight: 700, fontSize: 15, marginTop: 12 }}>{tr.noPendingPros}</div>
+                </div>
+              );
+              return pendingPros.map(pro => (
+                <div key={pro.id} className="lk-card" style={{ padding: "16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(124,58,237,.1)", border: "2px solid rgba(124,58,237,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: T.accent, fontWeight: 700, fontSize: 18 }}>{pro.nom.charAt(0)}</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 15 }}>{pro.nom}</div>
+                      <div style={{ color: T.textLo, fontSize: 12 }}>{pro.email} · {pro.ville || "—"}</div>
+                      <div style={{ color: T.warn, fontSize: 11, fontWeight: 600, marginTop: 2 }}>{tr.dossierPending}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
+                    {[{ l: "SIRET", v: pro.siret ? pro.siret.slice(0,6) + "…" : "—" }, { l: "CNI", v: pro.hasIdCard ? "✓" : "✗" }, { l: "Assurance", v: pro.hasInsurance ? "✓" : "✗" }].map(item => (
+                      <div key={item.l} style={{ background: "rgba(0,0,0,.03)", borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
+                        <div style={{ color: T.textLo, fontSize: 10, marginBottom: 3 }}>{item.l}</div>
+                        <div style={{ color: item.v === "✓" ? T.success : item.v === "✗" ? T.danger : T.textMid, fontWeight: 700, fontSize: 12 }}>{item.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button onClick={() => setAccounts(p => p.map(a => a.id === pro.id ? { ...a, dossierStatus: "approved" } : a))} style={{ background: "rgba(30,158,107,.1)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "11px", color: T.success, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                      {Icon.check(T.success, 14)} {tr.approveDossier}
+                    </button>
+                    <button onClick={() => { setRejectTarget(pro); setRejectReason(""); }} style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "11px", color: T.danger, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                      {Icon.x(T.danger, 14)} {tr.rejectDossier}
+                    </button>
+                  </div>
+                </div>
+              ));
+            })()}
+          </>
+        )}
+        {tab === "clients" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.allClients} ({accounts.filter(a => a.role === "client").length} {tr.clientsCount})</div>
+            <div style={{ marginBottom: 14 }}><input className="lk-input" value={searchPros} onChange={e => setSearchPros(e.target.value)} placeholder={tr.searchPlaceholder} /></div>
+            {accounts.filter(a => a.role === "client" && (!searchPros || a.nom.toLowerCase().includes(searchPros.toLowerCase()) || (a.email || "").toLowerCase().includes(searchPros.toLowerCase()))).map(client => {
+              const clientMissions = bookings.filter(b => b.clientId === client.id);
+              const isBanned = bannedList.some(b => b.email === client.email);
+              return (
+                <div key={client.id} className="lk-card" style={{ padding: "14px", marginBottom: 10, opacity: isBanned ? .5 : 1 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(201,160,48,.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: T.gold, fontWeight: 700, fontSize: 16 }}>{client.nom.charAt(0)}</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{client.nom}</div>
+                      <div style={{ color: T.textLo, fontSize: 12 }}>{client.email} · {client.ville || "—"}</div>
+                      {client.isDemo && <span style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.2)", color: T.warn, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20 }}>{tr.demoAccount}</span>}
+                      {isBanned && <span style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", color: T.danger, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, marginLeft: 4 }}>BANNI</span>}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: T.accent, fontWeight: 700, fontSize: 16 }}>{clientMissions.length}</div>
+                      <div style={{ color: T.textLo, fontSize: 11 }}>missions</div>
+                      {!isBanned && <button onClick={() => { setBanTarget(client); setBanReason(""); }} style={{ marginTop: 6, background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "4px 10px", color: T.danger, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.banUser}</button>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+        {tab === "validations" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.pendingPros}</div>
+            {(() => {
+              const pendingPros = accounts.filter(a => a.role === "pro" && a.dossierStatus === "pending");
+              if (pendingPros.length === 0) return (
+                <div style={{ textAlign: "center", padding: "48px 20px" }}>
+                  {Icon.check(T.success, 36)}
+                  <div style={{ color: T.success, fontWeight: 700, fontSize: 15, marginTop: 12 }}>{tr.noPendingPros}</div>
+                </div>
+              );
+              return pendingPros.map(pro => (
+                <div key={pro.id} className="lk-card" style={{ padding: "16px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(124,58,237,.1)", border: "2px solid rgba(124,58,237,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: T.accent, fontWeight: 700, fontSize: 18 }}>{pro.nom.charAt(0)}</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 15 }}>{pro.nom}</div>
+                      <div style={{ color: T.textLo, fontSize: 12 }}>{pro.email} · {pro.ville || "—"}</div>
+                      <div style={{ color: T.warn, fontSize: 11, fontWeight: 600, marginTop: 2 }}>{tr.dossierPending}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
+                    {[{ l: "SIRET", v: pro.siret || "—" }, { l: "CNI", v: pro.hasIdCard ? "✓" : "✗" }, { l: "Assurance", v: pro.hasInsurance ? "✓" : "✗" }].map(item => (
+                      <div key={item.l} style={{ background: "rgba(0,0,0,.03)", borderRadius: 8, padding: "8px 10px", textAlign: "center" }}>
+                        <div style={{ color: T.textLo, fontSize: 10, marginBottom: 3 }}>{item.l}</div>
+                        <div style={{ color: item.v === "✓" ? T.success : item.v === "✗" ? T.danger : T.textMid, fontWeight: 700, fontSize: 12 }}>{item.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <button onClick={() => setAccounts(p => p.map(a => a.id === pro.id ? { ...a, dossierStatus: "approved" } : a))} style={{ background: "rgba(30,158,107,.1)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "11px", color: T.success, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                      {Icon.check(T.success, 14)} {tr.approveDossier}
+                    </button>
+                    <button onClick={() => { setRejectTarget(pro); setRejectReason(""); }} style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "11px", color: T.danger, fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                      {Icon.x(T.danger, 14)} {tr.rejectDossier}
+                    </button>
+                  </div>
+                </div>
+              ));
+            })()}
+          </>
+        )}
+        {tab === "clients" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.allClients} ({accounts.filter(a => a.role === "client").length} {tr.clientsCount})</div>
+            <div style={{ marginBottom: 14 }}>
+              <input className="lk-input" value={searchPros} onChange={e => setSearchPros(e.target.value)} placeholder={tr.searchPlaceholder} />
+            </div>
+            {accounts.filter(a => a.role === "client" && (!searchPros || a.nom.toLowerCase().includes(searchPros.toLowerCase()) || a.email.toLowerCase().includes(searchPros.toLowerCase()))).map(client => {
+              const clientMissions = bookings.filter(b => b.clientId === client.id);
+              const isBanned = bannedList.some(b => b.email === client.email);
+              return (
+                <div key={client.id} className="lk-card" style={{ padding: "14px", marginBottom: 10, opacity: isBanned ? .5 : 1 }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(201,160,48,.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ color: T.gold, fontWeight: 700, fontSize: 16 }}>{client.nom.charAt(0)}</span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{client.nom}</div>
+                      <div style={{ color: T.textLo, fontSize: 12 }}>{client.email}</div>
+                      {client.isDemo && <span style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.2)", color: T.warn, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20 }}>{tr.demoAccount}</span>}
+                      {isBanned && <span style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", color: T.danger, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, marginLeft: 4 }}>BANNI</span>}
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: T.accent, fontWeight: 700, fontSize: 14 }}>{clientMissions.length}</div>
+                      <div style={{ color: T.textLo, fontSize: 11 }}>missions</div>
+                      {!isBanned && (
+                        <button onClick={() => { setBanTarget(client); setBanReason(""); }} style={{ marginTop: 6, background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "4px 10px", color: T.danger, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.banUser}</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
         {tab === "missions" && (
           <>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.allMissionsLabel} ({allDone.length})</div>
@@ -3676,6 +4089,35 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
           </>
         )}
       </div>
+      {rejectTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ color: T.danger, fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{tr.rejectDossier}</div>
+            <div style={{ color: T.textMid, fontSize: 13, marginBottom: 16 }}>{rejectTarget.nom} · {rejectTarget.email}</div>
+            <label className="lk-label">{tr.rejectReason}</label>
+            <textarea className="lk-input" value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder={tr.rejectReasonPlaceholder} rows={3} style={{ resize: "none", marginBottom: 16 }} />
+            <button onClick={() => { setAccounts(p => p.map(a => a.id === rejectTarget.id ? { ...a, dossierStatus: "rejected", rejectReason } : a)); setRejectTarget(null); setRejectReason(""); }} className="lk-btn" style={{ marginBottom: 10, background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>{tr.confirmReject}</button>
+            <button onClick={() => setRejectTarget(null)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>
+      )}
+      {rejectTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ color: T.danger, fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{tr.rejectDossier}</div>
+            <div style={{ color: T.textMid, fontSize: 13, marginBottom: 16 }}>{rejectTarget.nom} · {rejectTarget.email}</div>
+            <label className="lk-label">{tr.rejectReason}</label>
+            <textarea className="lk-input" value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder={tr.rejectReasonPlaceholder} rows={3} style={{ resize: "none", marginBottom: 16 }} />
+            <button onClick={() => {
+              setAccounts(p => p.map(a => a.id === rejectTarget.id ? { ...a, dossierStatus: "rejected", rejectReason } : a));
+              setRejectTarget(null); setRejectReason("");
+            }} className="lk-btn" style={{ marginBottom: 10, background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>{tr.confirmReject}</button>
+            <button onClick={() => setRejectTarget(null)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>
+      )}
       {banTarget && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
