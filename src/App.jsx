@@ -647,10 +647,10 @@ body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;backgroun
 .lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,58,237,.45)}
 .lk-btn:active{transform:translateY(0)}
 .lk-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
-.lk-ghost{background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:rgba(28,28,28,.7);font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.lk-ghost:hover{background:#f8f8f6;border-color:rgba(0,0,0,.2)}
-.lk-card{background:#ffffff;border:1px solid rgba(124,58,237,.1);border-radius:16px;transition:all .2s;box-shadow:0 2px 12px rgba(124,58,237,.07)}
-.lk-card:hover{border-color:rgba(124,58,237,.3);box-shadow:0 4px 20px rgba(124,58,237,.14)}
+.lk-ghost{background:#fff;border:1.5px solid rgba(124,58,237,.25);border-radius:10px;color:#5b21b6;font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(124,58,237,.1)}
+.lk-ghost:hover{background:#faf5ff;border-color:rgba(124,58,237,.5);box-shadow:0 4px 14px rgba(124,58,237,.18)}
+.lk-card{background:#ffffff;border:1.5px solid rgba(124,58,237,.15);border-radius:16px;transition:all .2s;box-shadow:0 4px 18px rgba(124,58,237,.1)}
+.lk-card:hover{border-color:rgba(124,58,237,.38);box-shadow:0 6px 26px rgba(124,58,237,.18)}
 .lk-input{width:100%;background:#f8f8f6;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:#1c1c1c;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;font-family:'Inter',sans-serif}
 .lk-input:focus{border-color:rgba(124,58,237,.5);background:#ffffff;box-shadow:0 0 0 3px rgba(124,58,237,.12)}
 .lk-input::placeholder{color:rgba(28,28,28,.3)}
@@ -668,7 +668,7 @@ select.lk-input option{background:#ffffff;color:#1c1c1c}
   .lk-desktop-main{max-width:900px;margin:0 auto;padding:28px 32px}
   .lk-desktop-2col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
   .lk-desktop-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-  .lk-card:hover{transform:translateY(-1px);border-color:rgba(124,58,237,.28)}
+  .lk-card:hover{transform:translateY(-2px);border-color:rgba(124,58,237,.38);box-shadow:0 8px 30px rgba(124,58,237,.2)}
 }
 @media (max-width: 767px) {
   .lk-desktop-sidebar{display:none!important}
@@ -1598,7 +1598,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
             {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
           </div>
-          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 18px", textAlign: "center" }}>
+          <div style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 14, padding: "16px 18px", textAlign: "center", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
             <div style={{ color: T.textMid, fontSize: 13, marginBottom: 10 }}>{tr.notMember}</div>
             <button onClick={onRegister} className="lk-ghost" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               {tr.freeAccount} {Icon.arrow(T.accent, 14)}
@@ -2039,7 +2039,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 18)}</div>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
                 <div>
                   <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
                   <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
@@ -3119,7 +3119,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 380px", gap: 28 }}>
           {/* Colonne principale */}
           <div>
-            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.12)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
+            <div style={{ background: "linear-gradient(135deg,rgba(124,58,237,.08),rgba(91,33,182,.05))", border: "1.5px solid rgba(124,58,237,.2)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
               <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {account.nom.split(" ")[0]} 👋</div>
               <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
               <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
@@ -3128,8 +3128,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
               <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3,1fr)" : "1fr 1fr", gap: 10 }}>
                 {PROBLEMES.slice(0, isDesktop ? 6 : 4).map(p => { const IC = PROB_ICONS[p.id]; return (
-                  <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
-                    <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>{IC ? IC(T.accent, 16) : null}</div>
+                  <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", background: "#fff" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>{IC ? IC(T.accent, 18) : null}</div>
                     <div style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{p.label}</div>
                     {p.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginTop: 4 }}>URGENT</div>}
                   </button>
@@ -3144,7 +3144,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                   {myBk.slice(-3).reverse().map(b => {
                     const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
                     return (
-                      <div key={b.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
                           <div>
@@ -3169,7 +3169,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 {myBk.slice().reverse().map(b => {
                   const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
                   return (
-                    <div key={b.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
                         <div>
@@ -3204,8 +3204,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
               {PROBLEMES.map(p => { const IC = PROB_ICONS[p.id]; return (
-                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selProb?.id === p.id ? T.borderHi : T.border}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(28,28,28,.07)" : "rgba(0,0,0,.03)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.textLo, 18) : null}</div>
+                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${selProb?.id === p.id ? T.accent : "rgba(124,58,237,.18)"}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif", boxShadow: selProb?.id === p.id ? "0 4px 16px rgba(124,58,237,.2)" : "0 2px 8px rgba(124,58,237,.07)", transition: "all .15s" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(124,58,237,.12)" : "rgba(124,58,237,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.accent, 18) : null}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{p.label}</div>
                     <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{p.desc}</div>
@@ -3226,7 +3226,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {artisanList.map(a => (
-                    <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? T.card : "rgba(255,255,255,.02)", border: `1px solid ${selArt?.id === a.id ? T.borderHi : T.border}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s" }}>
+                    <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${selArt?.id === a.id ? T.accent : "rgba(124,58,237,.18)"}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s", boxShadow: selArt?.id === a.id ? "0 4px 16px rgba(124,58,237,.2)" : "0 2px 8px rgba(124,58,237,.07)" }}>
                       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                         <div style={{ width: 46, height: 46, borderRadius: 12, background: `${a.color}15`, border: `1px solid ${a.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ color: a.color, fontWeight: 800, fontSize: 18 }}>{a.nom.charAt(0)}</span>
