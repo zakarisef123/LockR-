@@ -97,6 +97,16 @@ const TRANS = {
     joinFree: "Rejoignez LOCKR gratuitement",
     settlementLabel: "Règlement de prestation",
     lang: "EN",
+    // Calendar
+    calendarTab: "Calendrier", noRdvDay: "Aucun RDV ce jour", rdvLabel: "RDV", rdv2Label: "2ème RDV",
+    immediateIntervention: "Intervention immédiate", scheduleRdv: "Planifier un RDV",
+    rdvDate: "Date du RDV", paymentDateLabel: "Date de paiement prévue",
+    acompteLabel: "Acompte (€)", acompteOptional: "Acompte optionnel",
+    acompteReceived: "Acompte reçu ✓", markAcompte: "Marquer acompte reçu",
+    acompteNotif: "Acompte à recevoir :", secondRdv: "2ème RDV prévu le",
+    confirmRdv: "Confirmer le RDV", bonAcceptMode: "Mode d'intervention",
+    noRdv: "Aucun RDV planifié", today: "Aujourd'hui",
+    rdvScheduled: "RDV planifié !", acompteSet: "Acompte noté",
     // PayModal
     payBtn: "Payer",
     // ClotureModal
@@ -231,6 +241,16 @@ const TRANS = {
     joinFree: "Join LOCKR for free",
     settlementLabel: "Service payment",
     lang: "FR",
+    // Calendar
+    calendarTab: "Calendar", noRdvDay: "No appointment this day", rdvLabel: "Appt", rdv2Label: "2nd Appt",
+    immediateIntervention: "Immediate intervention", scheduleRdv: "Schedule appointment",
+    rdvDate: "Appointment date", paymentDateLabel: "Expected payment date",
+    acompteLabel: "Deposit (€)", acompteOptional: "Optional deposit",
+    acompteReceived: "Deposit received ✓", markAcompte: "Mark deposit received",
+    acompteNotif: "Deposit to collect:", secondRdv: "2nd appt scheduled on",
+    confirmRdv: "Confirm appointment", bonAcceptMode: "Intervention mode",
+    noRdv: "No scheduled appointment", today: "Today",
+    rdvScheduled: "Appointment scheduled!", acompteSet: "Deposit noted",
     // PayModal
     payBtn: "Pay",
     // ClotureModal
@@ -1747,16 +1767,30 @@ function ChatRegional({ account, chatMessages, setChatMessages, lang = "fr" }) {
 function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [postModal, setPostModal] = useState(false);
+  const [rdvModal, setRdvModal] = useState(null);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [notif, setNotif] = useState(null);
   const myRegion = account.ville || "Paris";
   const bonsRegion = bons.filter(b => b.region === myRegion);
 
-  const prendre = (bon) => {
-    const bk = { id: uid(), clientId: "ext", artisanId: account.artisanId, clientNom: "Client LOCKR", adresse: bon.adresse, probleme: bon.probleme, montant: bon.montantEstime, statut: "assignée", createdAt: ts(), bonType: bon.postedBy === "platform" ? "platform" : "partner", bonId: bon.id, techPct: bon.techPct };
+  const prendre = (bon) => setRdvModal(bon);
+
+  const confirmRdv = (bon, rdvOpts) => {
+    const bk = {
+      id: uid(), clientId: "ext", artisanId: account.artisanId,
+      clientNom: "Client LOCKR", adresse: bon.adresse, probleme: bon.probleme,
+      montant: bon.montantEstime, statut: "assignée", createdAt: ts(),
+      bonType: bon.postedBy === "platform" ? "platform" : "partner",
+      bonId: bon.id, techPct: bon.techPct,
+      rdvDate: rdvOpts.rdvDate, paymentDate: rdvOpts.paymentDate,
+      acompte: rdvOpts.acompte || 0, acompteRecu: false,
+      rdv2Date: rdvOpts.rdv2Date, urgence: bon.urgence,
+    };
     setBookings(p => [...p, bk]);
     setBons(p => p.filter(b => b.id !== bon.id));
-    setNotif(`${tr.bonusAccepted} ${bon.titre}`);
+    setRdvModal(null);
+    const suffix = rdvOpts.rdvDate ? ` — ${tr.rdvScheduled}` : "";
+    setNotif(`${tr.bonusAccepted} ${bon.titre}${suffix}`);
     setTimeout(() => setNotif(null), 4000);
   };
   const poster = () => {
@@ -1806,6 +1840,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
           </div>
         );
       })}
+      {rdvModal && <RdvAcceptModal bon={rdvModal} onConfirm={(opts) => confirmRdv(rdvModal, opts)} onCancel={() => setRdvModal(null)} lang={lang} />}
       {postModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
@@ -1869,6 +1904,276 @@ function EarningsChart({ bookings, artisanId, lang = "fr" }) {
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         {data.map((d, i) => <div key={i} style={{ flex: 1, textAlign: "center", color: i === data.length - 1 ? T.success : T.textLo, fontSize: 11 }}>{d.label}</div>)}
+      </div>
+    </div>
+  );
+}
+
+/* ─── CALENDAR SCREEN ─── */
+function CalendarScreen({ bookings, artisanId, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const now = new Date();
+  const [curYear, setCurYear] = useState(now.getFullYear());
+  const [curMonth, setCurMonth] = useState(now.getMonth());
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const myBk = bookings.filter(b => b.artisanId === artisanId && (b.rdvDate || b.rdv2Date));
+
+  const prevMonth = () => { if (curMonth === 0) { setCurYear(y => y - 1); setCurMonth(11); } else setCurMonth(m => m - 1); };
+  const nextMonth = () => { if (curMonth === 11) { setCurYear(y => y + 1); setCurMonth(0); } else setCurMonth(m => m + 1); };
+
+  const MONTH_NAMES_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  const MONTH_NAMES_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DAY_NAMES_FR = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+  const DAY_NAMES_EN = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const monthNames = lang === "en" ? MONTH_NAMES_EN : MONTH_NAMES_FR;
+  const dayNames = lang === "en" ? DAY_NAMES_EN : DAY_NAMES_FR;
+
+  const firstDay = new Date(curYear, curMonth, 1);
+  const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+  // Monday-based offset
+  let startOffset = firstDay.getDay() - 1; if (startOffset < 0) startOffset = 6;
+  const cells = Array(startOffset).fill(null).concat(Array.from({ length: daysInMonth }, (_, i) => i + 1));
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const getRdvForDay = (day) => {
+    if (!day) return [];
+    const dateStr = `${curYear}-${String(curMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return myBk.filter(b => {
+      const r1 = b.rdvDate ? b.rdvDate.slice(0, 10) : null;
+      const r2 = b.rdv2Date ? b.rdv2Date.slice(0, 10) : null;
+      return r1 === dateStr || r2 === dateStr;
+    });
+  };
+
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const isToday = (day) => day && `${curYear}-${String(curMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` === todayStr;
+
+  const selBk = selectedDay ? getRdvForDay(selectedDay) : [];
+
+  return (
+    <div style={{ padding: "14px" }}>
+      {/* Header mois */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <button onClick={prevMonth} className="lk-ghost" style={{ padding: "8px 12px" }}>{Icon.back()}</button>
+        <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, letterSpacing: "-.3px" }}>
+          {monthNames[curMonth]} {curYear}
+        </div>
+        <button onClick={nextMonth} className="lk-ghost" style={{ padding: "8px 12px" }}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      {/* Grille jours */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 14 }}>
+        {dayNames.map(d => (
+          <div key={d} style={{ textAlign: "center", color: T.textLo, fontSize: 11, fontWeight: 700, padding: "4px 0", textTransform: "uppercase", letterSpacing: ".5px" }}>{d}</div>
+        ))}
+        {cells.map((day, i) => {
+          const rdvs = getRdvForDay(day);
+          const hasRdv = rdvs.length > 0;
+          const isTd = isToday(day);
+          return (
+            <button key={i} onClick={() => day && setSelectedDay(day === selectedDay ? null : day)}
+              style={{
+                border: `1px solid ${selectedDay === day ? T.accent : isTd ? T.gold : "rgba(0,0,0,.07)"}`,
+                borderRadius: 10, padding: "8px 4px", cursor: day ? "pointer" : "default",
+                background: selectedDay === day ? "rgba(28,28,28,.06)" : isTd ? "rgba(201,160,48,.08)" : "transparent",
+                minHeight: 52, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                fontFamily: "'Inter',sans-serif", transition: "all .15s"
+              }}>
+              {day && <>
+                <span style={{ color: isTd ? T.gold : T.textHi, fontWeight: isTd ? 800 : 500, fontSize: 14 }}>{day}</span>
+                {hasRdv && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "center" }}>
+                    {rdvs.slice(0, 2).map((b, j) => (
+                      <div key={j} style={{ width: 7, height: 7, borderRadius: "50%", background: b.urgence ? T.danger : T.gold }} />
+                    ))}
+                  </div>
+                )}
+                {rdvs.length > 2 && <span style={{ fontSize: 9, color: T.textLo }}>+{rdvs.length - 2}</span>}
+              </>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Détail du jour sélectionné */}
+      {selectedDay && (
+        <div style={{ animation: "fadeUp .2s ease" }}>
+          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+            {selectedDay} {monthNames[curMonth]} — {selBk.length > 0 ? `${selBk.length} RDV` : tr.noRdvDay}
+          </div>
+          {selBk.length === 0 && (
+            <div style={{ textAlign: "center", padding: "24px", color: T.textLo, fontSize: 13 }}>
+              {Icon.calendar(T.textLo, 28)}
+              <div style={{ marginTop: 8 }}>{tr.noRdvDay}</div>
+            </div>
+          )}
+          {selBk.map(b => {
+            const pr = PROBLEMES.find(p => p.id === b.probleme);
+            const isRdv1 = b.rdvDate && b.rdvDate.slice(0, 10) === `${curYear}-${String(curMonth+1).padStart(2,"0")}-${String(selectedDay).padStart(2,"0")}`;
+            return (
+              <div key={b.id} className="lk-card" style={{ padding: "12px 14px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                      <div style={{ background: isRdv1 ? "rgba(201,160,48,.1)" : "rgba(30,158,107,.1)", borderRadius: 6, padding: "2px 7px" }}>
+                        <span style={{ color: isRdv1 ? T.gold : T.success, fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>
+                          {isRdv1 ? tr.rdvLabel : tr.rdv2Label}
+                        </span>
+                      </div>
+                      {b.urgence && <div className="lk-tag-urgent">{tr.urgent}</div>}
+                    </div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pr?.label || b.probleme}</div>
+                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{b.clientNom} · {b.adresse}</div>
+                  </div>
+                  <div style={{ color: T.accent, fontWeight: 800, fontSize: 16 }}>{fmt(b.montant)}</div>
+                </div>
+                {b.rdvDate && isRdv1 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                    {Icon.clock(T.gold, 13)}
+                    <span style={{ color: T.textMid, fontSize: 12 }}>{new Date(b.rdvDate).toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+                    {b.acompte > 0 && !b.acompteRecu && (
+                      <span style={{ color: T.warn, fontSize: 11, fontWeight: 600, marginLeft: 8 }}>{tr.acompteNotif} {fmt(b.acompte)}</span>
+                    )}
+                    {b.acompte > 0 && b.acompteRecu && (
+                      <span style={{ color: T.success, fontSize: 11, fontWeight: 600, marginLeft: 8 }}>{tr.acompteReceived}</span>
+                    )}
+                  </div>
+                )}
+                {b.rdv2Date && !isRdv1 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                    {Icon.clock(T.success, 13)}
+                    <span style={{ color: T.textMid, fontSize: 12 }}>{new Date(b.rdv2Date).toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                )}
+                {b.paymentDate && isRdv1 && (
+                  <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                    {Icon.euro(T.textLo, 12)}
+                    <span style={{ color: T.textLo, fontSize: 11 }}>{tr.paymentDateLabel} : {new Date(b.paymentDate).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB")}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── RDV ACCEPT MODAL ─── */
+function RdvAcceptModal({ bon, onConfirm, onCancel, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [mode, setMode] = useState("immediate");
+  const [rdvDate, setRdvDate] = useState("");
+  const [rdvTime, setRdvTime] = useState("09:00");
+  const [paymentDate, setPaymentDate] = useState("");
+  const [acompte, setAcompte] = useState("");
+  const [hasAcompte, setHasAcompte] = useState(false);
+  const [hasRdv2, setHasRdv2] = useState(false);
+  const [rdv2Date, setRdv2Date] = useState("");
+  const [rdv2Time, setRdv2Time] = useState("14:00");
+
+  const minDate = new Date().toISOString().slice(0, 10);
+
+  const handleConfirm = () => {
+    const rdvIso = mode === "rdv" && rdvDate ? `${rdvDate}T${rdvTime}:00` : null;
+    const rdv2Iso = hasRdv2 && rdv2Date ? `${rdv2Date}T${rdv2Time}:00` : null;
+    onConfirm({
+      mode,
+      rdvDate: rdvIso,
+      paymentDate: paymentDate || null,
+      acompte: hasAcompte ? parseFloat(acompte) || 0 : 0,
+      rdv2Date: rdv2Iso,
+    });
+  };
+
+  const canConfirm = mode === "immediate" || (mode === "rdv" && rdvDate);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "90vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{bon.titre}</div>
+        <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20 }}>{bon.adresse}</div>
+
+        {/* Mode selector */}
+        <div style={{ marginBottom: 20 }}>
+          <label className="lk-label">{tr.bonAcceptMode}</label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button onClick={() => setMode("immediate")} style={{ background: mode === "immediate" ? "rgba(28,28,28,.07)" : "transparent", border: `1.5px solid ${mode === "immediate" ? T.accent : "rgba(0,0,0,.1)"}`, borderRadius: 12, padding: "14px 10px", cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>⚡</div>
+              <div style={{ color: mode === "immediate" ? T.accent : T.textMid, fontWeight: 700, fontSize: 12 }}>{tr.immediateIntervention}</div>
+            </button>
+            <button onClick={() => setMode("rdv")} style={{ background: mode === "rdv" ? "rgba(201,160,48,.08)" : "transparent", border: `1.5px solid ${mode === "rdv" ? T.gold : "rgba(0,0,0,.1)"}`, borderRadius: 12, padding: "14px 10px", cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>📅</div>
+              <div style={{ color: mode === "rdv" ? T.gold : T.textMid, fontWeight: 700, fontSize: 12 }}>{tr.scheduleRdv}</div>
+            </button>
+          </div>
+        </div>
+
+        {mode === "rdv" && (
+          <div style={{ animation: "fadeUp .2s ease" }}>
+            {/* Date + heure RDV */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, marginBottom: 14 }}>
+              <div>
+                <label className="lk-label">{tr.rdvDate}</label>
+                <input type="date" className="lk-input" value={rdvDate} min={minDate} onChange={e => setRdvDate(e.target.value)} />
+              </div>
+              <div style={{ width: 100 }}>
+                <label className="lk-label">Heure</label>
+                <input type="time" className="lk-input" value={rdvTime} onChange={e => setRdvTime(e.target.value)} />
+              </div>
+            </div>
+
+            {/* Date paiement */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.paymentDateLabel} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({lang === "fr" ? "optionnel" : "optional"})</span></label>
+              <input type="date" className="lk-input" value={paymentDate} min={rdvDate || minDate} onChange={e => setPaymentDate(e.target.value)} />
+            </div>
+
+            {/* Acompte */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <input type="checkbox" id="acompteChk" checked={hasAcompte} onChange={e => setHasAcompte(e.target.checked)} style={{ accentColor: T.gold, width: 16, height: 16 }} />
+                <label htmlFor="acompteChk" style={{ color: T.textMid, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>{tr.acompteOptional}</label>
+              </div>
+              {hasAcompte && (
+                <div style={{ position: "relative", animation: "fadeUp .15s ease" }}>
+                  <input type="number" className="lk-input" value={acompte} onChange={e => setAcompte(e.target.value)} placeholder="50" style={{ paddingRight: 36 }} />
+                  <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.textLo, fontWeight: 700 }}>€</div>
+                </div>
+              )}
+            </div>
+
+            {/* 2ème RDV */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <input type="checkbox" id="rdv2Chk" checked={hasRdv2} onChange={e => setHasRdv2(e.target.checked)} style={{ accentColor: T.success, width: 16, height: 16 }} />
+                <label htmlFor="rdv2Chk" style={{ color: T.textMid, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>{tr.rdv2Label}</label>
+              </div>
+              {hasRdv2 && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, animation: "fadeUp .15s ease" }}>
+                  <div>
+                    <label className="lk-label">{tr.rdv2Label} — date</label>
+                    <input type="date" className="lk-input" value={rdv2Date} min={rdvDate || minDate} onChange={e => setRdv2Date(e.target.value)} />
+                  </div>
+                  <div style={{ width: 100 }}>
+                    <label className="lk-label">Heure</label>
+                    <input type="time" className="lk-input" value={rdv2Time} onChange={e => setRdv2Time(e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <button onClick={handleConfirm} disabled={!canConfirm} className="lk-btn" style={{ marginBottom: 10 }}>
+          {mode === "rdv" ? tr.confirmRdv : tr.acceptBonus} {Icon.check("#fff", 14)}
+        </button>
+        <button onClick={onCancel} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
       </div>
     </div>
   );
@@ -1982,11 +2287,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const bk = activeMission ? (bookings.find(b => b.id === activeMission.id) || activeMission) : null;
   const prob = bk ? PROBLEMES.find(p => p.id === bk.probleme) : null;
 
+  const acomptesPending = myM.filter(b => b.acompte > 0 && !b.acompteRecu && b.statut !== "terminée");
+
   const tabs = [
     { id: "missions", icon: Icon.list, l: tr.missions },
     { id: "active", icon: Icon.map, l: tr.inProgress },
     { id: "bons", icon: Icon.percent, l: tr.bonuses },
-    { id: "chat", icon: Icon.chat, l: tr.chat },
+    { id: "calendar", icon: Icon.calendar, l: tr.calendarTab },
     { id: "stats", icon: Icon.chart, l: tr.stats },
     { id: "history", icon: Icon.hist, l: tr.history },
   ];
@@ -2036,8 +2343,18 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           <nav style={{ flex: 1, padding: "8px 10px" }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", border: "none", background: tab === t.id ? "rgba(28,28,28,.06)" : "transparent", borderRadius: 10, padding: "11px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: 2, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
-                {t.icon(tab === t.id ? T.accent : T.textLo, 16)}
+                <div style={{ position: "relative" }}>
+                  {t.icon(tab === t.id ? T.accent : T.textLo, 16)}
+                  {t.id === "missions" && acomptesPending.length > 0 && (
+                    <div style={{ position: "absolute", top: -4, right: -5, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #fff" }} />
+                  )}
+                </div>
                 <span style={{ color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13 }}>{t.l}</span>
+                {t.id === "missions" && acomptesPending.length > 0 && (
+                  <div style={{ marginLeft: "auto", background: T.warn, borderRadius: 10, padding: "1px 6px", minWidth: 18, textAlign: "center" }}>
+                    <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>{acomptesPending.length}</span>
+                  </div>
+                )}
               </button>
             ))}
           </nav>
@@ -2090,8 +2407,11 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
         {!isDesktop && (
           <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
             {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif" }}>
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif", position: "relative" }}>
                 {t.icon(tab === t.id ? T.accent : T.textLo, 14)}
+                {t.id === "missions" && acomptesPending.length > 0 && (
+                  <div style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #f4f4f2" }} />
+                )}
                 <span style={{ color: tab === t.id ? T.accent : T.textLo, fontSize: 10, fontWeight: 600 }}>{t.l}</span>
               </button>
             ))}
@@ -2132,14 +2452,40 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       <div style={{ flex: 1, background: T.bg, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 12)}<span style={{ color: T.textLo, fontSize: 12 }}>{b.adresse}</span></div>
                       <div style={{ background: "rgba(62,207,142,.06)", borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.euro(T.success, 12)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{fmt(b.montant * 0.40)}</span></div>
                     </div>
+                    {b.rdvDate && (
+                      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        <div style={{ background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+                          {Icon.calendar(T.gold, 12)}
+                          <span style={{ color: T.gold, fontSize: 11, fontWeight: 600 }}>{new Date(b.rdvDate).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB")} {new Date(b.rdvDate).toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                        {b.acompte > 0 && !b.acompteRecu && (
+                          <div style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.2)", borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+                            {Icon.euro(T.warn, 11)}
+                            <span style={{ color: T.warn, fontSize: 11, fontWeight: 600 }}>{tr.acompteNotif} {fmt(b.acompte)}</span>
+                          </div>
+                        )}
+                        {b.acompte > 0 && b.acompteRecu && (
+                          <div style={{ background: "rgba(30,158,107,.07)", borderRadius: 8, padding: "5px 10px" }}>
+                            <span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.acompteReceived}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div style={{ marginTop: 10 }}>
                       {!isActive ? (
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
-                          <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-                            {Icon.chat(T.gold, 13)} Chat
-                          </button>
-                          <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
+                            <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                              {Icon.chat(T.gold, 13)} Chat
+                            </button>
+                            <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
+                          </div>
+                          {b.acompte > 0 && !b.acompteRecu && (
+                            <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, acompteRecu: true } : x))} style={{ width: "100%", background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                              {Icon.check(T.warn, 13)} {tr.markAcompte} ({fmt(b.acompte)})
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <button onClick={() => { setActiveMission(b); setTab("active"); }} style={{ width: "100%", background: "rgba(28,28,28,.04)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
@@ -2184,7 +2530,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             </div>
           )}
           {tab === "bons" && <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />}
-          {tab === "chat" && <ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} lang={lang} />}
+          {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
           {tab === "history" && (
             <div style={{ padding: "14px" }}>
