@@ -162,6 +162,34 @@ const TRANS = {
     bonusPublished: "Bon publié !", urgentLabel: "Urgent",
     titleLabel: "Titre", addressLabel: "Adresse", typeLabel: "Type", regionSelectLabel: "Région",
     estimatedAmountLabel: "Montant estimé (€)",
+    // Feature 1 - photos avant/après
+    photoAvant: "Photo avant", photoApres: "Photo après", takePhotoAvant: "Prendre photo avant", takePhotoApres: "Prendre photo après",
+    photoAvantRequired: "Une photo avant est requise avant de démarrer", photoAdded: "Photo ajoutée",
+    // Feature 2 - blocage paiement
+    paymentBlockTitle: "Accès bloqué", paymentBlockMsg: "Vous avez des interventions impayées depuis plus de 7 jours. Résolvez-les pour recevoir de nouvelles propositions.",
+    // Feature 3 - devis
+    devisTitle: "Devis", devisAccept: "J'accepte le devis", devisAcceptRequired: "Vous devez accepter le devis pour continuer",
+    devisService: "Prestation", devisArtisan: "Artisan", devisTotal: "Montant total", devisDeposit: "Acompte (50%)",
+    devisModified: "Devis modifié", viewDevis: "Voir le devis", finalAmountLabel: "Montant final",
+    // Feature 4 - acompte
+    depositRequired: "Un acompte de 50% est requis pour confirmer la réservation", depositPayment: "Paiement de l'acompte",
+    // Feature 5 - audio
+    recordDiscussion: "Enregistrer la discussion", startRecording: "Démarrer l'enregistrement", stopRecording: "Arrêter", audioRecorded: "Enregistrement sauvegardé",
+    // Feature 6 - satisfaction
+    satisfactionTitle: "Comment s'est passée votre intervention ?", satisfactionSubmit: "Envoyer", satisfactionComment: "Commentaire (optionnel)",
+    satisfactionDone: "Merci pour votre retour !",
+    // Feature 7 - bannissement
+    bannissements: "Bannissements", banUser: "Bannir", banReason: "Raison", banDate: "Date", bannedBy: "Banni par",
+    banConfirmTitle: "Bannir l'utilisateur", banReasonPlaceholder: "Raison du bannissement…", banConfirm: "Confirmer le ban",
+    accountBanned: "Votre compte a été suspendu. Veuillez contacter le support.",
+    // Feature 9 - priorité
+    recommendedForYou: "Recommandé pour vous",
+    // Feature 10 - facture mensuelle
+    monthlyReport: "Facture mensuelle", downloadMonthlyReport: "Télécharger ma facture du mois",
+    monthlyReportTitle: "Récapitulatif mensuel", printDownload: "Imprimer / Télécharger",
+    missionList: "Missions", subtotal: "Sous-total", yourShare40pct: "Votre part (40%)", totalLabel: "Total",
+    // Feature 11 - photo profil
+    uploadProfilePhoto: "Uploader une photo de profil",
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -306,6 +334,34 @@ const TRANS = {
     bonusPublished: "Bonus published!", urgentLabel: "Urgent",
     titleLabel: "Title", addressLabel: "Address", typeLabel: "Type", regionSelectLabel: "Region",
     estimatedAmountLabel: "Estimated amount (€)",
+    // Feature 1 - photos before/after
+    photoAvant: "Before photo", photoApres: "After photo", takePhotoAvant: "Take before photo", takePhotoApres: "Take after photo",
+    photoAvantRequired: "A before photo is required before starting", photoAdded: "Photo added",
+    // Feature 2 - payment block
+    paymentBlockTitle: "Access blocked", paymentBlockMsg: "You have unpaid interventions older than 7 days. Please resolve them to receive new proposals.",
+    // Feature 3 - quote
+    devisTitle: "Quote", devisAccept: "I accept the quote", devisAcceptRequired: "You must accept the quote to continue",
+    devisService: "Service", devisArtisan: "Craftsman", devisTotal: "Total amount", devisDeposit: "Deposit (50%)",
+    devisModified: "Modified quote", viewDevis: "View quote", finalAmountLabel: "Final amount",
+    // Feature 4 - deposit
+    depositRequired: "A 50% deposit is required to confirm booking", depositPayment: "Deposit payment",
+    // Feature 5 - audio
+    recordDiscussion: "Record discussion", startRecording: "Start recording", stopRecording: "Stop", audioRecorded: "Recording saved",
+    // Feature 6 - satisfaction
+    satisfactionTitle: "How was your intervention?", satisfactionSubmit: "Submit", satisfactionComment: "Comment (optional)",
+    satisfactionDone: "Thank you for your feedback!",
+    // Feature 7 - ban
+    bannissements: "Bans", banUser: "Ban", banReason: "Reason", banDate: "Date", bannedBy: "Banned by",
+    banConfirmTitle: "Ban user", banReasonPlaceholder: "Reason for ban…", banConfirm: "Confirm ban",
+    accountBanned: "Your account has been suspended. Please contact support.",
+    // Feature 9 - priority
+    recommendedForYou: "Recommended for you",
+    // Feature 10 - monthly invoice
+    monthlyReport: "Monthly invoice", downloadMonthlyReport: "Download my monthly invoice",
+    monthlyReportTitle: "Monthly summary", printDownload: "Print / Download",
+    missionList: "Missions", subtotal: "Subtotal", yourShare40pct: "Your share (40%)", totalLabel: "Total",
+    // Feature 11 - profile photo
+    uploadProfilePhoto: "Upload profile photo",
   }
 };
 
@@ -1553,6 +1609,156 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
   );
 }
 
+/* ─── DEVIS MODAL (Feature 3) ─── */
+function DevisModal({ artisan, probleme, montant, onAccept, onCancel, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [accepted, setAccepted] = useState(false);
+  const [err, setErr] = useState("");
+  const acompte = montant * 0.5;
+  const prob = PROBLEMES.find(p => p.id === probleme);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          {Icon.file(T.accent, 20)}
+          <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17 }}>{tr.devisTitle}</div>
+        </div>
+        <div style={{ background: "rgba(0,0,0,.02)", border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ color: T.textLo, fontSize: 13 }}>{tr.devisService}</span>
+            <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{prob?.label || probleme}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ color: T.textLo, fontSize: 13 }}>{tr.devisArtisan}</span>
+            <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{artisan?.nom || "—"}</span>
+          </div>
+          <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10, marginTop: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ color: T.textLo, fontSize: 13 }}>{tr.devisTotal}</span>
+              <span style={{ color: T.textHi, fontWeight: 800, fontSize: 16 }}>{fmt(montant)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: T.textMid, fontSize: 13 }}>{tr.devisDeposit}</span>
+              <span style={{ color: T.accent2, fontWeight: 700, fontSize: 14 }}>{fmt(acompte)}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 16, cursor: "pointer" }} onClick={() => { setAccepted(a => !a); setErr(""); }}>
+          <div style={{ width: 20, height: 20, border: `2px solid ${accepted ? T.success : "rgba(0,0,0,.2)"}`, borderRadius: 5, background: accepted ? "rgba(30,158,107,.12)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+            {accepted && Icon.check(T.success, 12)}
+          </div>
+          <span style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>{tr.devisAccept}</span>
+        </div>
+        {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 12 }}>{err}</div>}
+        <button onClick={() => { if (!accepted) return setErr(tr.devisAcceptRequired); onAccept(); }} className="lk-btn" style={{ marginBottom: 10 }}>
+          {tr.depositPayment} — {fmt(acompte)} {Icon.arrow("#fff", 14)}
+        </button>
+        <button onClick={onCancel} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SATISFACTION MODAL (Feature 6) ─── */
+function SatisfactionModal({ booking, onSubmit, onClose, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [note, setNote] = useState(0);
+  const [comment, setComment] = useState("");
+  const prob = PROBLEMES.find(p => p.id === booking?.probleme);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.satisfactionTitle}</div>
+          <div style={{ color: T.textLo, fontSize: 13 }}>{prob?.label}</div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 20 }}>
+          {[1, 2, 3, 4, 5].map(s => (
+            <button key={s} onClick={() => setNote(s)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+              {Icon.star(note >= s ? T.gold : "rgba(0,0,0,.15)", 32)}
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="lk-input"
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+          placeholder={tr.satisfactionComment}
+          rows={3}
+          style={{ resize: "none", marginBottom: 16 }}
+        />
+        <button onClick={() => { if (note > 0) onSubmit(note, comment); }} disabled={note === 0} className="lk-btn" style={{ marginBottom: 10 }}>
+          {tr.satisfactionSubmit} {Icon.check("#fff", 14)}
+        </button>
+        <button onClick={onClose} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── MONTHLY REPORT MODAL (Feature 10) ─── */
+function MonthlyReportModal({ bookings, artisanId, lang = "fr", onClose }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const now = new Date();
+  const thisMonth = bookings.filter(b => {
+    if (b.artisanId !== artisanId || b.statut !== "terminée") return false;
+    const d = new Date(b.createdAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const subtotal = thisMonth.reduce((s, b) => s + (b.montantFinal || 0), 0);
+  const share = subtotal * 0.40;
+  const MONTH_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  const MONTH_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const monthName = (lang === "en" ? MONTH_EN : MONTH_FR)[now.getMonth()];
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }} id="monthly-report-print">
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 4 }}>{tr.monthlyReportTitle}</div>
+        <div style={{ color: T.textLo, fontSize: 13, marginBottom: 20 }}>{monthName} {now.getFullYear()}</div>
+        {thisMonth.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "32px 0", color: T.textLo, fontSize: 14 }}>{tr.noCompletedMission}</div>
+        ) : (
+          <>
+            {thisMonth.map(b => {
+              const pr = PROBLEMES.find(p => p.id === b.probleme);
+              return (
+                <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
+                  <div>
+                    <div style={{ color: T.textHi, fontSize: 13, fontWeight: 600 }}>{pr?.label || b.probleme}</div>
+                    <div style={{ color: T.textLo, fontSize: 11 }}>{fmtDate(b.createdAt)} · {b.clientNom}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{fmt(b.montantFinal || 0)}</div>
+                    <div style={{ color: T.success, fontSize: 11 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 16, borderTop: `2px solid ${T.accent}`, paddingTop: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: T.textMid, fontSize: 13 }}>{tr.subtotal}</span>
+                <span style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{fmt(subtotal)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: T.textMid, fontSize: 13 }}>{tr.yourShare40pct}</span>
+                <span style={{ color: T.success, fontWeight: 800, fontSize: 16 }}>{fmt(share)}</span>
+              </div>
+            </div>
+          </>
+        )}
+        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+          <button onClick={() => window.print()} className="lk-btn" style={{ flex: 1 }}>{tr.printDownload}</button>
+          <button onClick={onClose} className="lk-ghost" style={{ flex: 1 }}>{tr.close}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── CLOTURE MODAL ─── */
 function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -1771,7 +1977,15 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [notif, setNotif] = useState(null);
   const myRegion = account.ville || "Paris";
-  const bonsRegion = bons.filter(b => b.region === myRegion);
+  // Feature 9: sort by pro score
+  const proScore = bookings.filter(b => b.artisanId === account.artisanId && b.statut === "terminée").length;
+  const bonsRegion = bons.filter(b => b.region === myRegion).slice().sort((a, b) => {
+    if (proScore >= 5) {
+      if (a.urgence && !b.urgence) return -1;
+      if (!a.urgence && b.urgence) return 1;
+    }
+    return 0;
+  });
 
   const prendre = (bon) => setRdvModal(bon);
 
@@ -1815,9 +2029,13 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
         const IC = PROB_ICONS[bon.probleme] || Icon.tool;
         const isPlatform = bon.postedBy === "platform";
         const techEarn = bon.montantEstime * (bon.techPct / 100);
+        const isRecommended = proScore >= 5 && bon.urgence;
         return (
-          <div key={bon.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
-            {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginBottom: 8 }}>URGENT</div>}
+          <div key={bon.id} className="lk-card" style={{ padding: "14px", marginBottom: 10, border: isRecommended ? `1.5px solid ${T.gold}` : undefined }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: bon.urgence || isRecommended ? 8 : 0, flexWrap: "wrap" }}>
+              {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block" }}>URGENT</div>}
+              {isRecommended && <div style={{ display: "inline-block", background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", color: T.gold, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, letterSpacing: ".3px" }}>{tr.recommendedForYou}</div>}
+            </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 18)}</div>
@@ -2261,6 +2479,17 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const [dispo, setDispo] = useState(true);
   const [clotureModal, setClotureModal] = useState(false);
   const [chatMission, setChatMission] = useState(null);
+  const [monthlyModal, setMonthlyModal] = useState(false);
+  // Feature 1: photos avant/après
+  const [photoAvant, setPhotoAvant] = useState(null);
+  const [photoApres, setPhotoApres] = useState(null);
+  const photoAvantRef = useRef(null);
+  const photoApresRef = useRef(null);
+  // Feature 5: audio recording
+  const [recording, setRecording] = useState(false);
+  const [audioData, setAudioData] = useState(null);
+  const mediaRecRef = useRef(null);
+  const audioChunks = useRef([]);
   const raf = useRef(null);
   const t0 = useRef(null);
   const JOURNEY = 38000;
@@ -2270,19 +2499,63 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const done = myM.filter(b => b.statut === "terminée");
   const earnings = done.reduce((s, b) => s + (b.montantFinal ?? b.montant) * 0.40, 0);
 
+  // Feature 2: payment block check (unpaid > 7 days)
+  const sevenDaysAgo = Date.now() - 7 * 86400000;
+  const hasPaymentBlock = done.some(b => b.statutPaiement === "en_attente" && new Date(b.createdAt).getTime() < sevenDaysAgo);
+
   const startMission = b => {
+    // Feature 8: add rdvDate for immediate missions
+    setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "en_cours", rdvDate: x.rdvDate || new Date().toISOString(), photoAvant } : x));
     setActiveMission(b);
-    setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "en_cours" } : x));
     t0.current = Date.now();
     const run = () => { const t = Math.min((Date.now() - t0.current) / JOURNEY, 1); setProgress(t); if (t < 1) raf.current = requestAnimationFrame(run); };
     raf.current = requestAnimationFrame(run);
   };
   const finishMission = (montantFinal, factureImg, statutPaiement, acompte) => {
-    setBookings(p => p.map(x => x.id === activeMission.id ? { ...x, statut: "terminée", montantFinal, factureImg, statutPaiement } : x));
+    setBookings(p => p.map(x => x.id === activeMission.id ? { ...x, statut: "terminée", montantFinal, factureImg, statutPaiement, photoApres, audioData: audioData || x.audioData } : x));
     cancelAnimationFrame(raf.current);
     setActiveMission(null); setProgress(0); setClotureModal(false);
+    setPhotoAvant(null); setPhotoApres(null); setAudioData(null);
   };
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
+
+  // Feature 5: audio helpers
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      audioChunks.current = [];
+      mr.ondataavailable = e => audioChunks.current.push(e.data);
+      mr.onstop = () => {
+        const blob = new Blob(audioChunks.current, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.onload = ev => setAudioData(ev.target.result);
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mr.start();
+      mediaRecRef.current = mr;
+      setRecording(true);
+    } catch {}
+  };
+  const stopRecording = () => {
+    mediaRecRef.current?.stop();
+    setRecording(false);
+  };
+
+  // Feature 1: photo handlers
+  const handlePhotoAvant = e => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => setPhotoAvant(ev.target.result);
+    r.readAsDataURL(f);
+  };
+  const handlePhotoApres = e => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => setPhotoApres(ev.target.result);
+    r.readAsDataURL(f);
+  };
 
   const bk = activeMission ? (bookings.find(b => b.id === activeMission.id) || activeMission) : null;
   const prob = bk ? PROBLEMES.find(p => p.id === bk.probleme) : null;
@@ -2315,8 +2588,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           {/* Pro info */}
           <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>{account.nom.charAt(0)}</span>
+              <div style={{ position: "relative" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                  {account.photo ? <img src={account.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>{account.nom.charAt(0)}</span>}
+                </div>
+                <input type="file" accept="image/*" style={{ display: "none" }} id="proPhotoInput" onChange={e => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setAccounts(p => p.map(a => a.id === account.id ? { ...a, photo: ev.target.result } : a)); r.readAsDataURL(f); }} />
+                <label htmlFor="proPhotoInput" title={tr.uploadProfilePhoto} style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: T.accent, border: "1.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 8 }}>📷</label>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artisan?.nom || account.nom}</div>
@@ -2431,6 +2708,15 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined }}>
           {tab === "missions" && (
             <div style={{ padding: "14px" }}>
+              {hasPaymentBlock && (
+                <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 14, padding: "16px 18px", marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  {Icon.warning(T.danger, 20)}
+                  <div>
+                    <div style={{ color: T.danger, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{tr.paymentBlockTitle}</div>
+                    <div style={{ color: T.danger, fontSize: 13, opacity: .8 }}>{tr.paymentBlockMsg}</div>
+                  </div>
+                </div>
+              )}
               {active.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noMissionPending}</div>}
               {active.map(b => {
                 const pr = PROBLEMES.find(p => p.id === b.probleme);
@@ -2500,6 +2786,26 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           )}
           {tab === "active" && (
             <div style={{ padding: "14px" }}>
+              {/* Feature 1: Photo avant — before starting mission */}
+              {!activeMission && active.length > 0 && (
+                <div className="lk-card" style={{ padding: "14px", marginBottom: 14 }}>
+                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{tr.photoAvant}</div>
+                  <input ref={photoAvantRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePhotoAvant} />
+                  {!photoAvant ? (
+                    <button onClick={() => photoAvantRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 12, padding: "20px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, fontFamily: "'Inter',sans-serif" }}>
+                      {Icon.cam(T.accent, 24)}
+                      <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{tr.takePhotoAvant}</span>
+                    </button>
+                  ) : (
+                    <div style={{ position: "relative", borderRadius: 10, overflow: "hidden" }}>
+                      <img src={photoAvant} alt="avant" style={{ width: "100%", maxHeight: 160, objectFit: "cover" }} />
+                      <div style={{ position: "absolute", bottom: 8, left: 8 }}>
+                        <span style={{ background: "rgba(62,207,142,.9)", borderRadius: 8, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700 }}>{tr.photoAdded}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {!activeMission ? (
                 <div style={{ textAlign: "center", padding: "52px 20px" }}>
                   <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>{tr.noMissionActive}</div>
@@ -2519,6 +2825,42 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
                     </div>
                   </div>
+                  {/* Feature 5: Audio recording */}
+                  <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{tr.recordDiscussion}</div>
+                    {!audioData ? (
+                      <button onClick={recording ? stopRecording : startRecording} style={{ width: "100%", background: recording ? "rgba(220,38,38,.08)" : "rgba(0,0,0,.03)", border: `1px solid ${recording ? "rgba(220,38,38,.25)" : "rgba(0,0,0,.1)"}`, borderRadius: 10, padding: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: recording ? T.danger : T.textMid, fontWeight: 600, fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: recording ? T.danger : T.textLo, animation: recording ? "blink 1s infinite" : "none" }} />
+                        {recording ? tr.stopRecording : tr.startRecording}
+                      </button>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {Icon.check(T.success, 14)}
+                          <span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{tr.audioRecorded}</span>
+                        </div>
+                        <audio controls src={audioData} style={{ width: "100%" }} />
+                      </div>
+                    )}
+                  </div>
+                  {/* Feature 1: Photo après */}
+                  <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{tr.photoApres}</div>
+                    <input ref={photoApresRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePhotoApres} />
+                    {!photoApres ? (
+                      <button onClick={() => photoApresRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif" }}>
+                        {Icon.cam(T.textMid, 18)}
+                        <span style={{ color: T.textMid, fontWeight: 600, fontSize: 13 }}>{tr.takePhotoApres}</span>
+                      </button>
+                    ) : (
+                      <div style={{ position: "relative", borderRadius: 10, overflow: "hidden" }}>
+                        <img src={photoApres} alt="après" style={{ width: "100%", maxHeight: 130, objectFit: "cover" }} />
+                        <div style={{ position: "absolute", bottom: 6, left: 6 }}>
+                          <span style={{ background: "rgba(62,207,142,.9)", borderRadius: 8, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700 }}>{tr.photoAdded}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                     <a href="tel:0600000000" className="lk-ghost" style={{ flex: 1, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</a>
                     <button onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
@@ -2529,11 +2871,24 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               )}
             </div>
           )}
-          {tab === "bons" && <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />}
+          {tab === "bons" && (hasPaymentBlock ? (
+            <div style={{ padding: "14px" }}>
+              <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 14, padding: "20px 18px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                {Icon.warning(T.danger, 22)}
+                <div>
+                  <div style={{ color: T.danger, fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{tr.paymentBlockTitle}</div>
+                  <div style={{ color: T.danger, fontSize: 13, opacity: .8, lineHeight: 1.5 }}>{tr.paymentBlockMsg}</div>
+                </div>
+              </div>
+            </div>
+          ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />)}
           {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
           {tab === "history" && (
             <div style={{ padding: "14px" }}>
+              <button onClick={() => setMonthlyModal(true)} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 12, padding: "12px 16px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16, fontFamily: "'Inter',sans-serif" }}>
+                {Icon.file("#fff", 15)} {tr.downloadMonthlyReport}
+              </button>
               {done.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noCompletedMission}</div>}
               {done.map(b => {
                 const isPaid = b.statutPaiement === "payé";
@@ -2564,6 +2919,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
       </div>
       {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} lang={lang} />}
       {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
+      {monthlyModal && <MonthlyReportModal bookings={bookings} artisanId={account.artisanId} lang={lang} onClose={() => setMonthlyModal(false)} />}
     </div>
   );
 }
@@ -2581,6 +2937,12 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [payModal, setPayModal] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  // Feature 3 & 4: devis + acompte
+  const [devisModal, setDevisModal] = useState(false);
+  const [pendingBookData, setPendingBookData] = useState(null);
+  const [acompteModal, setAcompteModal] = useState(false);
+  // Feature 6: satisfaction modal
+  const [satisfactionBk, setSatisfactionBk] = useState(null);
   // Position GPS réelle de l'artisan (depuis son compte pro)
   const [artisanGpsPos, setArtisanGpsPos] = useState(null);
   const raf = useRef(null);
@@ -2645,6 +3007,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const book = async () => {
     if (!selArt || !selProb) return;
     const clientLatLng = clientPos ?? [48.8566, 2.3522];
+    const montant = selArt.tarif + (selProb.urgence ? 40 : 0);
 
     // Position de l'artisan : GPS réel si dispo, sinon coordonnées depuis son profil
     let artLat = selArt.lat ?? (clientLatLng[0] + 0.015);
@@ -2656,9 +3019,6 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       if (geocoded) { artLat = geocoded[0]; artLng = geocoded[1]; }
     }
 
-    setArtisanGpsPos([artLat, artLng]);
-    setProgress(0); setRouteInfo(null);
-
     // Adresse client : inverse geocode ou GPS brut
     let adresseClient = clientPos ? `${clientLatLng[0].toFixed(5)}, ${clientLatLng[1].toFixed(5)}` : "Paris, France";
     if (clientPos) {
@@ -2669,11 +3029,29 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       } catch {}
     }
 
+    // Feature 3 & 4: show DevisModal before booking
+    setPendingBookData({ clientLatLng, artLat, artLng, adresseClient, montant });
+    setDevisModal(true);
+  };
+
+  const confirmBookAfterDevis = () => {
+    setDevisModal(false);
+    // Feature 4: show acompte payment
+    setAcompteModal(true);
+  };
+
+  const confirmBookAfterAcompte = () => {
+    setAcompteModal(false);
+    if (!pendingBookData) return;
+    const { clientLatLng, artLat, artLng, adresseClient, montant } = pendingBookData;
+    setArtisanGpsPos([artLat, artLng]);
+    setProgress(0); setRouteInfo(null);
     const b = {
       id: uid(), clientId: account.id, artisanId: selArt.id, clientNom: account.nom,
       adresse: adresseClient, probleme: selProb.id,
-      montant: selArt.tarif + (selProb.urgence ? 40 : 0),
+      montant, acompte: montant * 0.5, acompteClientPaye: true,
       statut: "assignée", createdAt: ts(),
+      rdvDate: new Date().toISOString(), // Feature 8
       clientPos: clientLatLng, artisanPos: [artLat, artLng],
       bonType: "platform",
     };
@@ -2682,9 +3060,33 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     t0.current = null;
     setTimeout(() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "en_route" } : x)), 2000);
     setScreen("tracking");
+    setPendingBookData(null);
   };
 
   const stMap = { assignée: { l: tr.statusAssigned, c: T.accent }, en_route: { l: tr.statusEnRoute, c: T.accent2 }, terminée: { l: tr.statusDone, c: T.success }, en_cours: { l: tr.statusInProgress, c: T.warn } };
+
+  // Feature 6: check if any booking needs satisfaction rating
+  useEffect(() => {
+    const pending = myBk.find(b => b.statut === "terminée" && !b.satisfactionDone);
+    if (pending && !satisfactionBk) setSatisfactionBk(pending);
+  }, [myBk.length]);
+
+  const _modals = (
+    <>
+      {devisModal && selArt && selProb && pendingBookData && (
+        <DevisModal artisan={selArt} probleme={selProb.id} montant={pendingBookData.montant} onAccept={confirmBookAfterDevis} onCancel={() => { setDevisModal(false); setPendingBookData(null); }} lang={lang} />
+      )}
+      {acompteModal && pendingBookData && (
+        <PayModal amount={pendingBookData.montant * 0.5} onClose={() => { setAcompteModal(false); setPendingBookData(null); }} onDone={confirmBookAfterAcompte} lang={lang} />
+      )}
+      {satisfactionBk && (
+        <SatisfactionModal booking={satisfactionBk} lang={lang}
+          onSubmit={(note, comment) => { setBookings(p => p.map(b => b.id === satisfactionBk.id ? { ...b, satisfactionNote: note, satisfactionComment: comment, satisfactionDone: true } : b)); setSatisfactionBk(null); }}
+          onClose={() => { setBookings(p => p.map(b => b.id === satisfactionBk.id ? { ...b, satisfactionDone: true } : b)); setSatisfactionBk(null); }}
+        />
+      )}
+    </>
+  );
 
   if (screen === "home") return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif" }}>
@@ -2783,6 +3185,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           )}
         </div>
       </div>
+      {_modals}
     </div>
   );
 
@@ -2850,7 +3253,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 </div>
                 {selArt && selProb && isDesktop && (
                   <div style={{ marginTop: 20 }}>
-                    <button onClick={book} className="lk-btn">
+                    <button onClick={() => book()} className="lk-btn">
                       {tr.reserveBtn} {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
                     </button>
                   </div>
@@ -2873,6 +3276,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           </div>
         )}
       </div>
+      {_modals}
     </div>
   );
 
@@ -3017,6 +3421,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       )}
       {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} lang={lang} />}
       {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} lang={lang} />}
+      {_modals}
     </div>
   );
 
@@ -3024,7 +3429,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
 }
 
 /* ─── ADMIN APP ─── */
-function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onLogout, lang = "fr", setLang }) {
+function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, onLogout, lang = "fr", setLang, bannedList = [], setBannedList }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -3032,6 +3437,9 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
   const [postModal, setPostModal] = useState(false);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 40, region: "Paris" });
   const [postSuccess, setPostSuccess] = useState(false);
+  // Feature 7: ban
+  const [banTarget, setBanTarget] = useState(null);
+  const [banReason, setBanReason] = useState("");
 
   const allDone = bookings.filter(b => b.statut === "terminée");
   const totalCA = allDone.reduce((s, b) => s + (b.montantFinal || 0), 0);
@@ -3064,6 +3472,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
     { id: "bons", l: `${tr.adminBonuses} (${adminBons.length})` },
     { id: "pros", l: tr.craftsmen },
     { id: "missions", l: tr.allMissions },
+    { id: "bannissements", l: tr.bannissements },
   ];
 
   return (
@@ -3189,8 +3598,9 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.registeredCraftsmen} ({proAccounts.length})</div>
             {proAccounts.map(pro => {
               const proMissions = allDone.filter(b => b.artisanId === pro.artisanId);
+              const isBanned = bannedList.some(b => b.email === pro.email);
               return (
-                <div key={pro.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
+                <div key={pro.id} className="lk-card" style={{ padding: "14px", marginBottom: 10, opacity: isBanned ? .5 : 1 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(28,28,28,.06)", border: "2px solid rgba(28,28,28,.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: T.accent, fontWeight: 700, fontSize: 18 }}>{pro.nom.charAt(0)}</span>
@@ -3199,15 +3609,36 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
                       <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pro.nom}</div>
                       <div style={{ color: T.textLo, fontSize: 12 }}>{pro.ville || "—"}</div>
                       {pro.isDemo && <span style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.2)", color: T.warn, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20 }}>{tr.demoAccount}</span>}
+                      {isBanned && <span style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", color: T.danger, fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, marginLeft: 4 }}>BANNI</span>}
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(proMissions.reduce((s, b) => s + (b.montantFinal || 0) * 0.40, 0))}</div>
                       <div style={{ color: T.textLo, fontSize: 11 }}>{proMissions.length} missions</div>
+                      {!isBanned && (
+                        <button onClick={() => { setBanTarget(pro); setBanReason(""); }} style={{ marginTop: 6, background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "4px 10px", color: T.danger, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.banUser}</button>
+                      )}
                     </div>
                   </div>
                 </div>
               );
             })}
+          </>
+        )}
+        {tab === "bannissements" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>{tr.bannissements} ({bannedList.length})</div>
+            {bannedList.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: T.textLo, fontSize: 13 }}>Aucun bannissement</div>}
+            {bannedList.map(b => (
+              <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{b.nom}</div>
+                  <div style={{ color: T.danger, fontSize: 12 }}>{fmtDate(b.bannedAt)}</div>
+                </div>
+                <div style={{ color: T.textLo, fontSize: 12 }}>{b.email}</div>
+                {b.reason && <div style={{ color: T.textMid, fontSize: 12, marginTop: 4, fontStyle: "italic" }}>{b.reason}</div>}
+                <button onClick={() => setBannedList(p => p.filter(x => x.id !== b.id))} style={{ marginTop: 8, background: "none", border: "1px solid rgba(0,0,0,.1)", borderRadius: 8, padding: "4px 10px", color: T.textMid, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Débannir</button>
+              </div>
+            ))}
           </>
         )}
         {tab === "missions" && (
@@ -3244,6 +3675,22 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
           </>
         )}
       </div>
+      {banTarget && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ color: T.danger, fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{tr.banConfirmTitle}</div>
+            <div style={{ color: T.textMid, fontSize: 13, marginBottom: 16 }}>{banTarget.nom} · {banTarget.email}</div>
+            <label className="lk-label">{tr.banReason}</label>
+            <textarea className="lk-input" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder={tr.banReasonPlaceholder} rows={3} style={{ resize: "none", marginBottom: 16 }} />
+            <button onClick={() => {
+              setBannedList(p => [...p, { id: uid(), nom: banTarget.nom, email: banTarget.email, phone: banTarget.tel || "", reason: banReason, bannedAt: ts(), bannedBy: account.nom, type: banTarget.role }]);
+              setBanTarget(null); setBanReason("");
+            }} className="lk-btn" style={{ marginBottom: 10, background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>{tr.banConfirm}</button>
+            <button onClick={() => setBanTarget(null)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>
+      )}
       {postModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 36px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
@@ -3292,15 +3739,20 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState(INIT_CHAT);
   const [interventionChats, setInterventionChats] = useState({});
   const [lang, setLang] = useState("fr");
+  const [bannedList, setBannedList] = useState([]);
   const logout = () => { setAccount(null); setScreen("login"); };
 
   if (account) {
     if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
     if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} onLogout={logout} lang={lang} setLang={setLang} />;
-    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />;
   }
   if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
   if (screen === "register-client") return <RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
   if (screen === "register-pro") return <RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
-  return <LoginScreen onLogin={setAccount} onRegister={() => setScreen("register-choice")} accounts={accounts} lang={lang} setLang={setLang} />;
+  return <LoginScreen onLogin={(acc) => {
+    const banned = bannedList.find(b => b.email === acc.email);
+    if (banned) { alert((TRANS[lang] || TRANS.fr).accountBanned); return; }
+    setAccount(acc);
+  }} onRegister={() => setScreen("register-choice")} accounts={accounts} lang={lang} setLang={setLang} />;
 }
