@@ -97,6 +97,61 @@ const TRANS = {
     joinFree: "Rejoignez LOCKR gratuitement",
     settlementLabel: "Règlement de prestation",
     lang: "EN",
+    // PayModal
+    payBtn: "Payer",
+    // ClotureModal
+    invoiceAdded: "Facture ajoutée", removeFile: "Supprimer", amountLabel: "Montant", selectImage: "Sélectionnez une image",
+    yourShare40: "Votre part (40%)",
+    // ChatRegional
+    chatProRegion: "Chat Pros",
+    // BonsScreen
+    regionLabel: "Région", bonusAccepted: "Bon accepté !",
+    // ChatIntervention
+    interventionInProgress: "Intervention en cours", chatStart: "Début de la conversation",
+    // ProApp
+    artisanPro: "Artisan Pro", completedStat: "Terminées", netEarnings: "Gains net",
+    progressLabel: "Progression", closeAndInvoice: "Terminer et facturer",
+    noCompletedMission: "Aucune mission terminée", markAsPaid: "Marquer comme payé",
+    earned: "gagnés", dispoShort: "Dispo", indispoShort: "Indispo", gains: "Gains",
+    locating: "Localisation en cours…",
+    // ClientApp
+    statusAssigned: "Assignée", statusEnRoute: "En route", statusDone: "Terminée", statusInProgress: "En cours",
+    noIntervention: "Aucune intervention",
+    payInvoiceBtn: "Payer la facture",
+    selectInterventionType: "Sélectionnez un type d'intervention",
+    reserveBtn: "Réserver",
+    // LoginScreen
+    loginFeature1: "Artisans certifiés & vérifiés", loginFeature2: "Suivi GPS en temps réel", loginFeature3: "Intervention en moins de 30 min",
+    wrongCredentials: "Email ou mot de passe incorrect", notVerified: "Compte non vérifié",
+    loginTitle: "Connexion",
+    // RegisterChoiceScreen
+    chooseProfile: "Choisissez votre profil",
+    clientDesc: "Trouvez un artisan qualifié rapidement. Suivi en temps réel de votre intervention.",
+    getStarted: "Commencer",
+    proDesc: "Recevez des missions près de chez vous. Gérez votre activité et vos revenus.",
+    proDocsRequired: "Documents professionnels requis (SIRET, assurance, pièce d'identité)",
+    // RegisterClientScreen
+    clientRegisterTitle: "Inscription Particulier", clientRegisterSubtitle: "Trouvez un artisan en quelques secondes",
+    createMyAccount: "Créer mon compte", repeatPassword: "Répétez votre mot de passe",
+    // RegisterProScreen
+    joinProLockr: "Rejoignez les pros LOCKR", proRegisterTitle: "Inscription Artisan Pro",
+    stepWord: "Étape", ofWord: "sur",
+    personalInfo: "Informations personnelles", nextStepDocs: "Étape suivante — Documents",
+    proDocuments: "Documents professionnels",
+    proDocsLegalNote: "Ces documents sont requis par la loi et seront vérifiés par notre équipe sous 48h.",
+    siretInvalid: "SIRET invalide (14 chiffres requis)", idCardRequired: "Carte d'identité requise", insuranceRequired: "Attestation d'assurance requise",
+    siretLabel: "Numéro SIRET *", certifLabel: "Certification professionnelle", noCertif: "Aucune certification",
+    certifRgeFull: "RGE — Reconnu Garant de l'Environnement",
+    idCardLabel: "Pièce d'identité * (CNI ou Passeport)", uploadIdCard: "Téléverser CNI / Passeport",
+    insuranceLabel: "Attestation assurance RC Pro *", uploadInsurance: "Téléverser attestation d'assurance",
+    kbisLabel: "Extrait Kbis", uploadKbis: "Téléverser extrait Kbis", optionalWord: "optionnel",
+    ibanLabel: "IBAN (pour vos paiements)",
+    legalWarning: "En soumettant votre dossier, vous certifiez être en règle avec la législation française (auto-entrepreneur, société ou artisan enregistré). LOCKR se réserve le droit de vérifier et rejeter tout dossier incomplet.",
+    submitDossier: "Soumettre mon dossier",
+    // AdminApp
+    bonusPublished: "Bon publié !", urgentLabel: "Urgent",
+    titleLabel: "Titre", addressLabel: "Adresse", typeLabel: "Type", regionSelectLabel: "Région",
+    estimatedAmountLabel: "Montant estimé (€)",
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -176,6 +231,61 @@ const TRANS = {
     joinFree: "Join LOCKR for free",
     settlementLabel: "Service payment",
     lang: "FR",
+    // PayModal
+    payBtn: "Pay",
+    // ClotureModal
+    invoiceAdded: "Invoice added", removeFile: "Remove", amountLabel: "Amount", selectImage: "Please select an image",
+    yourShare40: "Your share (40%)",
+    // ChatRegional
+    chatProRegion: "Pro Chat",
+    // BonsScreen
+    regionLabel: "Region", bonusAccepted: "Bonus accepted!",
+    // ChatIntervention
+    interventionInProgress: "Intervention in progress", chatStart: "Start of conversation",
+    // ProApp
+    artisanPro: "Pro Craftsman", completedStat: "Completed", netEarnings: "Net earnings",
+    progressLabel: "Progress", closeAndInvoice: "Complete & invoice",
+    noCompletedMission: "No completed mission", markAsPaid: "Mark as paid",
+    earned: "earned", dispoShort: "Avail.", indispoShort: "N/A", gains: "Earnings",
+    locating: "Locating…",
+    // ClientApp
+    statusAssigned: "Assigned", statusEnRoute: "En route", statusDone: "Done", statusInProgress: "In progress",
+    noIntervention: "No intervention",
+    payInvoiceBtn: "Pay invoice",
+    selectInterventionType: "Select an intervention type",
+    reserveBtn: "Book",
+    // LoginScreen
+    loginFeature1: "Certified & verified craftsmen", loginFeature2: "Real-time GPS tracking", loginFeature3: "Intervention in under 30 min",
+    wrongCredentials: "Incorrect email or password", notVerified: "Account not verified",
+    loginTitle: "Sign in",
+    // RegisterChoiceScreen
+    chooseProfile: "Choose your profile",
+    clientDesc: "Find a qualified craftsman quickly. Real-time tracking of your intervention.",
+    getStarted: "Get started",
+    proDesc: "Receive missions near you. Manage your activity and revenue.",
+    proDocsRequired: "Professional documents required (SIRET, insurance, ID)",
+    // RegisterClientScreen
+    clientRegisterTitle: "Individual Registration", clientRegisterSubtitle: "Find a craftsman in seconds",
+    createMyAccount: "Create my account", repeatPassword: "Repeat your password",
+    // RegisterProScreen
+    joinProLockr: "Join LOCKR pros", proRegisterTitle: "Pro Craftsman Registration",
+    stepWord: "Step", ofWord: "of",
+    personalInfo: "Personal information", nextStepDocs: "Next step — Documents",
+    proDocuments: "Professional documents",
+    proDocsLegalNote: "These documents are required by law and will be verified by our team within 48h.",
+    siretInvalid: "Invalid SIRET (14 digits required)", idCardRequired: "ID card required", insuranceRequired: "Insurance certificate required",
+    siretLabel: "SIRET Number *", certifLabel: "Professional certification", noCertif: "No certification",
+    certifRgeFull: "RGE — Recognized Environmental Guarantor",
+    idCardLabel: "ID Document * (National ID or Passport)", uploadIdCard: "Upload ID / Passport",
+    insuranceLabel: "Professional liability insurance *", uploadInsurance: "Upload insurance certificate",
+    kbisLabel: "Kbis extract", uploadKbis: "Upload Kbis extract", optionalWord: "optional",
+    ibanLabel: "IBAN (for your payments)",
+    legalWarning: "By submitting your application, you certify compliance with applicable law (sole trader, company or registered craftsman). LOCKR reserves the right to verify and reject any incomplete application.",
+    submitDossier: "Submit my application",
+    // AdminApp
+    bonusPublished: "Bonus published!", urgentLabel: "Urgent",
+    titleLabel: "Title", addressLabel: "Address", typeLabel: "Type", regionSelectLabel: "Region",
+    estimatedAmountLabel: "Estimated amount (€)",
   }
 };
 
@@ -699,7 +809,8 @@ const PAY_METHODS = [
 const fmtCard = v => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
 
-function PayModal({ amount, onClose, onDone }) {
+function PayModal({ amount, onClose, onDone, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [step, setStep] = useState("method");
   const [method, setMethod] = useState(null);
   const [card, setCard] = useState({ num: "", exp: "", cvv: "", nom: "" });
@@ -707,10 +818,10 @@ function PayModal({ amount, onClose, onDone }) {
 
   const pick = m => { setMethod(m); setStep(m.id === "stripe" ? "card" : "confirm"); };
   const payCard = () => {
-    if (card.num.replace(/\s/g, "").length < 16) return setErr("Numéro de carte invalide");
-    if (card.exp.length < 5) return setErr("Date d'expiration invalide");
-    if (card.cvv.length < 3) return setErr("CVV invalide");
-    if (!card.nom) return setErr("Nom du titulaire requis");
+    if (card.num.replace(/\s/g, "").length < 16) return setErr(tr.cardInvalid);
+    if (card.exp.length < 5) return setErr(tr.expInvalid);
+    if (card.cvv.length < 3) return setErr(tr.cvvInvalid);
+    if (!card.nom) return setErr(tr.holderRequired);
     setErr(""); setStep("processing"); setTimeout(() => setStep("done"), 2000);
   };
   const payNow = () => { setStep("processing"); setTimeout(() => setStep("done"), 1600); };
@@ -722,7 +833,7 @@ function PayModal({ amount, onClose, onDone }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22 }}>
           <div>
             <div style={{ fontSize: 26, fontWeight: 800, color: T.textHi, letterSpacing: "-1px" }}>{fmt(amount)}</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginTop: 3 }}>Règlement de prestation</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginTop: 3 }}>{tr.settlementLabel}</div>
           </div>
           <button onClick={onClose} className="lk-ghost" style={{ padding: "7px 12px" }}>{Icon.x()}</button>
         </div>
@@ -740,21 +851,21 @@ function PayModal({ amount, onClose, onDone }) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 10, padding: "10px 14px" }}>
               {Icon.shield(T.success, 14)}
-              <span style={{ color: T.success, fontSize: 12, fontWeight: 500 }}>Paiement chiffré SSL 256-bit</span>
+              <span style={{ color: T.success, fontSize: 12, fontWeight: 500 }}>{tr.paymentEncrypted}</span>
             </div>
           </>
         )}
         {step === "card" && (
           <>
-            <button onClick={() => setStep("method")} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.back(T.accent, 14)} Retour</button>
-            <div style={{ marginBottom: 12 }}><label className="lk-label">Numéro de carte</label><input className="lk-input" value={card.num} onChange={e => setCard(p => ({ ...p, num: fmtCard(e.target.value) }))} placeholder="1234 5678 9012 3456" inputMode="numeric" /></div>
-            <div style={{ marginBottom: 12 }}><label className="lk-label">Titulaire</label><input className="lk-input" value={card.nom} onChange={e => setCard(p => ({ ...p, nom: e.target.value }))} placeholder="Jean Dupont" /></div>
+            <button onClick={() => setStep("method")} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.back(T.accent, 14)} {tr.back}</button>
+            <div style={{ marginBottom: 12 }}><label className="lk-label">{tr.cardNumber}</label><input className="lk-input" value={card.num} onChange={e => setCard(p => ({ ...p, num: fmtCard(e.target.value) }))} placeholder="1234 5678 9012 3456" inputMode="numeric" /></div>
+            <div style={{ marginBottom: 12 }}><label className="lk-label">{tr.cardHolder}</label><input className="lk-input" value={card.nom} onChange={e => setCard(p => ({ ...p, nom: e.target.value }))} placeholder="Jean Dupont" /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-              <div><label className="lk-label">Expiration</label><input className="lk-input" value={card.exp} onChange={e => setCard(p => ({ ...p, exp: fmtExp(e.target.value) }))} placeholder="MM/AA" inputMode="numeric" /></div>
-              <div><label className="lk-label">CVV</label><input className="lk-input" type="password" value={card.cvv} onChange={e => setCard(p => ({ ...p, cvv: e.target.value.slice(0, 4) }))} placeholder="123" inputMode="numeric" /></div>
+              <div><label className="lk-label">{tr.expiry}</label><input className="lk-input" value={card.exp} onChange={e => setCard(p => ({ ...p, exp: fmtExp(e.target.value) }))} placeholder="MM/AA" inputMode="numeric" /></div>
+              <div><label className="lk-label">{tr.cvv}</label><input className="lk-input" type="password" value={card.cvv} onChange={e => setCard(p => ({ ...p, cvv: e.target.value.slice(0, 4) }))} placeholder="123" inputMode="numeric" /></div>
             </div>
             {err && <div style={{ background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, marginBottom: 14 }}>{err}</div>}
-            <button onClick={payCard} className="lk-btn">Payer {fmt(amount)}</button>
+            <button onClick={payCard} className="lk-btn">{tr.pay} {fmt(amount)}</button>
           </>
         )}
         {step === "confirm" && method && (
@@ -762,16 +873,16 @@ function PayModal({ amount, onClose, onDone }) {
             <div style={{ width: 72, height: 72, background: `${method.color}12`, border: `1px solid ${method.color}30`, borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
               <span style={{ color: method.color, fontWeight: 800, fontSize: 22 }}>{method.abbr}</span>
             </div>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>Confirmer avec {method.label}</div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>{tr.confirmWith} {method.label}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: T.accent, letterSpacing: "-1px", marginBottom: 20 }}>{fmt(amount)}</div>
-            <button onClick={payNow} className="lk-btn" style={{ marginBottom: 10 }}>Confirmer le paiement</button>
-            <button onClick={() => setStep("method")} className="lk-ghost" style={{ width: "100%" }}>Changer de méthode</button>
+            <button onClick={payNow} className="lk-btn" style={{ marginBottom: 10 }}>{tr.confirmPayment}</button>
+            <button onClick={() => setStep("method")} className="lk-ghost" style={{ width: "100%" }}>{tr.changeMethod}</button>
           </div>
         )}
         {step === "processing" && (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <div style={{ width: 52, height: 52, border: "3px solid rgba(0,0,0,.06)", borderTop: `3px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
-            <div style={{ color: T.textMid, fontSize: 14, fontWeight: 500 }}>Transaction en cours…</div>
+            <div style={{ color: T.textMid, fontSize: 14, fontWeight: 500 }}>{tr.processing}</div>
           </div>
         )}
         {step === "done" && (
@@ -779,9 +890,9 @@ function PayModal({ amount, onClose, onDone }) {
             <div style={{ width: 76, height: 76, background: "rgba(62,207,142,.1)", border: "1.5px solid rgba(62,207,142,.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", animation: "checkPop .4s ease" }}>
               {Icon.check(T.success, 30)}
             </div>
-            <div style={{ color: T.success, fontWeight: 800, fontSize: 20, marginBottom: 6 }}>Paiement confirmé !</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginBottom: 28 }}>{fmt(amount)} débité avec succès</div>
-            <button onClick={onDone} style={{ width: "100%", background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: 14, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Fermer</button>
+            <div style={{ color: T.success, fontWeight: 800, fontSize: 20, marginBottom: 6 }}>{tr.paymentConfirmed}</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginBottom: 28 }}>{fmt(amount)} {tr.debited}</div>
+            <button onClick={onDone} style={{ width: "100%", background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: 14, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.close}</button>
           </div>
         )}
       </div>
@@ -946,7 +1057,7 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
           <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>{tr.createAccount}</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>Choisissez votre profil</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>{tr.chooseProfile}</div>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -955,9 +1066,9 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
               {Icon.user(T.gold, 22)}
             </div>
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.individual}</div>
-            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>Trouvez un artisan qualifié rapidement. Suivi en temps réel de votre intervention.</div>
+            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>{tr.clientDesc}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
-              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Commencer</span>
+              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{tr.getStarted}</span>
               {Icon.arrow(T.accent, 13)}
             </div>
           </button>
@@ -966,10 +1077,10 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
               {Icon.tool(T.accent, 22)}
             </div>
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.craftsman}</div>
-            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>Recevez des missions près de chez vous. Gérez votre activité et vos revenus.</div>
-            <div style={{ color: T.textLo, fontSize: 11, marginTop: 6, fontStyle: "italic" }}>Documents professionnels requis (SIRET, assurance, pièce d'identité)</div>
+            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>{tr.proDesc}</div>
+            <div style={{ color: T.textLo, fontSize: 11, marginTop: 6, fontStyle: "italic" }}>{tr.proDocsRequired}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
-              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Commencer</span>
+              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{tr.getStarted}</span>
               {Icon.arrow(T.accent, 13)}
             </div>
           </button>
@@ -1041,8 +1152,8 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
           <button onClick={onBack} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>Inscription Particulier</div>
-            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>Trouvez un artisan en quelques secondes</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>{tr.clientRegisterTitle}</div>
+            <div style={{ color: T.textLo, fontSize: 13, marginTop: 2 }}>{tr.clientRegisterSubtitle}</div>
           </div>
         </div>
         <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
@@ -1066,10 +1177,10 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
           </div>
           <Field label={tr.city} value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" err={errs.ville} />
           <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
-            <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder="6 caractères minimum" type="password" err={errs.pass} />
-            <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder="Répétez votre mot de passe" type="password" err={errs.confirm} />
+            <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder={tr.minChars} type="password" err={errs.pass} />
+            <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder={tr.repeatPassword} type="password" err={errs.confirm} />
           </div>
-          <button onClick={submit} className="lk-btn">Créer mon compte {Icon.arrow("#fff", 14)}</button>
+          <button onClick={submit} className="lk-btn">{tr.createMyAccount} {Icon.arrow("#fff", 14)}</button>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
@@ -1077,7 +1188,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
         </div>
       </div>
       </div>
-      {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} />}
+      {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} lang={lang} />}
     </div>
   );
 }
@@ -1126,9 +1237,9 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
   const validateStep2 = () => {
     const e = {};
-    if (!siret.replace(/\s/g, "").match(/^\d{14}$/)) e.siret = "SIRET invalide (14 chiffres requis)";
-    if (!idCardFile) e.idCard = "Carte d'identité requise";
-    if (!insuranceFile) e.insurance = "Attestation d'assurance requise";
+    if (!siret.replace(/\s/g, "").match(/^\d{14}$/)) e.siret = tr.siretInvalid;
+    if (!idCardFile) e.idCard = tr.idCardRequired;
+    if (!insuranceFile) e.insurance = tr.insuranceRequired;
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -1162,7 +1273,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
             {Icon.lock("#c9a030", 26)}
           </div>
           <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
-          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>Rejoignez les pros LOCKR</div>
+          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.joinProLockr}</div>
         </div>
       )}
       <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
@@ -1170,8 +1281,8 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
           <button onClick={step === 1 ? onBack : () => setStep(1)} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>Inscription Artisan Pro</div>
-            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>Étape {step} sur 2</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>{tr.proRegisterTitle}</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.stepWord} {step} {tr.ofWord} 2</div>
           </div>
         </div>
 
@@ -1183,7 +1294,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
         {step === 1 && (
           <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
-              {Icon.user(T.accent, 16)} Informations personnelles
+              {Icon.user(T.accent, 16)} {tr.personalInfo}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
               <div>
@@ -1215,35 +1326,35 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
               </select>
             </div>
             <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
-              <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder="6 caractères minimum" type="password" err={errs.pass} />
-              <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder="Répétez votre mot de passe" type="password" err={errs.confirm} />
+              <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder={tr.minChars} type="password" err={errs.pass} />
+              <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder={tr.repeatPassword} type="password" err={errs.confirm} />
             </div>
-            <button onClick={goStep2} className="lk-btn">Étape suivante — Documents {Icon.arrow("#fff", 14)}</button>
+            <button onClick={goStep2} className="lk-btn">{tr.nextStepDocs} {Icon.arrow("#fff", 14)}</button>
           </div>
         )}
 
         {step === 2 && (
           <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-              {Icon.shield(T.accent, 16)} Documents professionnels
+              {Icon.shield(T.accent, 16)} {tr.proDocuments}
             </div>
             <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
-              Ces documents sont requis par la loi et seront vérifiés par notre équipe sous 48h.
+              {tr.proDocsLegalNote}
             </div>
 
             {/* SIRET */}
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Numéro SIRET *</label>
+              <label className="lk-label">{tr.siretLabel}</label>
               <input className="lk-input" value={siret} onChange={e => { setSiret(e.target.value); clr("siret"); }} placeholder="123 456 789 00015" maxLength={17} style={{ borderColor: errs.siret ? "rgba(220,38,38,.4)" : "" }} />
               {errs.siret && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.siret}</div>}
             </div>
 
             {/* Certification */}
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Certification professionnelle</label>
+              <label className="lk-label">{tr.certifLabel}</label>
               <select className="lk-input" value={certif} onChange={e => setCertif(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="aucune">Aucune certification</option>
-                <option value="rge">RGE — Reconnu Garant de l'Environnement</option>
+                <option value="aucune">{tr.noCertif}</option>
+                <option value="rge">{tr.certifRgeFull}</option>
                 <option value="qualibat">Qualibat</option>
                 <option value="qualifelec">Qualifelec</option>
                 <option value="artisan_agree">Artisan Agréé</option>
@@ -1252,12 +1363,12 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
             {/* Carte d'identité */}
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Pièce d'identité * (CNI ou Passeport)</label>
+              <label className="lk-label">{tr.idCardLabel}</label>
               <input type="file" accept="image/*,.pdf" ref={idRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setIdCardFile(f); clr("idCard"); } }} style={{ display: "none" }} />
               <button type="button" onClick={() => idRef.current?.click()} style={{ width: "100%", background: idCardFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.idCard ? "rgba(220,38,38,.5)" : idCardFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
                 {idCardFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
                 <span style={{ color: idCardFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {idCardFile ? idCardFile.name : "Téléverser CNI / Passeport"}
+                  {idCardFile ? idCardFile.name : tr.uploadIdCard}
                 </span>
               </button>
               {errs.idCard && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.idCard}</div>}
@@ -1265,12 +1376,12 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
             {/* Assurance RC Pro */}
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Attestation assurance RC Pro * </label>
+              <label className="lk-label">{tr.insuranceLabel}</label>
               <input type="file" accept="image/*,.pdf" ref={insRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setInsuranceFile(f); clr("insurance"); } }} style={{ display: "none" }} />
               <button type="button" onClick={() => insRef.current?.click()} style={{ width: "100%", background: insuranceFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.insurance ? "rgba(220,38,38,.5)" : insuranceFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
                 {insuranceFile ? Icon.check(T.success, 18) : Icon.shield(T.textLo, 18)}
                 <span style={{ color: insuranceFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {insuranceFile ? insuranceFile.name : "Téléverser attestation d'assurance"}
+                  {insuranceFile ? insuranceFile.name : tr.uploadInsurance}
                 </span>
               </button>
               {errs.insurance && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.insurance}</div>}
@@ -1278,19 +1389,19 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
             {/* Kbis (optionnel) */}
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Extrait Kbis <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>(optionnel)</span></label>
+              <label className="lk-label">{tr.kbisLabel} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({tr.optionalWord})</span></label>
               <input type="file" accept="image/*,.pdf" ref={kbisRef} onChange={e => { const f = e.target.files?.[0]; if (f) setKbisFile(f); }} style={{ display: "none" }} />
               <button type="button" onClick={() => kbisRef.current?.click()} style={{ width: "100%", background: kbisFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${kbisFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
                 {kbisFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
                 <span style={{ color: kbisFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {kbisFile ? kbisFile.name : "Téléverser extrait Kbis"}
+                  {kbisFile ? kbisFile.name : tr.uploadKbis}
                 </span>
               </button>
             </div>
 
             {/* IBAN */}
             <div style={{ marginBottom: 20 }}>
-              <label className="lk-label">IBAN (pour vos paiements) <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>(optionnel)</span></label>
+              <label className="lk-label">{tr.ibanLabel} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({tr.optionalWord})</span></label>
               <input className="lk-input" value={iban} onChange={e => setIban(e.target.value.toUpperCase())} placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" />
             </div>
 
@@ -1299,12 +1410,12 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
               <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                 {Icon.warning(T.warn, 16)}
                 <div style={{ color: T.textMid, fontSize: 12, lineHeight: 1.6 }}>
-                  En soumettant votre dossier, vous certifiez être en règle avec la législation française (auto-entrepreneur, société ou artisan enregistré). LOCKR se réserve le droit de vérifier et rejeter tout dossier incomplet.
+                  {tr.legalWarning}
                 </div>
               </div>
             </div>
 
-            <button onClick={submit} className="lk-btn">Soumettre mon dossier {Icon.check("#fff", 14)}</button>
+            <button onClick={submit} className="lk-btn">{tr.submitDossier} {Icon.check("#fff", 14)}</button>
           </div>
         )}
 
@@ -1314,7 +1425,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
         </div>
       </div>
       </div>
-      {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} />}
+      {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} lang={lang} />}
     </div>
   );
 }
@@ -1337,8 +1448,8 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
     const adminAcc = accounts.find(a => a.email === email && a.pass === pass && a.role === "admin");
     if (adminAcc) return onLogin(adminAcc);
     const acc = accounts.find(a => a.email === email && a.pass === pass && a.role === tab);
-    if (!acc) return setErr("Email ou mot de passe incorrect");
-    if (!acc.verified) return setErr("Compte non vérifié");
+    if (!acc) return setErr(tr.wrongCredentials);
+    if (!acc.verified) return setErr(tr.notVerified);
     onLogin(acc);
   };
 
@@ -1355,7 +1466,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
             <div style={{ fontSize: 48, fontWeight: 900, color: "#fff", letterSpacing: "-2px", marginBottom: 12 }}>LOCKR</div>
             <div style={{ color: "rgba(255,255,255,.55)", fontSize: 16, lineHeight: 1.7, marginBottom: 40 }}>{tr.appTagline}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[{ icon: Icon.shield, text: "Artisans certifiés & vérifiés" }, { icon: Icon.map, text: "Suivi GPS en temps réel" }, { icon: Icon.check, text: "Intervention en moins de 30 min" }].map((f, i) => (
+              {[{ icon: Icon.shield, text: tr.loginFeature1 }, { icon: Icon.map, text: tr.loginFeature2 }, { icon: Icon.check, text: tr.loginFeature3 }].map((f, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ width: 32, height: 32, background: "rgba(201,160,48,.12)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     {f.icon("rgba(201,160,48,.9)", 16)}
@@ -1378,7 +1489,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
               <div style={{ color: T.textLo, fontSize: 14 }}>{tr.appTagline}</div>
             </div>
           )}
-          {isDesktop && <div style={{ fontSize: 24, fontWeight: 800, color: T.textHi, marginBottom: 28, letterSpacing: "-.5px" }}>Connexion</div>}
+          {isDesktop && <div style={{ fontSize: 24, fontWeight: 800, color: T.textHi, marginBottom: 28, letterSpacing: "-.5px" }}>{tr.loginTitle}</div>}
           <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
             {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }].map(t => (
               <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 12, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
@@ -1423,7 +1534,8 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
 }
 
 /* ─── CLOTURE MODAL ─── */
-function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
+function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [montant, setMontant] = useState(String(mission?.montant || ""));
   const [factureImg, setFactureImg] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -1436,15 +1548,15 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
 
   const handleFile = e => {
     const f = e.target.files?.[0]; if (!f) return;
-    if (!f.type.startsWith("image/")) return setErr("Sélectionnez une image");
+    if (!f.type.startsWith("image/")) return setErr(tr.selectImage);
     setErr(""); const r = new FileReader();
     r.onload = ev => { setFactureImg(ev.target.result); setPreview(ev.target.result); };
     r.readAsDataURL(f);
   };
   const validate = () => {
     const m = parseFloat(montant.replace(",", "."));
-    if (isNaN(m) || m <= 0) return setErr("Montant invalide");
-    if (!factureImg) return setErr("Une photo de facture est requise");
+    if (isNaN(m) || m <= 0) return setErr(tr.invoiceInvalid);
+    if (!factureImg) return setErr(tr.invoiceRequired);
     setErr(""); setStep("confirm");
   };
   const isPaid = statut === "payé";
@@ -1459,30 +1571,30 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 22 }}>
               <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.check(T.success, 20)}</div>
               <div>
-                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>Clôturer la mission</div>
+                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>{tr.closeMission}</div>
                 <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{prob?.label} · {mission?.clientNom}</div>
               </div>
             </div>
             <div style={{ marginBottom: 20 }}>
-              <label className="lk-label">Photo de la facture *</label>
+              <label className="lk-label">{tr.invoicePhoto}</label>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display: "none" }} />
               {!preview ? (
                 <button onClick={() => fileRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 14, padding: "28px 20px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
                   {Icon.cam(T.accent, 30)}
-                  <div style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Photographier ou sélectionner</div>
+                  <div style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{tr.photographOrSelect}</div>
                 </button>
               ) : (
                 <div style={{ position: "relative", borderRadius: 13, overflow: "hidden", border: "1px solid rgba(62,207,142,.3)" }}>
                   <img src={preview} alt="Facture" style={{ width: "100%", maxHeight: 200, objectFit: "cover" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg,rgba(0,0,0,.45),transparent)", display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{Icon.check(T.success, 14)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>Facture ajoutée</span></div>
-                    <button onClick={() => { setFactureImg(null); setPreview(null); }} style={{ background: "rgba(240,101,101,.2)", border: "1px solid rgba(240,101,101,.3)", borderRadius: 8, padding: "4px 10px", color: T.danger, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Supprimer</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{Icon.check(T.success, 14)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{tr.invoiceAdded}</span></div>
+                    <button onClick={() => { setFactureImg(null); setPreview(null); }} style={{ background: "rgba(240,101,101,.2)", border: "1px solid rgba(240,101,101,.3)", borderRadius: 8, padding: "4px 10px", color: T.danger, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.removeFile}</button>
                   </div>
                 </div>
               )}
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label className="lk-label">Montant total de la facture *</label>
+              <label className="lk-label">{tr.totalAmount}</label>
               <div style={{ position: "relative" }}>
                 <input type="number" value={montant} onChange={e => { setMontant(e.target.value); setErr(""); }} className="lk-input" style={{ paddingRight: 40, fontSize: 22, fontWeight: 800 }} placeholder="0" />
                 <div style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: T.textLo, fontWeight: 700, fontSize: 18 }}>€</div>
@@ -1496,7 +1608,7 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
             {montantNum > 0 && (
               <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(0,0,0,.06)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ color: T.textLo, fontSize: 13 }}>Votre part (40%)</span>
+                  <span style={{ color: T.textLo, fontSize: 13 }}>{tr.yourShare40}</span>
                   <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(montantNum * 0.40)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -1506,14 +1618,14 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
               </div>
             )}
             <div style={{ marginBottom: 20 }}>
-              <label className="lk-label">Statut du paiement *</label>
+              <label className="lk-label">{tr.paymentStatus}</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <button onClick={() => setStatut("payé")} style={{ background: isPaid ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.02)", border: `1px solid ${isPaid ? "rgba(62,207,142,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${isPaid ? T.success : "rgba(0,0,0,.1)"}`, background: isPaid ? "rgba(62,207,142,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isPaid && Icon.check(T.success, 11)}
                     </div>
-                    <span style={{ color: isPaid ? T.success : T.textMid, fontWeight: 700, fontSize: 13 }}>Payé</span>
+                    <span style={{ color: isPaid ? T.success : T.textMid, fontWeight: 700, fontSize: 13 }}>{tr.paid}</span>
                   </div>
                 </button>
                 <button onClick={() => setStatut("en_attente")} style={{ background: !isPaid ? "rgba(245,166,35,.07)" : "rgba(255,255,255,.02)", border: `1px solid ${!isPaid ? "rgba(245,166,35,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
@@ -1521,36 +1633,36 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
                     <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${!isPaid ? T.warn : "rgba(0,0,0,.1)"}`, background: !isPaid ? "rgba(245,166,35,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {!isPaid && <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.warn }} />}
                     </div>
-                    <span style={{ color: !isPaid ? T.warn : T.textMid, fontWeight: 700, fontSize: 13 }}>En attente</span>
+                    <span style={{ color: !isPaid ? T.warn : T.textMid, fontWeight: 700, fontSize: 13 }}>{tr.pending}</span>
                   </div>
                 </button>
               </div>
             </div>
             {err && <div style={{ background: "rgba(240,101,101,.07)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, marginBottom: 14 }}>{err}</div>}
-            <button onClick={validate} className="lk-btn" style={{ marginBottom: 10 }}>Continuer {Icon.arrow("#fff", 14)}</button>
-            <button onClick={onCancel} className="lk-ghost" style={{ width: "100%" }}>Annuler</button>
+            <button onClick={validate} className="lk-btn" style={{ marginBottom: 10 }}>{tr.next} {Icon.arrow("#fff", 14)}</button>
+            <button onClick={onCancel} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
           </>
         )}
         {step === "confirm" && (
           <>
             <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>Récapitulatif</div>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>{tr.summary}</div>
             </div>
             {preview && <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 16 }}><img src={preview} alt="Facture" style={{ width: "100%", height: 130, objectFit: "cover" }} /></div>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
               <div style={{ background: "rgba(62,207,142,.07)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>Montant</div>
+                <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>{tr.amountLabel}</div>
                 <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 800, fontSize: 22 }}>{fmt(montantNum)}</div>
               </div>
               <div style={{ background: "rgba(62,207,142,.07)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 12, padding: "12px 14px" }}>
-                <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>Votre part</div>
+                <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>{tr.yourShare}</div>
                 <div style={{ color: T.success, fontWeight: 800, fontSize: 22 }}>{fmt(montantNum * 0.40)}</div>
               </div>
             </div>
             <button onClick={() => onConfirm(montantNum, factureImg, statut, parseFloat(acompte) || 0)} style={{ width: "100%", background: isPaid ? "linear-gradient(135deg,#2aaf77,#1d8f5f)" : "linear-gradient(135deg,#c87d1a,#a86010)", border: "none", borderRadius: 12, padding: 14, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10, fontFamily: "'Inter',sans-serif" }}>
-              {isPaid ? "Confirmer — Facture payée" : "Confirmer — Paiement en attente"}
+              {isPaid ? tr.confirmPaid : tr.confirmPending}
             </button>
-            <button onClick={() => setStep("form")} className="lk-ghost" style={{ width: "100%" }}>Modifier</button>
+            <button onClick={() => setStep("form")} className="lk-ghost" style={{ width: "100%" }}>{tr.edit}</button>
           </>
         )}
       </div>
@@ -1559,7 +1671,8 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel }) {
 }
 
 /* ─── CHAT REGIONAL ─── */
-function ChatRegional({ account, chatMessages, setChatMessages }) {
+function ChatRegional({ account, chatMessages, setChatMessages, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [msg, setMsg] = useState("");
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoData, setPhotoData] = useState(null);
@@ -1588,12 +1701,12 @@ function ChatRegional({ account, chatMessages, setChatMessages }) {
       <div style={{ padding: "12px 14px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
         {Icon.chat(T.accent, 18)}
         <div>
-          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>Chat Pros — {region}</div>
-          <div style={{ color: T.textLo, fontSize: 11, marginTop: 1 }}>Échangez avec les pros de votre région</div>
+          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{tr.chatProRegion} — {region}</div>
+          <div style={{ color: T.textLo, fontSize: 11, marginTop: 1 }}>{tr.chatSubtitle}</div>
         </div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {messages.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: T.textLo, fontSize: 14 }}>Aucun message. Soyez le premier à écrire !</div>}
+        {messages.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: T.textLo, fontSize: 14 }}>{tr.noMessage}</div>}
         {messages.map(m => {
           const isMe = m.auteurId === account.id;
           return (
@@ -1623,7 +1736,7 @@ function ChatRegional({ account, chatMessages, setChatMessages }) {
       <div style={{ padding: "12px 14px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, alignItems: "center" }}>
         <input type="file" accept="image/*" ref={fileRef} onChange={handleFile} style={{ display: "none" }} />
         <button onClick={() => fileRef.current?.click()} className="lk-ghost" style={{ padding: "10px 12px", flexShrink: 0 }}>{Icon.image(T.textMid, 16)}</button>
-        <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMsg()} className="lk-input" placeholder="Votre message…" style={{ flex: 1 }} />
+        <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMsg()} className="lk-input" placeholder={tr.yourMessage} style={{ flex: 1 }} />
         <button onClick={sendMsg} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "10px 14px", cursor: "pointer", flexShrink: 0 }}>{Icon.send("#fff", 16)}</button>
       </div>
     </div>
@@ -1631,7 +1744,8 @@ function ChatRegional({ account, chatMessages, setChatMessages }) {
 }
 
 /* ─── BONS DISPONIBLES ─── */
-function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
+function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [postModal, setPostModal] = useState(false);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [notif, setNotif] = useState(null);
@@ -1642,7 +1756,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
     const bk = { id: uid(), clientId: "ext", artisanId: account.artisanId, clientNom: "Client LOCKR", adresse: bon.adresse, probleme: bon.probleme, montant: bon.montantEstime, statut: "assignée", createdAt: ts(), bonType: bon.postedBy === "platform" ? "platform" : "partner", bonId: bon.id, techPct: bon.techPct };
     setBookings(p => [...p, bk]);
     setBons(p => p.filter(b => b.id !== bon.id));
-    setNotif(`Bon accepté ! ${bon.titre}`);
+    setNotif(`${tr.bonusAccepted} ${bon.titre}`);
     setTimeout(() => setNotif(null), 4000);
   };
   const poster = () => {
@@ -1657,12 +1771,12 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
       {notif && <div style={{ background: "rgba(62,207,142,.15)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>{Icon.check(T.success, 16)}<span style={{ color: T.success, fontWeight: 600, fontSize: 13 }}>{notif}</span></div>}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>Bons disponibles</div>
-          <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>Région : {myRegion}</div>
+          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>{tr.availableBonuses}</div>
+          <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.regionLabel} : {myRegion}</div>
         </div>
-        <button onClick={() => setPostModal(true)} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} Poster</button>
+        <button onClick={() => setPostModal(true)} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} {tr.post}</button>
       </div>
-      {bonsRegion.length === 0 && <div style={{ textAlign: "center", padding: "48px 20px" }}>{Icon.list(T.textLo, 36)}<div style={{ color: T.textLo, fontSize: 14, marginTop: 12 }}>Aucun bon disponible dans votre région</div></div>}
+      {bonsRegion.length === 0 && <div style={{ textAlign: "center", padding: "48px 20px" }}>{Icon.list(T.textLo, 36)}<div style={{ color: T.textLo, fontSize: 14, marginTop: 12 }}>{tr.noBonusRegion}</div></div>}
       {bonsRegion.map(bon => {
         const IC = PROB_ICONS[bon.probleme] || Icon.tool;
         const isPlatform = bon.postedBy === "platform";
@@ -1684,11 +1798,11 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
             </div>
             <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: T.textLo, fontSize: 12 }}>Votre part ({bon.techPct}%)</span>
+                <span style={{ color: T.textLo, fontSize: 12 }}>{tr.yourSharePct} ({bon.techPct}%)</span>
                 <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(techEarn)}</span>
               </div>
             </div>
-            <button onClick={() => prendre(bon)} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>Accepter ce bon {Icon.arrow("#fff", 13)}</button>
+            <button onClick={() => prendre(bon)} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>{tr.acceptBonus} {Icon.arrow("#fff", 13)}</button>
           </div>
         );
       })}
@@ -1696,26 +1810,26 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 20 }}>Poster un bon</div>
-            <div style={{ marginBottom: 14 }}><label className="lk-label">Titre</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
-            <div style={{ marginBottom: 14 }}><label className="lk-label">Adresse client</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 20 }}>{tr.postBonus}</div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.titleLabel}</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.clientAddress}</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Type d'intervention</label>
+              <label className="lk-label">{tr.interventionTypeLabel}</label>
               <select className="lk-input" value={newBon.probleme} onChange={e => setNewBon(p => ({ ...p, probleme: e.target.value }))} style={{ cursor: "pointer" }}>
                 {PROBLEMES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: 14 }}><label className="lk-label">Montant estimé (€)</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 20 }}>
-              <label className="lk-label">Part du technicien : {newBon.techPct}%</label>
+              <label className="lk-label">{tr.technicianShare} : {newBon.techPct}%</label>
               <input type="range" min={20} max={70} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value) }))} style={{ width: "100%", accentColor: T.accent }} />
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
-              <label htmlFor="urgence" style={{ color: T.textMid, fontSize: 13, cursor: "pointer" }}>Intervention urgente</label>
+              <label htmlFor="urgence" style={{ color: T.textMid, fontSize: 13, cursor: "pointer" }}>{tr.urgentIntervention}</label>
             </div>
-            <button onClick={poster} className="lk-btn" style={{ marginBottom: 10 }}>Publier le bon</button>
-            <button onClick={() => setPostModal(false)} className="lk-ghost" style={{ width: "100%" }}>Annuler</button>
+            <button onClick={poster} className="lk-btn" style={{ marginBottom: 10 }}>{tr.publishBonus}</button>
+            <button onClick={() => setPostModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
           </div>
         </div>
       )}
@@ -1724,7 +1838,8 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings }) {
 }
 
 /* ─── EARNINGS CHART ─── */
-function EarningsChart({ bookings, artisanId }) {
+function EarningsChart({ bookings, artisanId, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const done = bookings.filter(b => b.artisanId === artisanId && b.statut === "terminée");
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
@@ -1740,10 +1855,10 @@ function EarningsChart({ bookings, artisanId }) {
 
   return (
     <div style={{ padding: "14px" }}>
-      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Mes revenus</div>
+      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{tr.earnings}</div>
       <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 14, padding: "16px", marginBottom: 20 }}>
         <div style={{ color: T.success, fontWeight: 800, fontSize: 28 }}>{fmt(thisMonth.value)}</div>
-        <div style={{ color: T.textLo, fontSize: 12, marginTop: 4 }}>Ce mois</div>
+        <div style={{ color: T.textLo, fontSize: 12, marginTop: 4 }}>{tr.thisMonth}</div>
       </div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140, marginBottom: 8 }}>
         {data.map((d, i) => (
@@ -1760,7 +1875,8 @@ function EarningsChart({ bookings, artisanId }) {
 }
 
 /* ─── CHAT INTERVENTION (pro ↔ client) ─── */
-function ChatIntervention({ bookingId, account, interventionChats, setInterventionChats, otherNom, onClose }) {
+function ChatIntervention({ bookingId, account, interventionChats, setInterventionChats, otherNom, onClose, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [msg, setMsg] = useState("");
   const bottomRef = useRef(null);
   const messages = interventionChats[bookingId] || [];
@@ -1786,7 +1902,7 @@ function ChatIntervention({ bookingId, account, interventionChats, setInterventi
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{otherNom}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: T.success }} />
-              <span style={{ color: T.textLo, fontSize: 11 }}>Intervention en cours</span>
+              <span style={{ color: T.textLo, fontSize: 11 }}>{tr.interventionInProgress}</span>
             </div>
           </div>
           <button onClick={onClose} className="lk-ghost" style={{ padding: "7px 10px" }}>{Icon.x()}</button>
@@ -1797,7 +1913,7 @@ function ChatIntervention({ bookingId, account, interventionChats, setInterventi
           {messages.length === 0 && (
             <div style={{ textAlign: "center", padding: "32px 20px" }}>
               {Icon.chat(T.textLo, 32)}
-              <div style={{ color: T.textLo, fontSize: 13, marginTop: 10 }}>Début de la conversation</div>
+              <div style={{ color: T.textLo, fontSize: 13, marginTop: 10 }}>{tr.chatStart}</div>
             </div>
           )}
           {messages.map(m => {
@@ -1819,7 +1935,7 @@ function ChatIntervention({ bookingId, account, interventionChats, setInterventi
 
         {/* Input */}
         <div style={{ padding: "12px 14px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, alignItems: "center", background: T.surface }}>
-          <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} className="lk-input" placeholder="Votre message…" style={{ flex: 1 }} />
+          <input value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} className="lk-input" placeholder={tr.yourMessage} style={{ flex: 1 }} />
           <button onClick={send} disabled={!msg.trim()} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer", flexShrink: 0, opacity: msg.trim() ? 1 : .4 }}>
             {Icon.send("#fff", 16)}
           </button>
@@ -1897,23 +2013,23 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artisan?.nom || account.nom}</div>
-                <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || "Artisan Pro"}</div>
+                <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || tr.artisanPro}</div>
               </div>
             </div>
             <button onClick={() => setDispo(d => !d)} style={{ width: "100%", marginTop: 10, background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: dispo ? T.success : T.danger, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: dispo ? T.success : T.danger }} />
-              {dispo ? "Disponible" : "Indisponible"}
+              {dispo ? tr.available : tr.unavailable}
             </button>
           </div>
           {/* Stats rapides */}
           <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <div style={{ background: "rgba(28,28,28,.03)", borderRadius: 10, padding: "8px 10px" }}>
               <div style={{ color: T.accent, fontWeight: 800, fontSize: 18 }}>{active.length}</div>
-              <div style={{ color: T.textLo, fontSize: 10 }}>En attente</div>
+              <div style={{ color: T.textLo, fontSize: 10 }}>{tr.pending}</div>
             </div>
             <div style={{ background: "rgba(30,158,107,.06)", borderRadius: 10, padding: "8px 10px" }}>
               <div style={{ color: T.success, fontWeight: 800, fontSize: 15 }}>{fmt(earnings)}</div>
-              <div style={{ color: T.textLo, fontSize: 10 }}>Gains</div>
+              <div style={{ color: T.textLo, fontSize: 10 }}>{tr.gains}</div>
             </div>
           </div>
           {/* Navigation */}
@@ -1929,7 +2045,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           <div style={{ padding: "12px 10px", borderTop: `1px solid ${T.border}` }}>
             <button onClick={onLogout} style={{ width: "100%", border: "none", background: "transparent", borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
               {Icon.sign(T.danger, 16)}
-              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>Déconnexion</span>
+              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>{tr.logout}</span>
             </button>
           </div>
         </div>
@@ -1947,12 +2063,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 </div>
                 <div>
                   <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{artisan?.nom || account.nom}</div>
-                  <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || "Artisan Pro"}</div>
+                  <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || tr.artisanPro}</div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: dispo ? T.success : T.danger, fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: dispo ? T.success : T.danger }} />{dispo ? "Dispo" : "Indispo"}
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: dispo ? T.success : T.danger }} />{dispo ? tr.dispoShort : tr.indispoShort}
                 </button>
                 <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 10px" }}>{Icon.sign()}</button>
               </div>
@@ -1962,7 +2078,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
         {/* Stats bar mobile */}
         {!isDesktop && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: T.border }}>
-            {[{ l: "En attente", v: active.length, c: T.accent }, { l: "Terminées", v: done.length, c: T.success }, { l: "Gains net", v: fmt(earnings), c: T.success }].map(k => (
+            {[{ l: tr.pending, v: active.length, c: T.accent }, { l: tr.completedStat, v: done.length, c: T.success }, { l: tr.netEarnings, v: fmt(earnings), c: T.success }].map(k => (
               <div key={k.l} style={{ background: T.bg, padding: "12px 8px", textAlign: "center" }}>
                 <div style={{ color: k.c, fontWeight: 800, fontSize: k.l === "Gains net" ? 11 : 20 }}>{k.v}</div>
                 <div style={{ color: T.textLo, fontSize: 9, marginTop: 2, textTransform: "uppercase" }}>{k.l}</div>
@@ -1985,7 +2101,10 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
         {isDesktop && (
           <div style={{ background: "#fff", padding: "18px 32px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 20 }}>{tabs.find(t => t.id === tab)?.l || ""}</div>
-            <div style={{ color: T.success, fontWeight: 700, fontSize: 14 }}>{fmt(earnings)} gagnés</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
+              <div style={{ color: T.success, fontWeight: 700, fontSize: 14 }}>{fmt(earnings)} {tr.earned}</div>
+            </div>
           </div>
         )}
         {/* Content */}
@@ -2046,8 +2165,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     <LiveMap progress={progress} artisanColor={artisan?.color || T.accent} compact artisanPos={artisan ? [artisan.lat, artisan.lng] : null} />
                   </div>
                   <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <span style={{ color: T.textLo, fontSize: 12 }}>Progression</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "center" }}>
+                      <span style={{ color: T.textLo, fontSize: 12 }}>{tr.progressLabel}</span>
                       <span style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{Math.round(progress * 100)}%</span>
                     </div>
                     <div style={{ background: "rgba(0,0,0,.04)", borderRadius: 3, height: 3 }}>
@@ -2055,21 +2174,21 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <a href="tel:0600000000" className="lk-ghost" style={{ flex: 1, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} Appeler</a>
+                    <a href="tel:0600000000" className="lk-ghost" style={{ flex: 1, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</a>
                     <button onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                      {Icon.check("#fff", 15)} Terminer et facturer
+                      {Icon.check("#fff", 15)} {tr.closeAndInvoice}
                     </button>
                   </div>
                 </>
               )}
             </div>
           )}
-          {tab === "bons" && <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} />}
-          {tab === "chat" && <ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} />}
-          {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} /></div>}
+          {tab === "bons" && <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />}
+          {tab === "chat" && <ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} lang={lang} />}
+          {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
           {tab === "history" && (
             <div style={{ padding: "14px" }}>
-              {done.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>Aucune mission terminée</div>}
+              {done.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noCompletedMission}</div>}
               {done.map(b => {
                 const isPaid = b.statutPaiement === "payé";
                 const pr = PROBLEMES.find(p => p.id === b.probleme);
@@ -2082,12 +2201,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 700, fontSize: 15 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
-                        <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? "Payé" : "En attente"}</div>
+                        <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? tr.paid : tr.pending}</div>
                       </div>
                     </div>
                     {!isPaid && (
                       <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statutPaiement: "payé", payeLe: ts() } : x))} style={{ width: "100%", background: "rgba(245,166,35,.08)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                        {Icon.check(T.warn, 12)} Marquer comme payé
+                        {Icon.check(T.warn, 12)} {tr.markAsPaid}
                       </button>
                     )}
                   </div>
@@ -2097,8 +2216,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           )}
         </div>
       </div>
-      {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} />}
-      {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} />}
+      {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} lang={lang} />}
+      {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
     </div>
   );
 }
@@ -2219,7 +2338,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     setScreen("tracking");
   };
 
-  const stMap = { assignée: { l: "Assignée", c: T.accent }, en_route: { l: "En route", c: T.accent2 }, terminée: { l: "Terminée", c: T.success }, en_cours: { l: "En cours", c: T.warn } };
+  const stMap = { assignée: { l: tr.statusAssigned, c: T.accent }, en_route: { l: tr.statusEnRoute, c: T.accent2 }, terminée: { l: tr.statusDone, c: T.success }, en_cours: { l: tr.statusInProgress, c: T.warn } };
 
   if (screen === "home") return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif" }}>
@@ -2231,6 +2350,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {clientPos && <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(30,158,107,.08)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 20, padding: "4px 10px" }}>{Icon.pin(T.success, 11)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.gpsActive}</span></div>}
+          {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
           <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
         </div>
       </div>
@@ -2295,7 +2415,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           {isDesktop && (
             <div>
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 14 }}>{tr.myInterventions}</div>
-              {myBk.length === 0 && <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", padding: "32px 0" }}>Aucune intervention</div>}
+              {myBk.length === 0 && <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", padding: "32px 0" }}>{tr.noIntervention}</div>}
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {myBk.slice().reverse().map(b => {
                   const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
@@ -2372,9 +2492,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                             </div>
                           </div>
                           <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-                            {a.avis > 0 && <span style={{ color: T.textLo, fontSize: 11 }}>{a.note}★ · {a.avis} avis</span>}
-                            {a.isReal && <span style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", color: T.success, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>✓ Pro vérifié</span>}
-                            <span className={a.dispo ? "lk-badge-ok" : "lk-badge-off"}>{a.dispo ? "Disponible" : "Indisponible"}</span>
+                            {a.avis > 0 && <span style={{ color: T.textLo, fontSize: 11 }}>{a.note}★ · {a.avis} {tr.reviews}</span>}
+                            {a.isReal && <span style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", color: T.success, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>✓ {tr.verified}</span>}
+                            <span className={a.dispo ? "lk-badge-ok" : "lk-badge-off"}>{a.dispo ? tr.available : tr.unavailable}</span>
                           </div>
                           {a.ville && <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6, color: T.textLo, fontSize: 12 }}>{Icon.pin(T.textLo, 12)} {a.ville}</div>}
                         </div>
@@ -2385,7 +2505,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 {selArt && selProb && isDesktop && (
                   <div style={{ marginTop: 20 }}>
                     <button onClick={book} className="lk-btn">
-                      Réserver {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
+                      {tr.reserveBtn} {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
                     </button>
                   </div>
                 )}
@@ -2394,7 +2514,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             {!selProb && isDesktop && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 300, color: T.textLo, fontSize: 14, gap: 12 }}>
                 {Icon.key(T.textLo, 36)}
-                <span>Sélectionnez un type d'intervention</span>
+                <span>{tr.selectInterventionType}</span>
               </div>
             )}
           </div>
@@ -2402,7 +2522,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         {selArt && selProb && !isDesktop && (
           <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, padding: "16px 14px", background: "linear-gradient(0deg,rgba(8,11,20,.98),transparent)", paddingTop: 24 }}>
             <button onClick={book} className="lk-btn">
-              Réserver {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
+              {tr.reserveBtn} {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
             </button>
           </div>
         )}
@@ -2432,7 +2552,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             {geoLoading && !bk?.clientPos ? (
               <div style={{ height: "100%", background: "#e8e8e4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
                 <div style={{ width: 38, height: 38, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                <div style={{ color: T.textLo, fontSize: 13 }}>Localisation en cours…</div>
+                <div style={{ color: T.textLo, fontSize: 13 }}>{tr.locating}</div>
               </div>
             ) : (
               <div style={{ height: "100%" }}>
@@ -2483,7 +2603,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             )}
             {phase === "arrived" && bk?.montantFinal && (
               <button onClick={() => setPayModal(true)} className="lk-btn">
-                {Icon.card("#fff", 16)} Payer la facture — {fmt(bk.montantFinal)}
+                {Icon.card("#fff", 16)} {tr.payInvoiceBtn} — {fmt(bk.montantFinal)}
               </button>
             )}
           </div>
@@ -2495,7 +2615,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             {geoLoading && !bk?.clientPos ? (
               <div style={{ height: 300, background: "#e8e8e4", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
                 <div style={{ width: 38, height: 38, border: "2.5px solid rgba(0,0,0,.06)", borderTop: `2.5px solid ${T.accent}`, borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                <div style={{ color: T.textLo, fontSize: 13 }}>Localisation en cours…</div>
+                <div style={{ color: T.textLo, fontSize: 13 }}>{tr.locating}</div>
               </div>
             ) : (
               <LiveMap
@@ -2543,14 +2663,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             )}
             {phase === "arrived" && bk?.montantFinal && (
               <button onClick={() => setPayModal(true)} className="lk-btn">
-                {Icon.card("#fff", 16)} Payer la facture — {fmt(bk.montantFinal)}
+                {Icon.card("#fff", 16)} {tr.payInvoiceBtn} — {fmt(bk.montantFinal)}
               </button>
             )}
           </div>
         </>
       )}
-      {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} />}
-      {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} />}
+      {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} lang={lang} />}
+      {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} lang={lang} />}
     </div>
   );
 
@@ -2626,7 +2746,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
           <div style={{ padding: "12px 10px", borderTop: `1px solid ${T.border}` }}>
             <button onClick={onLogout} style={{ width: "100%", border: "none", background: "transparent", borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
               {Icon.sign(T.danger, 16)}
-              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>Déconnexion</span>
+              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>{tr.logout}</span>
             </button>
           </div>
         </div>
@@ -2651,7 +2771,10 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
         {isDesktop && (
           <div style={{ background: "#fff", padding: "18px 32px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 20 }}>{adminTabs.find(t => t.id === tab)?.l || tr.dashboard}</div>
-            <div style={{ color: T.textMid, fontSize: 13 }}>Admin LOCKR</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
+              <div style={{ color: T.textMid, fontSize: 13 }}>Admin LOCKR</div>
+            </div>
           </div>
         )}
         {/* Tabs mobile */}
@@ -2690,7 +2813,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
         )}
         {tab === "bons" && (
           <>
-            {postSuccess && <div style={{ background: "rgba(62,207,142,.12)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, color: T.success, fontWeight: 600, fontSize: 13 }}>Bon publié !</div>}
+            {postSuccess && <div style={{ background: "rgba(62,207,142,.12)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, color: T.success, fontWeight: 600, fontSize: 13 }}>{tr.bonusPublished}</div>}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>{tr.lockrBonuses}</div>
               <button onClick={() => setPostModal(true)} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.plus("#fff", 15)} {tr.newBonus}</button>
@@ -2756,7 +2879,7 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{fmt(b.montantFinal || 0)}</div>
-                      <div style={{ color: isPaid ? T.success : T.warn, fontSize: 11 }}>{isPaid ? "Payé" : "En attente"}</div>
+                      <div style={{ color: isPaid ? T.success : T.warn, fontSize: 11 }}>{isPaid ? tr.paid : tr.pending}</div>
                     </div>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -2780,28 +2903,28 @@ function AdminApp({ account, bookings, setBookings, accounts, bons, setBons, onL
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 36px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 20 }}>{tr.newLockrBonus}</div>
-            <div style={{ marginBottom: 14 }}><label className="lk-label">Titre</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
-            <div style={{ marginBottom: 14 }}><label className="lk-label">Adresse</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.titleLabel}</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.addressLabel}</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Région</label>
+              <label className="lk-label">{tr.regionSelectLabel}</label>
               <select className="lk-input" value={newBon.region} onChange={e => setNewBon(p => ({ ...p, region: e.target.value }))} style={{ cursor: "pointer" }}>
                 {["Paris", "Lyon", "Marseille", "Bordeaux", "Toulouse", "Nantes", "Lille", "Strasbourg"].map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">Type</label>
+              <label className="lk-label">{tr.typeLabel}</label>
               <select className="lk-input" value={newBon.probleme} onChange={e => setNewBon(p => ({ ...p, probleme: e.target.value }))} style={{ cursor: "pointer" }}>
                 {PROBLEMES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </div>
-            <div style={{ marginBottom: 14 }}><label className="lk-label">Montant estimé (€)</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmountLabel}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 14 }}>
               <label className="lk-label">{tr.artisanShare} : {newBon.techPct}%</label>
               <input type="range" min={5} max={95} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value) }))} style={{ width: "100%", accentColor: T.accent }} />
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="adm-urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
-              <label htmlFor="adm-urgence" style={{ color: T.textMid, fontSize: 13, cursor: "pointer" }}>Urgent</label>
+              <label htmlFor="adm-urgence" style={{ color: T.textMid, fontSize: 13, cursor: "pointer" }}>{tr.urgentLabel}</label>
             </div>
             <button onClick={posterBonAdmin} className="lk-btn" style={{ marginBottom: 10 }}>{tr.publishBonus2}</button>
             <button onClick={() => setPostModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
@@ -2828,7 +2951,7 @@ export default function App() {
   if (account) {
     if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
     if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} onLogout={logout} lang={lang} setLang={setLang} />;
-    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} />;
+    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />;
   }
   if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
   if (screen === "register-client") return <RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
