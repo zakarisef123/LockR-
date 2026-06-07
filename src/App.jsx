@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const fmt = n => `${Math.round(Number(n))} €`;
+const fmtFrom = (n, lang = "fr") => lang === "en" ? `From ${Math.round(Number(n))} €` : `À partir de ${Math.round(Number(n))} €`;
 const fmtTime = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const fmtDate = d => new Date(d).toLocaleDateString("fr-FR");
 const ts = () => new Date().toISOString();
@@ -366,12 +367,12 @@ const TRANS = {
 };
 
 const T = {
-  bg: "#f4f4f2", surface: "#ffffff", card: "#ffffff", border: "rgba(0,0,0,.08)",
-  borderHi: "rgba(28,28,28,.3)", accent: "#1c1c1c", accent2: "#c9a030",
+  bg: "#f5f3ff", surface: "#ffffff", card: "#ffffff", border: "rgba(124,58,237,.1)",
+  borderHi: "rgba(124,58,237,.45)", accent: "#7c3aed", accent2: "#a78bfa",
   success: "#1e9e6b", warn: "#d97706", danger: "#dc2626",
   textHi: "#1c1c1c", textMid: "rgba(28,28,28,.55)", textLo: "rgba(28,28,28,.38)",
-  grad: "linear-gradient(135deg,#1c1c1c,#3a3a3a)", gradBtn: "linear-gradient(135deg,#1c1c1c,#2e2e2e)",
-  gold: "#c9a030",
+  grad: "linear-gradient(135deg,#7c3aed,#5b21b6)", gradBtn: "linear-gradient(135deg,#7c3aed,#5b21b6)",
+  gold: "#a78bfa",
 };
 
 const PLATFORM_CUT = 0.10;
@@ -627,7 +628,7 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#f4f4f2}
+body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#f5f3ff}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#d0d0cc;border-radius:4px}
 .leaflet-container{background:#e8e8e4 !important}
@@ -642,16 +643,16 @@ body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;backgroun
 @keyframes checkPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes notif{0%{transform:translateY(-80px);opacity:0}15%{transform:translateY(0);opacity:1}80%{transform:translateY(0);opacity:1}100%{transform:translateY(-80px);opacity:0}}
-.lk-btn{background:linear-gradient(135deg,#1c1c1c,#2e2e2e);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.lk-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif;box-shadow:0 2px 12px rgba(124,58,237,.35)}
+.lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,58,237,.45)}
 .lk-btn:active{transform:translateY(0)}
 .lk-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
 .lk-ghost{background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:rgba(28,28,28,.7);font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .lk-ghost:hover{background:#f8f8f6;border-color:rgba(0,0,0,.2)}
-.lk-card{background:#ffffff;border:1px solid rgba(0,0,0,.07);border-radius:16px;transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-.lk-card:hover{border-color:rgba(201,160,48,.3);box-shadow:0 4px 20px rgba(0,0,0,.1)}
+.lk-card{background:#ffffff;border:1px solid rgba(124,58,237,.1);border-radius:16px;transition:all .2s;box-shadow:0 2px 12px rgba(124,58,237,.07)}
+.lk-card:hover{border-color:rgba(124,58,237,.3);box-shadow:0 4px 20px rgba(124,58,237,.14)}
 .lk-input{width:100%;background:#f8f8f6;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:#1c1c1c;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;font-family:'Inter',sans-serif}
-.lk-input:focus{border-color:rgba(28,28,28,.5);background:#ffffff;box-shadow:0 0 0 3px rgba(201,160,48,.15)}
+.lk-input:focus{border-color:rgba(124,58,237,.5);background:#ffffff;box-shadow:0 0 0 3px rgba(124,58,237,.12)}
 .lk-input::placeholder{color:rgba(28,28,28,.3)}
 .lk-label{display:block;color:rgba(28,28,28,.45);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
 .lk-tag-urgent{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);color:#dc2626;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
@@ -667,7 +668,7 @@ select.lk-input option{background:#ffffff;color:#1c1c1c}
   .lk-desktop-main{max-width:900px;margin:0 auto;padding:28px 32px}
   .lk-desktop-2col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
   .lk-desktop-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-  .lk-card:hover{transform:translateY(-1px)}
+  .lk-card:hover{transform:translateY(-1px);border-color:rgba(124,58,237,.28)}
 }
 @media (max-width: 767px) {
   .lk-desktop-sidebar{display:none!important}
@@ -2045,7 +2046,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ color: T.accent, fontWeight: 800, fontSize: 17 }}>{bon.montantEstime}€</div>
+                <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmtFrom(bon.montantEstime, lang)}</div>
               </div>
             </div>
             <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
@@ -3237,7 +3238,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                               <div style={{ color: T.textLo, fontSize: 12 }}>{a.certif}</div>
                             </div>
                             <div style={{ textAlign: "right" }}>
-                              <div style={{ color: T.accent, fontWeight: 800, fontSize: 16 }}>{a.tarif + (selProb.urgence ? 40 : 0)}€</div>
+                              <div style={{ color: T.accent, fontWeight: 800, fontSize: 14 }}>{fmtFrom(a.tarif + (selProb.urgence ? 40 : 0), lang)}</div>
                             </div>
                           </div>
                           <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -3254,7 +3255,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 {selArt && selProb && isDesktop && (
                   <div style={{ marginTop: 20 }}>
                     <button onClick={() => book()} className="lk-btn">
-                      {tr.reserveBtn} {selArt.nom} — {fmt(selArt.tarif + (selProb.urgence ? 40 : 0))} {Icon.arrow("#fff", 14)}
+                      {tr.reserveBtn} {selArt.nom} — {fmtFrom(selArt.tarif + (selProb.urgence ? 40 : 0), lang)} {Icon.arrow("#fff", 14)}
                     </button>
                   </div>
                 )}
@@ -3585,7 +3586,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                         <div style={{ color: T.textLo, fontSize: 12 }}>{bon.adresse}</div>
                       </div>
                     </div>
-                    <div style={{ color: T.accent, fontWeight: 800, fontSize: 17 }}>{bon.montantEstime}€</div>
+                    <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmtFrom(bon.montantEstime, lang)}</div>
                   </div>
                   <button onClick={() => setBons(p => p.filter(b => b.id !== bon.id))} style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "5px 12px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.deleteBonus}</button>
                 </div>
