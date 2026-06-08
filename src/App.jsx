@@ -809,14 +809,18 @@ function makeSvgIcon(L, isFull, color, size = 40, transport = "voiture", photoUr
 }
 
 /* ─── LIVE MAP ─── */
-function LiveMap({ progress = 0, artisanColor = "#5b8def", compact = false, clientPos = null, artisanPos = null, onRouteReady = null }) {
+function LiveMap({ progress = 0, artisanColor = "#5b8def", compact = false, clientPos = null, artisanPos = null, onRouteReady = null, artisan = null }) {
   const mapRef = useRef(null);
   const L_ = useRef(null);
   const mapObj = useRef(null);
   const artMk = useRef(null);
   const donePoly = useRef(null);
   const routeCoords = useRef(null);
-  const H = compact ? 210 : 300;
+  const routeInfoRef = useRef(null);
+  const [eta, setEta] = useState(null);
+  const [distKm, setDistKm] = useState(null);
+  const arrived = progress >= 0.97;
+  const H = compact ? 220 : 340;
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -827,64 +831,129 @@ function LiveMap({ progress = 0, artisanColor = "#5b8def", compact = false, clie
       L_.current = L;
       if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; }
 
-      // Positions client et artisan (coordonnées GPS réelles)
       const cLat = clientPos?.[0] ?? 48.8566;
       const cLng = clientPos?.[1] ?? 2.3522;
       const aLat = artisanPos?.[0] ?? (cLat + 0.015);
       const aLng = artisanPos?.[1] ?? (cLng + 0.015);
 
-      const map = L.map(mapRef.current, { center: [cLat, cLng], zoom: 14, zoomControl: true, attributionControl: false });
+      // Tuiles CartoDB Voyager — style propre, neutre, proche Uber
+      const map = L.map(mapRef.current, { center: [cLat, cLng], zoom: 14, zoomControl: false, attributionControl: false });
       mapObj.current = map;
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd" }).addTo(map);
 
-      // Marqueur client
-      L.marker([cLat, cLng], { icon: makeSvgIcon(L, false, "#3ecf8e", 40), zIndexOffset: 10 }).addTo(map);
-      // Marqueur artisan
-      artMk.current = L.marker([aLat, aLng], { icon: makeSvgIcon(L, true, artisanColor, 44), zIndexOffset: 20 }).addTo(map);
+      // Zoom en bas à droite (Uber style)
+      L.control.zoom({ position: "bottomright" }).addTo(map);
 
-      // Tracé de route RÉEL via OSRM
+      // Marqueur client — point bleu pulsant style Uber
+      const clientIcon = L.divIcon({
+        html: `<div style="position:relative;width:22px;height:22px">
+          <div style="position:absolute;inset:0;border-radius:50%;background:#1a56db;opacity:.2;animation:uberPulse 1.8s ease-out infinite"></div>
+          <div style="position:absolute;inset:4px;border-radius:50%;background:#1a56db;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(26,86,219,.5)"></div>
+        </div>`,
+        className: "", iconSize: [22, 22], iconAnchor: [11, 11]
+      });
+      L.marker([cLat, cLng], { icon: clientIcon, zIndexOffset: 10 }).addTo(map);
+
+      // Marqueur artisan — bulle blanche avec icône voiture (style Uber)
+      const artColor = artisanColor;
+      const artIcon = L.divIcon({
+        html: `<div style="background:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.22);border:2.5px solid ${artColor}">
+          <svg width="24" height="24" viewBox="0 0 40 40" fill="none"><rect x="6" y="16" width="28" height="14" rx="4" fill="${artColor}"/><rect x="10" y="10" width="20" height="10" rx="3" fill="${artColor}"/><circle cx="12" cy="30" r="4" fill="#333"/><circle cx="28" cy="30" r="4" fill="#333"/><rect x="11" y="12" width="6" height="6" rx="1" fill="rgba(255,255,255,0.55)"/><rect x="23" y="12" width="6" height="6" rx="1" fill="rgba(255,255,255,0.55)"/></svg>
+        </div>`,
+        className: "", iconSize: [44, 44], iconAnchor: [22, 22]
+      });
+      artMk.current = L.marker([aLat, aLng], { icon: artIcon, zIndexOffset: 20 }).addTo(map);
+
       const route = await fetchRoute(aLat, aLng, cLat, cLng);
       if (dead) return;
       routeCoords.current = route.coords;
+      routeInfoRef.current = route;
       if (onRouteReady) onRouteReady(route);
+      setEta(Math.round(route.durationSec / 60));
+      setDistKm((route.distanceM / 1000).toFixed(1));
 
-      // Route grisée (tout le trajet)
-      L.polyline(route.coords, { color: "rgba(28,28,28,.12)", weight: 4, dashArray: "8 6" }).addTo(map);
-      // Route effectuée (colorée)
-      donePoly.current = L.polyline([], { color: artisanColor, weight: 5 }).addTo(map);
+      // Trait pointillé gris (route restante)
+      L.polyline(route.coords, { color: "#d1d5db", weight: 5, dashArray: "6 5", lineCap: "round" }).addTo(map);
+      // Trait plein coloré (déjà parcouru)
+      donePoly.current = L.polyline([], { color: artColor, weight: 5, lineCap: "round" }).addTo(map);
 
-      map.fitBounds(L.latLngBounds([[aLat, aLng], [cLat, cLng]]), { padding: [44, 44] });
+      map.fitBounds(L.latLngBounds([[aLat, aLng], [cLat, cLng]]), { padding: [60, 60] });
     })();
     return () => { dead = true; };
   }, [clientPos?.[0], clientPos?.[1], artisanPos?.[0], artisanPos?.[1]]);
 
   useEffect(() => {
     const c = routeCoords.current;
-    if (!c || !artMk.current || !L_.current) return;
+    if (!c || !artMk.current) return;
     const idx = Math.min(Math.floor(progress * (c.length - 1)), c.length - 1);
     const pos = c[idx];
     if (!pos) return;
     artMk.current.setLatLng(pos);
     donePoly.current?.setLatLngs(c.slice(0, idx + 1));
+    if (routeInfoRef.current) {
+      setEta(Math.max(0, Math.round((1 - progress) * routeInfoRef.current.durationSec / 60)));
+      setDistKm(((1 - progress) * routeInfoRef.current.distanceM / 1000).toFixed(1));
+    }
+    // Carte suit l'artisan doucement
+    if (mapObj.current && progress > 0.05) {
+      mapObj.current.panTo(pos, { animate: true, duration: 0.6 });
+    }
   }, [progress]);
 
-  const eta = Math.max(0, Math.round((1 - progress) * 12));
+  const etaDisplay = eta !== null ? eta : Math.max(0, Math.round((1 - progress) * 12));
+
   return (
-    <div style={{ position: "relative", height: H, background: "#e8e8e4", overflow: "hidden" }}>
+    <div style={{ position: "relative", height: H, background: "#e8eaf0", overflow: "hidden", borderRadius: compact ? 16 : 0 }}>
+      {/* CSS keyframe pour la pulsation */}
+      <style>{`@keyframes uberPulse{0%{transform:scale(1);opacity:.25}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}`}</style>
       <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 52, background: "linear-gradient(0deg,#f4f4f2,transparent)", pointerEvents: "none" }} />
-      {progress < 0.97 && (
-        <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(255,255,255,.92)", border: "1px solid rgba(0,0,0,.1)", borderRadius: 10, padding: "7px 12px", display: "flex", alignItems: "center", gap: 7, boxShadow: "0 2px 8px rgba(0,0,0,.12)" }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626", animation: "blink 1.2s infinite" }} />
-          <span style={{ color: "#1c1c1c", fontWeight: 700, fontSize: 12, letterSpacing: ".5px" }}>EN DIRECT</span>
-          <span style={{ color: artisanColor, fontWeight: 800, fontSize: 13, marginLeft: 2 }}>{eta} min</span>
-        </div>
-      )}
-      {progress >= 0.97 && (
-        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", background: "rgba(30,158,107,.12)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "7px 14px", boxShadow: "0 2px 8px rgba(0,0,0,.1)" }}>
-          <span style={{ color: "#1e9e6b", fontWeight: 700, fontSize: 13 }}>Artisan arrivé ✓</span>
-        </div>
-      )}
+
+      {/* Dégradé bas pour la bande flottante */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 110, background: "linear-gradient(0deg, rgba(255,255,255,1) 40%, transparent)", pointerEvents: "none" }} />
+
+      {/* Bande inférieure flottante style Uber Eats */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 16px 14px" }}>
+        {arrived ? (
+          <div style={{ background: "#fff", borderRadius: 18, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, boxShadow: "0 -2px 20px rgba(0,0,0,.1)" }}>
+            <div style={{ width: 46, height: 46, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: "#111" }}>Artisan arrivé !</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Votre artisan est devant chez vous</div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ background: "#fff", borderRadius: 18, padding: "12px 16px", boxShadow: "0 -2px 20px rgba(0,0,0,.1)", display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Avatar artisan */}
+            <div style={{ width: 46, height: 46, borderRadius: "50%", background: `${artisanColor}18`, border: `2px solid ${artisanColor}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span style={{ color: artisanColor, fontWeight: 800, fontSize: 18 }}>{artisan?.nom?.charAt(0) ?? "A"}</span>
+            </div>
+            {/* Infos */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 20, color: "#111", lineHeight: 1 }}>{etaDisplay}</span>
+                <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 500 }}>min</span>
+                {distKm && <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 4 }}>· {distKm} km</span>}
+              </div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {artisan?.nom ?? "Artisan"} · en route
+              </div>
+              {/* Barre de progression fine */}
+              <div style={{ marginTop: 7, height: 3, background: "#f3f4f6", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${progress * 100}%`, background: artisanColor, borderRadius: 4, transition: "width .4s ease" }} />
+              </div>
+            </div>
+            {/* Badge LIVE */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, flexShrink: 0 }}>
+              <div style={{ background: "#fee2e2", borderRadius: 20, padding: "3px 8px", display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#ef4444", animation: "blink 1.2s infinite" }} />
+                <span style={{ color: "#ef4444", fontSize: 10, fontWeight: 700, letterSpacing: ".5px" }}>LIVE</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -2990,7 +3059,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               ) : (
                 <>
                   <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 12, border: `1px solid ${T.border}` }}>
-                    <LiveMap progress={progress} artisanColor={artisan?.color || T.accent} compact artisanPos={artisan ? [artisan.lat, artisan.lng] : null} />
+                    <LiveMap progress={progress} artisanColor={artisan?.color || T.accent} compact artisanPos={artisan ? [artisan.lat, artisan.lng] : null} artisan={artisan} />
                   </div>
                   <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "center" }}>
@@ -3566,6 +3635,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                   clientPos={bk?.clientPos}
                   artisanPos={artisanGpsPos || bk?.artisanPos}
                   onRouteReady={setRouteInfo}
+                  artisan={art}
                 />
               </div>
             )}
@@ -3628,6 +3698,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 clientPos={bk?.clientPos}
                 artisanPos={artisanGpsPos || bk?.artisanPos}
                 onRouteReady={setRouteInfo}
+                artisan={art}
               />
             )}
           </div>
