@@ -2916,19 +2916,28 @@ function ProProfileTab({ account, setAccounts, bookings, lang = "fr" }) {
 /* ─── MARKETPLACE PRO ─── */
 const MARKET_CATS = ["Outils", "Pièces", "Équipements", "Matériaux"];
 const MARKET_ETATS = ["Neuf", "Très bon état", "Occasion"];
+const MARKET_METIERS = [
+  { id: "all",          label: "Tous secteurs", color: "#6b7280", icon: Icon.tool },
+  { id: "serrurier",    label: "Serrurerie",    color: "#7c3aed", icon: Icon.key,     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=70" },
+  { id: "plombier",     label: "Plomberie",     color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
+  { id: "electricien",  label: "Électricité",   color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
+  { id: "chauffagiste", label: "Chauffage",     color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
+];
 
 function ProMarketplace({ account, listings, setListings, lang }) {
   const tr = TRANS[lang] || TRANS.fr;
-  const [filter, setFilter] = useState("all");
+  const [selMetier, setSelMetier] = useState("all");
   const [filterCat, setFilterCat] = useState("all");
+  const [filterOwn, setFilterOwn] = useState(false);
   const [search, setSearch] = useState("");
   const [newModal, setNewModal] = useState(false);
-  const [form, setForm] = useState({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf" });
+  const [form, setForm] = useState({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier" });
   const [posted, setPosted] = useState(false);
   const [detailId, setDetailId] = useState(null);
 
   const visible = listings.filter(l => {
-    if (filter === "mine" && l.proId !== account.id) return false;
+    if (filterOwn && l.proId !== account.id) return false;
+    if (selMetier !== "all" && l.metier !== selMetier) return false;
     if (filterCat !== "all" && l.categorie !== filterCat) return false;
     if (search && !l.titre.toLowerCase().includes(search.toLowerCase()) && !l.desc.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -2936,78 +2945,123 @@ function ProMarketplace({ account, listings, setListings, lang }) {
 
   const post = () => {
     if (!form.titre || !form.prix) return;
-    const nl = { id: uid(), proId: account.id, proNom: account.nom, metier: account.metier || "serrurier", titre: form.titre, desc: form.desc, prix: Number(form.prix), categorie: form.categorie, etat: form.etat, photo: null, tel: account.tel || "", createdAt: ts() };
+    const nl = { id: uid(), proId: account.id, proNom: account.nom, metier: form.metier, titre: form.titre, desc: form.desc, prix: Number(form.prix), categorie: form.categorie, etat: form.etat, photo: null, tel: account.tel || "", createdAt: ts() };
     setListings(p => [nl, ...p]);
-    setForm({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf" });
+    setForm({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier" });
     setPosted(true);
     setNewModal(false);
     setTimeout(() => setPosted(false), 3000);
   };
 
   const detail = detailId ? listings.find(l => l.id === detailId) : null;
-  const metierColor = (mid) => ({ serrurier: "#7c3aed", plombier: "#0ea5e9", electricien: "#f59e0b", chauffagiste: "#ef4444" }[mid] || T.accent);
+  const metierColor = (mid) => MARKET_METIERS.find(m => m.id === mid)?.color || T.accent;
+  const metierLabel = (mid) => MARKET_METIERS.find(m => m.id === mid)?.label || mid;
+  const curMetier = MARKET_METIERS.find(m => m.id === selMetier);
 
   return (
-    <div style={{ padding: "16px 14px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div>
-          <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17 }}>{tr.marketplace}</div>
-          <div style={{ color: T.textLo, fontSize: 12 }}>{tr.marketplaceDesc}</div>
+    <div style={{ padding: "0" }}>
+      {/* ── Header fixe ── */}
+      <div style={{ padding: "16px 14px 0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div>
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17 }}>{tr.marketplace}</div>
+            <div style={{ color: T.textLo, fontSize: 12 }}>{tr.marketplaceDesc}</div>
+          </div>
+          <button onClick={() => setNewModal(true)} className="lk-btn" style={{ padding: "10px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+            {Icon.plus("#fff", 14)} {tr.newListing}
+          </button>
         </div>
-        <button onClick={() => setNewModal(true)} className="lk-btn" style={{ padding: "10px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-          {Icon.plus("#fff", 14)} {tr.newListing}
-        </button>
+        {posted && <div style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, color: T.success, fontWeight: 600, fontSize: 13 }}>{Icon.check(T.success, 14)} {tr.listingPosted}</div>}
       </div>
 
-      {posted && <div style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, color: T.success, fontWeight: 600, fontSize: 13 }}>{Icon.check(T.success, 14)} {tr.listingPosted}</div>}
-
-      {/* Filtres */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        {[{ id: "all", l: tr.allListings }, { id: "mine", l: tr.myListings }].map(f => (
-          <button key={f.id} onClick={() => setFilter(f.id)} style={{ background: filter === f.id ? T.accent : T.card, color: filter === f.id ? "#fff" : T.textMid, border: `1px solid ${filter === f.id ? T.accent : T.border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{f.l}</button>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        {[{ id: "all", l: tr.filterAll }, ...MARKET_CATS.map(c => ({ id: c, l: c }))].map(c => (
-          <button key={c.id} onClick={() => setFilterCat(c.id)} style={{ background: filterCat === c.id ? T.grad : T.card, color: filterCat === c.id ? "#fff" : T.textMid, border: `1px solid ${filterCat === c.id ? T.accent : T.border}`, borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{c.l}</button>
-        ))}
-      </div>
-      <input className="lk-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une annonce…" style={{ marginBottom: 14 }} />
-
-      {/* Liste annonces */}
-      {visible.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 0", color: T.textLo }}>{Icon.tool(T.textLo, 32)}<div style={{ marginTop: 10 }}>{tr.noListings}</div></div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {visible.map(l => {
-            const mc = metierColor(l.metier);
-            const isMine = l.proId === account.id;
-            return (
-              <div key={l.id} onClick={() => setDetailId(l.id)} style={{ background: "#fff", border: `1.5px solid ${T.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,.07)", transition: "transform .15s, box-shadow .15s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 6px 18px rgba(0,0,0,.12)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.07)"; }}>
-                {/* Photo placeholder colorée */}
-                <div style={{ height: 80, background: `linear-gradient(135deg,${mc}20,${mc}08)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `${mc}20`, border: `1px solid ${mc}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {Icon.tool(mc, 20)}
-                  </div>
-                  <div style={{ position: "absolute", top: 6, right: 6, background: l.etat === "Neuf" ? "rgba(62,207,142,.15)" : "rgba(201,160,48,.12)", border: `1px solid ${l.etat === "Neuf" ? "rgba(62,207,142,.3)" : "rgba(201,160,48,.25)"}`, borderRadius: 20, padding: "2px 7px", fontSize: 9, fontWeight: 700, color: l.etat === "Neuf" ? T.success : T.gold }}>{l.etat}</div>
-                  {isMine && <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(124,58,237,.12)", border: "1px solid rgba(124,58,237,.25)", borderRadius: 20, padding: "2px 7px", fontSize: 9, fontWeight: 700, color: T.accent }}>Moi</div>}
-                </div>
-                <div style={{ padding: "10px 10px 12px" }}>
-                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12, lineHeight: 1.3, marginBottom: 4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.titre}</div>
-                  <div style={{ color: mc, fontWeight: 800, fontSize: 15, marginBottom: 4 }}>{fmt(l.prix)}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ color: T.textLo, fontSize: 10 }}>{l.proNom}</div>
-                    <div style={{ background: `${mc}12`, borderRadius: 8, padding: "2px 6px", fontSize: 9, color: mc, fontWeight: 600 }}>{l.categorie}</div>
-                  </div>
-                </div>
+      {/* ── Onglets secteurs avec photo de fond ── */}
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "0 14px 14px", scrollbarWidth: "none" }}>
+        {MARKET_METIERS.map(m => {
+          const isSelected = selMetier === m.id;
+          const count = m.id === "all" ? listings.length : listings.filter(l => l.metier === m.id).length;
+          return (
+            <button key={m.id} onClick={() => { setSelMetier(m.id); setFilterCat("all"); }}
+              style={{ position: "relative", flexShrink: 0, width: m.id === "all" ? 80 : 110, height: 72, borderRadius: 14, overflow: "hidden", cursor: "pointer", border: `2.5px solid ${isSelected ? m.color : "transparent"}`, fontFamily: "'Inter',sans-serif", boxShadow: isSelected ? `0 4px 14px ${m.color}50` : "0 2px 8px rgba(0,0,0,.12)", transition: "all .15s" }}>
+              {m.photo && <img src={m.photo} alt="" onError={e => { e.target.style.display="none"; }}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+              <div style={{ position: "absolute", inset: 0, background: isSelected ? `${m.color}dd` : m.id === "all" ? "rgba(30,30,30,.75)" : "rgba(10,10,10,.55)" }} />
+              <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                {m.icon("#fff", 18)}
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 10, textAlign: "center", lineHeight: 1.2 }}>{m.label}</div>
+                <div style={{ background: "rgba(255,255,255,.25)", borderRadius: 20, padding: "1px 6px", fontSize: 9, color: "#fff", fontWeight: 700 }}>{count}</div>
               </div>
-            );
-          })}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Bandeau secteur sélectionné ── */}
+      {selMetier !== "all" && curMetier && (
+        <div style={{ position: "relative", margin: "0 14px 14px", borderRadius: 14, overflow: "hidden", height: 60, animation: "fadeUp .2s ease" }}>
+          {curMetier.photo && <img src={curMetier.photo} alt="" onError={e => { e.target.style.display="none"; }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }} />}
+          <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,${curMetier.color}ee,${curMetier.color}88)` }} />
+          <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", gap: 12, padding: "0 16px" }}>
+            {curMetier.icon("#fff", 22)}
+            <div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{curMetier.label}</div>
+              <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11 }}>{visible.length} annonce{visible.length > 1 ? "s" : ""}</div>
+            </div>
+          </div>
         </div>
       )}
+
+      <div style={{ padding: "0 14px" }}>
+        {/* ── Filtres secondaires ── */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button onClick={() => setFilterOwn(!filterOwn)} style={{ background: filterOwn ? T.accent : T.card, color: filterOwn ? "#fff" : T.textMid, border: `1px solid ${filterOwn ? T.accent : T.border}`, borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.myListings}</button>
+          {[{ id: "all", l: tr.filterAll }, ...MARKET_CATS.map(c => ({ id: c, l: c }))].map(c => (
+            <button key={c.id} onClick={() => setFilterCat(c.id)} style={{ background: filterCat === c.id ? T.grad : T.card, color: filterCat === c.id ? "#fff" : T.textMid, border: `1px solid ${filterCat === c.id ? T.accent : T.border}`, borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{c.l}</button>
+          ))}
+        </div>
+        <input className="lk-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une annonce…" style={{ marginBottom: 14 }} />
+
+        {/* ── Liste annonces ── */}
+        {visible.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 0", color: T.textLo }}>{Icon.tool(T.textLo, 32)}<div style={{ marginTop: 10 }}>{tr.noListings}</div></div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {visible.map(l => {
+              const mc = metierColor(l.metier);
+              const mPhoto = MARKET_METIERS.find(m => m.id === l.metier)?.photo;
+              const isMine = l.proId === account.id;
+              return (
+                <div key={l.id} onClick={() => setDetailId(l.id)} style={{ background: "#fff", border: `1.5px solid ${T.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,.07)", transition: "transform .15s, box-shadow .15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 6px 18px rgba(0,0,0,.12)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.07)"; }}>
+                  {/* Photo de fond du secteur */}
+                  <div style={{ height: 76, position: "relative", overflow: "hidden" }}>
+                    {mPhoto && <img src={mPhoto} alt="" onError={e => { e.target.style.display="none"; }}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .45 }} />}
+                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg,${mc}30,${mc}10)` }} />
+                    <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 11, background: `${mc}25`, border: `1px solid ${mc}40`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {Icon.tool(mc, 19)}
+                      </div>
+                    </div>
+                    <div style={{ position: "absolute", top: 5, right: 5, background: l.etat === "Neuf" ? "rgba(62,207,142,.9)" : "rgba(201,160,48,.85)", borderRadius: 20, padding: "2px 6px", fontSize: 8, fontWeight: 700, color: "#fff" }}>{l.etat}</div>
+                    {isMine && <div style={{ position: "absolute", top: 5, left: 5, background: "rgba(124,58,237,.85)", borderRadius: 20, padding: "2px 6px", fontSize: 8, fontWeight: 700, color: "#fff" }}>Moi</div>}
+                    <div style={{ position: "absolute", bottom: 5, left: 6, background: `${mc}cc`, borderRadius: 8, padding: "1px 6px", fontSize: 8, color: "#fff", fontWeight: 700 }}>{metierLabel(l.metier)}</div>
+                  </div>
+                  <div style={{ padding: "9px 10px 11px" }}>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 11, lineHeight: 1.3, marginBottom: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.titre}</div>
+                    <div style={{ color: mc, fontWeight: 800, fontSize: 14, marginBottom: 3 }}>{fmt(l.prix)}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ color: T.textLo, fontSize: 9 }}>{l.proNom}</div>
+                      <div style={{ background: `${mc}12`, borderRadius: 7, padding: "1px 5px", fontSize: 8, color: mc, fontWeight: 600 }}>{l.categorie}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Modal nouvelle annonce */}
       {newModal && (
@@ -3015,6 +3069,21 @@ function ProMarketplace({ account, listings, setListings, lang }) {
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 32px", animation: "slideUp .3s ease", maxHeight: "85vh", overflowY: "auto" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 18px" }} />
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{tr.newListing}</div>
+            {/* Secteur d'activité */}
+            <label className="lk-label">Secteur d'activité</label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 6, marginBottom: 14 }}>
+              {MARKET_METIERS.filter(m => m.id !== "all").map(m => (
+                <button key={m.id} onClick={() => setForm(p => ({ ...p, metier: m.id }))}
+                  style={{ position: "relative", height: 52, borderRadius: 11, overflow: "hidden", border: `2px solid ${form.metier === m.id ? m.color : "rgba(0,0,0,.1)"}`, cursor: "pointer", fontFamily: "'Inter',sans-serif", boxShadow: form.metier === m.id ? `0 2px 10px ${m.color}40` : "none" }}>
+                  {m.photo && <img src={m.photo} alt="" onError={e => { e.target.style.display="none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .4 }} />}
+                  <div style={{ position: "absolute", inset: 0, background: form.metier === m.id ? `${m.color}cc` : "rgba(20,20,20,.45)" }} />
+                  <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: "100%" }}>
+                    {m.icon("#fff", 14)}
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{m.label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
             <label className="lk-label">{tr.listingTitle}</label>
             <input className="lk-input" value={form.titre} onChange={e => setForm(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Perceuse Bosch 18V…" style={{ marginBottom: 12 }} />
             <label className="lk-label">{tr.listingDesc}</label>
