@@ -133,6 +133,13 @@ const TRANS = {
     reserveBtn: "Réserver",
     // LoginScreen
     loginFeature1: "Artisans certifiés & vérifiés", loginFeature2: "Suivi GPS en temps réel", loginFeature3: "Intervention en moins de 30 min",
+    loginFeature4: "Paiement sécurisé en ligne", loginFeature5: "Support 7j/7 réactif",
+    loginWhoTitle: "Qui sommes-nous ?",
+    loginWhoText: "LOCKR est la plateforme française qui connecte les particuliers avec des artisans de confiance — plombiers, électriciens, serruriers, chauffagistes — vérifiés, assurés et notés par la communauté.",
+    loginWhyTitle: "Pourquoi choisir LOCKR ?",
+    loginStat1: "500+", loginStat1Label: "artisans certifiés",
+    loginStat2: "12 000+", loginStat2Label: "missions réalisées",
+    loginStat3: "4.9★", loginStat3Label: "note moyenne",
     wrongCredentials: "Email ou mot de passe incorrect", notVerified: "Compte non vérifié",
     loginTitle: "Connexion",
     // RegisterChoiceScreen
@@ -327,6 +334,13 @@ const TRANS = {
     reserveBtn: "Book",
     // LoginScreen
     loginFeature1: "Certified & verified craftsmen", loginFeature2: "Real-time GPS tracking", loginFeature3: "Intervention in under 30 min",
+    loginFeature4: "Secure online payment", loginFeature5: "Responsive 7/7 support",
+    loginWhoTitle: "Who are we?",
+    loginWhoText: "LOCKR is the French platform connecting individuals with trusted craftsmen — plumbers, electricians, locksmiths, heating engineers — verified, insured and rated by the community.",
+    loginWhyTitle: "Why choose LOCKR?",
+    loginStat1: "500+", loginStat1Label: "certified craftsmen",
+    loginStat2: "12 000+", loginStat2Label: "missions completed",
+    loginStat3: "4.9★", loginStat3Label: "average rating",
     wrongCredentials: "Incorrect email or password", notVerified: "Account not verified",
     loginTitle: "Sign in",
     // RegisterChoiceScreen
@@ -1644,42 +1658,116 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
     onLogin(acc);
   };
 
+  const features = [
+    { icon: Icon.shield, text: tr.loginFeature1 },
+    { icon: Icon.map,    text: tr.loginFeature2 },
+    { icon: Icon.check,  text: tr.loginFeature3 },
+    { icon: Icon.card,   text: tr.loginFeature4 },
+    { icon: Icon.phone,  text: tr.loginFeature5 },
+  ];
+
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
+
+      {/* ── Panneau gauche desktop ── */}
       {isDesktop && (
-        <div style={{ flex: 1, background: "linear-gradient(135deg,#1c1c1c 0%,#2e2e2e 60%,#1a1a1a 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 48px", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 30% 50%, rgba(201,160,48,.15) 0%, transparent 60%), radial-gradient(circle at 80% 80%, rgba(201,160,48,.08) 0%, transparent 50%)" }} />
-          <div style={{ position: "relative", textAlign: "center", maxWidth: 360 }}>
-            <div style={{ width: 72, height: 72, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
-              {Icon.lock("#c9a030", 32)}
+        <div style={{ flex: 1, position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          {/* Image de fond — remplacez l'URL par votre propre photo */}
+          <img
+            src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1400&q=80"
+            alt=""
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+            onError={e => { e.target.style.display = "none"; }}
+          />
+          {/* Overlay dégradé sombre */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,10,.45) 0%, rgba(10,10,10,.65) 40%, rgba(10,10,10,.93) 100%)" }} />
+          {/* Reflets dorés */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 30%, rgba(201,160,48,.18) 0%, transparent 55%), radial-gradient(circle at 80% 70%, rgba(124,58,237,.12) 0%, transparent 50%)" }} />
+
+          {/* Contenu superposé */}
+          <div style={{ position: "relative", padding: "48px 52px", color: "#fff" }}>
+            {/* Logo */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 36 }}>
+              <div style={{ width: 52, height: 52, background: "rgba(201,160,48,.18)", border: "1.5px solid rgba(201,160,48,.45)", borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {Icon.lock("#c9a030", 26)}
+              </div>
+              <div>
+                <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-1.5px", lineHeight: 1 }}>LOCKR</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 3 }}>{tr.appTagline}</div>
+              </div>
             </div>
-            <div style={{ fontSize: 48, fontWeight: 900, color: "#fff", letterSpacing: "-2px", marginBottom: 12 }}>LOCKR</div>
-            <div style={{ color: "rgba(255,255,255,.55)", fontSize: 16, lineHeight: 1.7, marginBottom: 40 }}>{tr.appTagline}</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {[{ icon: Icon.shield, text: tr.loginFeature1 }, { icon: Icon.map, text: tr.loginFeature2 }, { icon: Icon.check, text: tr.loginFeature3 }].map((f, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 32, height: 32, background: "rgba(201,160,48,.12)", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {f.icon("rgba(201,160,48,.9)", 16)}
+
+            {/* Qui sommes-nous */}
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", color: "#c9a030", textTransform: "uppercase", marginBottom: 10 }}>{tr.loginWhoTitle}</div>
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: "rgba(255,255,255,.75)", margin: 0, maxWidth: 460 }}>{tr.loginWhoText}</p>
+            </div>
+
+            {/* Avantages */}
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", color: "#c9a030", textTransform: "uppercase", marginBottom: 14 }}>{tr.loginWhyTitle}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 18px" }}>
+                {features.map((f, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 30, height: 30, background: "rgba(201,160,48,.14)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {f.icon("#c9a030", 14)}
+                    </div>
+                    <span style={{ color: "rgba(255,255,255,.8)", fontSize: 13 }}>{f.text}</span>
                   </div>
-                  <span style={{ color: "rgba(255,255,255,.7)", fontSize: 14 }}>{f.text}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div style={{ display: "flex", gap: 0, background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 16, overflow: "hidden" }}>
+              {[
+                { n: tr.loginStat1, l: tr.loginStat1Label },
+                { n: tr.loginStat2, l: tr.loginStat2Label },
+                { n: tr.loginStat3, l: tr.loginStat3Label },
+              ].map((s, i) => (
+                <div key={i} style={{ flex: 1, textAlign: "center", padding: "14px 8px", borderRight: i < 2 ? "1px solid rgba(255,255,255,.08)" : "none" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#c9a030", letterSpacing: "-.5px" }}>{s.n}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginTop: 3 }}>{s.l}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
       )}
-      <div style={{ width: isDesktop ? 440 : "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: isDesktop ? "48px 40px" : "20px 18px", overflowY: "auto" }}>
-        <div style={{ width: "100%", maxWidth: 390, animation: "fadeUp .45s ease" }}>
-          {!isDesktop && (
-            <div style={{ textAlign: "center", marginBottom: 42 }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <div style={{ width: 40, height: 40, background: T.grad, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 20)}</div>
-                <span style={{ fontSize: 28, fontWeight: 800, color: T.textHi, letterSpacing: "-1.2px" }}>LOCKR</span>
+
+      {/* ── Panneau droit : formulaire ── */}
+      <div style={{ width: isDesktop ? 460 : "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: isDesktop ? "48px 44px" : 0, overflowY: "auto", background: T.bg }}>
+
+        {/* Hero mobile avec image */}
+        {!isDesktop && (
+          <div style={{ position: "relative", padding: "52px 22px 36px", overflow: "hidden" }}>
+            <img
+              src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=75"
+              alt=""
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
+              onError={e => { e.target.style.display = "none"; }}
+            />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(10,10,10,.5) 0%,rgba(10,10,10,.85) 70%,rgba(10,10,10,.98) 100%)" }} />
+            <div style={{ position: "relative" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
+                <div style={{ width: 38, height: 38, background: "rgba(201,160,48,.18)", border: "1px solid rgba(201,160,48,.4)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#c9a030", 18)}</div>
+                <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", letterSpacing: "-1px" }}>LOCKR</span>
               </div>
-              <div style={{ color: T.textLo, fontSize: 14 }}>{tr.appTagline}</div>
+              <p style={{ color: "rgba(255,255,255,.7)", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", maxWidth: 340 }}>{tr.loginWhoText}</p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {features.slice(0, 3).map((f, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(201,160,48,.12)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "5px 10px" }}>
+                    {f.icon("#c9a030", 12)}
+                    <span style={{ color: "rgba(255,255,255,.85)", fontSize: 11, fontWeight: 500 }}>{f.text}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
+          </div>
+        )}
+
+        <div style={{ width: "100%", maxWidth: 390, margin: "0 auto", padding: isDesktop ? 0 : "24px 20px 32px", animation: "fadeUp .45s ease" }}>
           {isDesktop && <div style={{ fontSize: 24, fontWeight: 800, color: T.textHi, marginBottom: 28, letterSpacing: "-.5px" }}>{tr.loginTitle}</div>}
           <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
             {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }].map(t => (
