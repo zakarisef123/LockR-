@@ -747,10 +747,18 @@ const PROB_ICONS = {
 };
 
 const METIERS = [
-  { id: "serrurier",    label: "Serrurier",    labelEn: "Locksmith",        color: "#7c3aed", icon: Icon.key,     desc: "Ouverture, serrure, blindage", descEn: "Opening, lock, reinforcement" },
-  { id: "plombier",     label: "Plombier",     labelEn: "Plumber",          color: "#0ea5e9", icon: Icon.droplet, desc: "Fuite, débouchage, sanitaire",  descEn: "Leak, unclogging, sanitary" },
-  { id: "electricien",  label: "Électricien",  labelEn: "Electrician",      color: "#f59e0b", icon: Icon.bolt,    desc: "Panne, tableau, installation",  descEn: "Failure, panel, installation" },
-  { id: "chauffagiste", label: "Chauffagiste", labelEn: "Heating engineer", color: "#ef4444", icon: Icon.flame,   desc: "Chaudière, PAC, radiateur",     descEn: "Boiler, heat pump, radiator" },
+  { id: "serrurier",    label: "Serrurier",    labelEn: "Locksmith",        color: "#7c3aed", icon: Icon.key,     desc: "Ouverture, serrure, blindage", descEn: "Opening, lock, reinforcement",
+    photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
+    heroBg: "linear-gradient(135deg,#3b0764,#6d28d9)" },
+  { id: "plombier",     label: "Plombier",     labelEn: "Plumber",          color: "#0ea5e9", icon: Icon.droplet, desc: "Fuite, débouchage, sanitaire",  descEn: "Leak, unclogging, sanitary",
+    photo: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&q=80",
+    heroBg: "linear-gradient(135deg,#0c4a6e,#0369a1)" },
+  { id: "electricien",  label: "Électricien",  labelEn: "Electrician",      color: "#f59e0b", icon: Icon.bolt,    desc: "Panne, tableau, installation",  descEn: "Failure, panel, installation",
+    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80",
+    heroBg: "linear-gradient(135deg,#78350f,#d97706)" },
+  { id: "chauffagiste", label: "Chauffagiste", labelEn: "Heating engineer", color: "#ef4444", icon: Icon.flame,   desc: "Chaudière, PAC, radiateur",     descEn: "Boiler, heat pump, radiator",
+    photo: "https://images.unsplash.com/photo-1621905252395-760b98e1ce07?w=800&q=80",
+    heroBg: "linear-gradient(135deg,#7f1d1d,#dc2626)" },
 ];
 
 const CSS = `
@@ -3593,12 +3601,27 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             </div>
             <div style={{ marginBottom: 22 }}>
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
-              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "1fr 1fr", gap: 12 }}>
                 {METIERS.map(m => (
-                  <button key={m.id} onClick={() => { setSelMetier(m.id); setSelProb(null); setScreen("choose"); }} className="lk-card" style={{ borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", background: "#fff" }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${m.color}15`, border: `1px solid ${m.color}30`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>{m.icon(m.color, 18)}</div>
-                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12 }}>{m.label}</div>
-                    <div style={{ color: T.textLo, fontSize: 11, marginTop: 3 }}>{m.desc}</div>
+                  <button key={m.id} onClick={() => { setSelMetier(m.id); setSelProb(null); setScreen("choose"); }} style={{ position: "relative", borderRadius: 18, overflow: "hidden", height: isDesktop ? 160 : 130, cursor: "pointer", border: "none", fontFamily: "'Inter',sans-serif", transition: "transform .18s, box-shadow .18s", boxShadow: "0 4px 18px rgba(0,0,0,.18)" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform="scale(1.03)"; e.currentTarget.style.boxShadow="0 8px 28px rgba(0,0,0,.28)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform="scale(1)";    e.currentTarget.style.boxShadow="0 4px 18px rgba(0,0,0,.18)"; }}>
+                    {/* Image de fond */}
+                    <img src={m.photo} alt={m.label} onError={e => { e.target.style.display="none"; }}
+                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                    {/* Overlay dégradé */}
+                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(160deg, ${m.color}cc 0%, ${m.color}99 100%)`, mixBlendMode: "multiply" }} />
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,transparent 30%,rgba(0,0,0,.55) 100%)" }} />
+                    {/* Contenu */}
+                    <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "14px 14px 12px" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,.2)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {m.icon("#fff", 18)}
+                      </div>
+                      <div>
+                        <div style={{ color: "#fff", fontWeight: 800, fontSize: 14, letterSpacing: "-.3px" }}>{m.label}</div>
+                        <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, marginTop: 3 }}>{m.desc}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -3694,28 +3717,64 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.selectMetier}</div>
           <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 10 }}>
             {METIERS.map(m => (
-              <button key={m.id} onClick={() => { setSelMetier(m.id === selMetier ? null : m.id); setSelProb(null); }} style={{ background: selMetier === m.id ? `${m.color}15` : "#fff", border: `2px solid ${selMetier === m.id ? m.color : "rgba(0,0,0,.1)"}`, borderRadius: 14, padding: "14px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${m.color}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>{m.icon(m.color, 22)}</div>
-                <div style={{ color: selMetier === m.id ? m.color : T.textHi, fontWeight: 700, fontSize: 13 }}>{m.label}</div>
-                <div style={{ color: T.textLo, fontSize: 11, textAlign: "center" }}>{m.desc}</div>
+              <button key={m.id} onClick={() => { setSelMetier(m.id === selMetier ? null : m.id); setSelProb(null); }}
+                style={{ position: "relative", borderRadius: 16, overflow: "hidden", height: 90, cursor: "pointer", border: `2.5px solid ${selMetier === m.id ? m.color : "transparent"}`, fontFamily: "'Inter',sans-serif", transition: "all .15s", boxShadow: selMetier === m.id ? `0 4px 16px ${m.color}50` : "0 2px 8px rgba(0,0,0,.12)" }}>
+                <img src={m.photo} alt={m.label} onError={e => { e.target.style.display="none"; }}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                <div style={{ position: "absolute", inset: 0, background: selMetier === m.id ? `${m.color}bb` : "rgba(10,10,10,.55)" }} />
+                <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                  {m.icon("#fff", 22)}
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12 }}>{m.label}</div>
+                  {selMetier === m.id && <div style={{ position: "absolute", top: 6, right: 6 }}>{Icon.check("#fff", 14)}</div>}
+                </div>
               </button>
             ))}
           </div>
         </div>
+        {/* Bannière hero du métier sélectionné */}
+        {selMetier && (() => { const m = METIERS.find(x => x.id === selMetier); return m ? (
+          <div style={{ position: "relative", borderRadius: 18, overflow: "hidden", height: isDesktop ? 140 : 110, marginBottom: 20, animation: "fadeUp .3s ease" }}>
+            <img src={m.photo} alt={m.label} onError={e => { e.target.style.display="none"; }}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }} />
+            <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg, ${m.color}ee 0%, ${m.color}99 50%, transparent 100%)` }} />
+            <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", gap: 16, padding: "0 24px" }}>
+              <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,.2)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {m.icon("#fff", 26)}
+              </div>
+              <div>
+                <div style={{ color: "#fff", fontWeight: 900, fontSize: isDesktop ? 22 : 18, letterSpacing: "-.5px" }}>{m.label}</div>
+                <div style={{ color: "rgba(255,255,255,.8)", fontSize: 13, marginTop: 3 }}>{m.desc}</div>
+              </div>
+            </div>
+          </div>
+        ) : null; })()}
+
         <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
           {/* Colonne gauche : sélection du problème */}
           <div>
             {selMetier && <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
-              {PROBLEMES.filter(p => !selMetier || p.metier === selMetier).map(p => { const IC = PROB_ICONS[p.id]; return (
-                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${selProb?.id === p.id ? T.accent : "rgba(124,58,237,.18)"}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif", boxShadow: selProb?.id === p.id ? "0 4px 16px rgba(124,58,237,.2)" : "0 2px 8px rgba(124,58,237,.07)", transition: "all .15s" }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(124,58,237,.12)" : "rgba(124,58,237,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.accent, 18) : null}</div>
+              {PROBLEMES.filter(p => !selMetier || p.metier === selMetier).map(p => {
+                const IC = PROB_ICONS[p.id];
+                const metierColor = METIERS.find(m => m.id === p.metier)?.color || T.accent;
+                const metierPhoto = METIERS.find(m => m.id === p.metier)?.photo;
+                const isSelected = selProb?.id === p.id;
+                return (
+                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: isSelected ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${isSelected ? metierColor : "rgba(0,0,0,.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif", boxShadow: isSelected ? `0 4px 16px ${metierColor}30` : "0 1px 6px rgba(0,0,0,.07)", transition: "all .15s" }}>
+                  {/* Miniature photo du métier */}
+                  <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", position: "relative", flexShrink: 0, background: `${metierColor}15` }}>
+                    {metierPhoto && <img src={metierPhoto} alt="" onError={e => { e.target.style.display="none"; }}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", opacity: .7 }} />}
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {IC ? IC(isSelected ? metierColor : "#fff", 18) : null}
+                    </div>
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{p.label}</div>
                     <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{p.desc}</div>
                   </div>
                   {p.urgence && <span className="lk-tag-urgent">URGENT</span>}
-                  {selProb?.id === p.id && Icon.check(T.accent, 16)}
+                  {isSelected && Icon.check(metierColor, 16)}
                 </button>
               ); })}
             </div>
