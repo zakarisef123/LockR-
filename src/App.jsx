@@ -142,6 +142,15 @@ const TRANS = {
     loginStat3: "4.9★", loginStat3Label: "note moyenne",
     wrongCredentials: "Email ou mot de passe incorrect", notVerified: "Compte non vérifié",
     loginTitle: "Connexion",
+    // Marketplace
+    marketplace: "Marketplace", marketplaceDesc: "Achetez et vendez du matériel entre pros",
+    newListing: "Nouvelle annonce", myListings: "Mes annonces", allListings: "Toutes les annonces",
+    listingTitle: "Titre de l'annonce", listingDesc: "Description", listingPrice: "Prix (€)",
+    listingCategory: "Catégorie", listingCondition: "État",
+    conditionNew: "Neuf", conditionGoodUsed: "Très bon état", conditionUsed: "Occasion",
+    contactSeller: "Contacter", noListings: "Aucune annonce pour l'instant",
+    postListing: "Publier l'annonce", listingPosted: "Annonce publiée !",
+    deleteListing: "Supprimer", filterAll: "Tout", catTools: "Outils", catParts: "Pièces", catEquip: "Équipements", catMat: "Matériaux",
     // RegisterChoiceScreen
     chooseProfile: "Choisissez votre profil",
     clientDesc: "Trouvez un artisan qualifié rapidement. Suivi en temps réel de votre intervention.",
@@ -346,6 +355,14 @@ const TRANS = {
     loginStat3: "4.9★", loginStat3Label: "average rating",
     wrongCredentials: "Incorrect email or password", notVerified: "Account not verified",
     loginTitle: "Sign in",
+    marketplace: "Marketplace", marketplaceDesc: "Buy and sell materials between pros",
+    newListing: "New listing", myListings: "My listings", allListings: "All listings",
+    listingTitle: "Listing title", listingDesc: "Description", listingPrice: "Price (€)",
+    listingCategory: "Category", listingCondition: "Condition",
+    conditionNew: "New", conditionGoodUsed: "Like new", conditionUsed: "Used",
+    contactSeller: "Contact", noListings: "No listings yet",
+    postListing: "Post listing", listingPosted: "Listing posted!",
+    deleteListing: "Delete", filterAll: "All", catTools: "Tools", catParts: "Parts", catEquip: "Equipment", catMat: "Materials",
     // RegisterChoiceScreen
     chooseProfile: "Choose your profile",
     clientDesc: "Find a qualified craftsman quickly. Real-time tracking of your intervention.",
@@ -680,6 +697,14 @@ const INIT_BONS = [
   { id: "bon7", titre: "Installation pompe à chaleur",    adresse: "5 allée des Roses, Paris 14", probleme: "pac",         urgence: false, montantEstime: 600, postedBy: "platform", postedByNom: "LOCKR", region: "Paris", lat: 48.833, lng: 2.330, createdAt: new Date(Date.now() - 18000000).toISOString(), techPct: 35 },
 ];
 
+const INIT_LISTINGS = [
+  { id: "l1", proId: "p1", proNom: "Karim Benali", metier: "serrurier", titre: "Perceuse à percussion Bosch GSB 18V-55 — kit complet", desc: "Vendue avec 2 batteries, chargeur et mallette. Très peu utilisée, parfait état. Idéale pour pose de serrures.", prix: 180, categorie: "Outils", etat: "Très bon état", photo: null, tel: "0601020304", createdAt: new Date(Date.now() - 86400000 * 2).toISOString() },
+  { id: "l2", proId: "p3", proNom: "Marc Fontaine",  metier: "plombier",  titre: "Lot de raccords à compression 15mm — 50 pièces neuves", desc: "Lot de raccords laiton 15mm, jamais utilisés, achetés en trop. Marque Giacomini.", prix: 45, categorie: "Pièces", etat: "Neuf", photo: null, tel: "0614151617", createdAt: new Date(Date.now() - 86400000 * 5).toISOString() },
+  { id: "l3", proId: "p5", proNom: "Nicolas Laurent", metier: "electricien", titre: "Tableau électrique Legrand 13 rangées — neuf sous blister", desc: "Tableau coffret 13 rangées 26 modules. Acheté en double commande, jamais ouvert.", prix: 120, categorie: "Équipements", etat: "Neuf", photo: null, tel: "0622232425", createdAt: new Date(Date.now() - 86400000 * 3).toISOString() },
+  { id: "l4", proId: "p7", proNom: "Pierre Rousseau", metier: "chauffagiste", titre: "Chaudière Vaillant ecoTEC plus 24kW — révisée", desc: "Chaudière déposée lors d'un remplacement chez client. Révisée, garantie 6 mois pièces. Idéale dépannage.", prix: 550, categorie: "Équipements", etat: "Occasion", photo: null, tel: "0630313233", createdAt: new Date(Date.now() - 86400000 * 7).toISOString() },
+  { id: "l5", proId: "p4", proNom: "Julien Moreau",   metier: "plombier",  titre: "Robinets thermostatiques Danfoss — lot de 8", desc: "Robinets thermostatiques RAV-N + RA-N, déposés lors rénovation. Recondés, propres, fonctionnels.", prix: 60, categorie: "Pièces", etat: "Occasion", photo: null, tel: "0618192021", createdAt: new Date(Date.now() - 86400000 * 1).toISOString() },
+];
+
 const INIT_CHAT = {
   Paris: [
     { id: "m1", auteurId: "p1", auteurNom: "Karim Benali", texte: "Salut les gars, quelqu'un a une référence pour les cylindres Mul-T-Lock ?", createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), photo: null },
@@ -751,13 +776,13 @@ const METIERS = [
     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
     heroBg: "linear-gradient(135deg,#3b0764,#6d28d9)" },
   { id: "plombier",     label: "Plombier",     labelEn: "Plumber",          color: "#0ea5e9", icon: Icon.droplet, desc: "Fuite, débouchage, sanitaire",  descEn: "Leak, unclogging, sanitary",
-    photo: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=800&q=80",
+    photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=800&q=80",
     heroBg: "linear-gradient(135deg,#0c4a6e,#0369a1)" },
   { id: "electricien",  label: "Électricien",  labelEn: "Electrician",      color: "#f59e0b", icon: Icon.bolt,    desc: "Panne, tableau, installation",  descEn: "Failure, panel, installation",
     photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&q=80",
     heroBg: "linear-gradient(135deg,#78350f,#d97706)" },
   { id: "chauffagiste", label: "Chauffagiste", labelEn: "Heating engineer", color: "#ef4444", icon: Icon.flame,   desc: "Chaudière, PAC, radiateur",     descEn: "Boiler, heat pump, radiator",
-    photo: "https://images.unsplash.com/photo-1621905252395-760b98e1ce07?w=800&q=80",
+    photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
     heroBg: "linear-gradient(135deg,#7f1d1d,#dc2626)" },
 ];
 
@@ -2888,8 +2913,185 @@ function ProProfileTab({ account, setAccounts, bookings, lang = "fr" }) {
   );
 }
 
+/* ─── MARKETPLACE PRO ─── */
+const MARKET_CATS = ["Outils", "Pièces", "Équipements", "Matériaux"];
+const MARKET_ETATS = ["Neuf", "Très bon état", "Occasion"];
+
+function ProMarketplace({ account, listings, setListings, lang }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [filter, setFilter] = useState("all");
+  const [filterCat, setFilterCat] = useState("all");
+  const [search, setSearch] = useState("");
+  const [newModal, setNewModal] = useState(false);
+  const [form, setForm] = useState({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf" });
+  const [posted, setPosted] = useState(false);
+  const [detailId, setDetailId] = useState(null);
+
+  const visible = listings.filter(l => {
+    if (filter === "mine" && l.proId !== account.id) return false;
+    if (filterCat !== "all" && l.categorie !== filterCat) return false;
+    if (search && !l.titre.toLowerCase().includes(search.toLowerCase()) && !l.desc.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const post = () => {
+    if (!form.titre || !form.prix) return;
+    const nl = { id: uid(), proId: account.id, proNom: account.nom, metier: account.metier || "serrurier", titre: form.titre, desc: form.desc, prix: Number(form.prix), categorie: form.categorie, etat: form.etat, photo: null, tel: account.tel || "", createdAt: ts() };
+    setListings(p => [nl, ...p]);
+    setForm({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf" });
+    setPosted(true);
+    setNewModal(false);
+    setTimeout(() => setPosted(false), 3000);
+  };
+
+  const detail = detailId ? listings.find(l => l.id === detailId) : null;
+  const metierColor = (mid) => ({ serrurier: "#7c3aed", plombier: "#0ea5e9", electricien: "#f59e0b", chauffagiste: "#ef4444" }[mid] || T.accent);
+
+  return (
+    <div style={{ padding: "16px 14px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17 }}>{tr.marketplace}</div>
+          <div style={{ color: T.textLo, fontSize: 12 }}>{tr.marketplaceDesc}</div>
+        </div>
+        <button onClick={() => setNewModal(true)} className="lk-btn" style={{ padding: "10px 14px", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          {Icon.plus("#fff", 14)} {tr.newListing}
+        </button>
+      </div>
+
+      {posted && <div style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, color: T.success, fontWeight: 600, fontSize: 13 }}>{Icon.check(T.success, 14)} {tr.listingPosted}</div>}
+
+      {/* Filtres */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        {[{ id: "all", l: tr.allListings }, { id: "mine", l: tr.myListings }].map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)} style={{ background: filter === f.id ? T.accent : T.card, color: filter === f.id ? "#fff" : T.textMid, border: `1px solid ${filter === f.id ? T.accent : T.border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{f.l}</button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+        {[{ id: "all", l: tr.filterAll }, ...MARKET_CATS.map(c => ({ id: c, l: c }))].map(c => (
+          <button key={c.id} onClick={() => setFilterCat(c.id)} style={{ background: filterCat === c.id ? T.grad : T.card, color: filterCat === c.id ? "#fff" : T.textMid, border: `1px solid ${filterCat === c.id ? T.accent : T.border}`, borderRadius: 20, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{c.l}</button>
+        ))}
+      </div>
+      <input className="lk-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher une annonce…" style={{ marginBottom: 14 }} />
+
+      {/* Liste annonces */}
+      {visible.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 0", color: T.textLo }}>{Icon.tool(T.textLo, 32)}<div style={{ marginTop: 10 }}>{tr.noListings}</div></div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {visible.map(l => {
+            const mc = metierColor(l.metier);
+            const isMine = l.proId === account.id;
+            return (
+              <div key={l.id} onClick={() => setDetailId(l.id)} style={{ background: "#fff", border: `1.5px solid ${T.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,.07)", transition: "transform .15s, box-shadow .15s" }}
+                onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 6px 18px rgba(0,0,0,.12)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.07)"; }}>
+                {/* Photo placeholder colorée */}
+                <div style={{ height: 80, background: `linear-gradient(135deg,${mc}20,${mc}08)`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: `${mc}20`, border: `1px solid ${mc}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {Icon.tool(mc, 20)}
+                  </div>
+                  <div style={{ position: "absolute", top: 6, right: 6, background: l.etat === "Neuf" ? "rgba(62,207,142,.15)" : "rgba(201,160,48,.12)", border: `1px solid ${l.etat === "Neuf" ? "rgba(62,207,142,.3)" : "rgba(201,160,48,.25)"}`, borderRadius: 20, padding: "2px 7px", fontSize: 9, fontWeight: 700, color: l.etat === "Neuf" ? T.success : T.gold }}>{l.etat}</div>
+                  {isMine && <div style={{ position: "absolute", top: 6, left: 6, background: "rgba(124,58,237,.12)", border: "1px solid rgba(124,58,237,.25)", borderRadius: 20, padding: "2px 7px", fontSize: 9, fontWeight: 700, color: T.accent }}>Moi</div>}
+                </div>
+                <div style={{ padding: "10px 10px 12px" }}>
+                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12, lineHeight: 1.3, marginBottom: 4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.titre}</div>
+                  <div style={{ color: mc, fontWeight: 800, fontSize: 15, marginBottom: 4 }}>{fmt(l.prix)}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ color: T.textLo, fontSize: 10 }}>{l.proNom}</div>
+                    <div style={{ background: `${mc}12`, borderRadius: 8, padding: "2px 6px", fontSize: 9, color: mc, fontWeight: 600 }}>{l.categorie}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal nouvelle annonce */}
+      {newModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 32px", animation: "slideUp .3s ease", maxHeight: "85vh", overflowY: "auto" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 18px" }} />
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{tr.newListing}</div>
+            <label className="lk-label">{tr.listingTitle}</label>
+            <input className="lk-input" value={form.titre} onChange={e => setForm(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Perceuse Bosch 18V…" style={{ marginBottom: 12 }} />
+            <label className="lk-label">{tr.listingDesc}</label>
+            <textarea className="lk-input" value={form.desc} onChange={e => setForm(p => ({ ...p, desc: e.target.value }))} placeholder="Décrivez le matériel, son état, les accessoires inclus…" rows={3} style={{ marginBottom: 12, resize: "none" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div>
+                <label className="lk-label">{tr.listingPrice}</label>
+                <input className="lk-input" type="number" value={form.prix} onChange={e => setForm(p => ({ ...p, prix: e.target.value }))} placeholder="150" />
+              </div>
+              <div>
+                <label className="lk-label">{tr.listingCondition}</label>
+                <select className="lk-input" value={form.etat} onChange={e => setForm(p => ({ ...p, etat: e.target.value }))} style={{ cursor: "pointer" }}>
+                  {MARKET_ETATS.map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+            </div>
+            <label className="lk-label">{tr.listingCategory}</label>
+            <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
+              {MARKET_CATS.map(c => (
+                <button key={c} onClick={() => setForm(p => ({ ...p, categorie: c }))} style={{ background: form.categorie === c ? T.grad : T.card, color: form.categorie === c ? "#fff" : T.textMid, border: `1px solid ${form.categorie === c ? T.accent : T.border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{c}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setNewModal(false)} className="lk-ghost" style={{ flex: 1 }}>{tr.cancel}</button>
+              <button onClick={post} className="lk-btn" style={{ flex: 2 }}>{tr.postListing}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal détail annonce */}
+      {detail && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 32px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 18px" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, lineHeight: 1.3, marginBottom: 6 }}>{detail.titre}</div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <span style={{ background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "2px 8px", fontSize: 11, color: T.gold, fontWeight: 600 }}>{detail.categorie}</span>
+                  <span style={{ background: detail.etat === "Neuf" ? "rgba(62,207,142,.1)" : "rgba(201,160,48,.1)", border: `1px solid ${detail.etat === "Neuf" ? "rgba(62,207,142,.25)" : "rgba(201,160,48,.2)"}`, borderRadius: 20, padding: "2px 8px", fontSize: 11, color: detail.etat === "Neuf" ? T.success : T.gold, fontWeight: 600 }}>{detail.etat}</span>
+                </div>
+              </div>
+              <div style={{ color: metierColor(detail.metier), fontWeight: 900, fontSize: 22 }}>{fmt(detail.prix)}</div>
+            </div>
+            <p style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>{detail.desc || "Aucune description."}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 16 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: `${metierColor(detail.metier)}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: metierColor(detail.metier), fontWeight: 800, fontSize: 14 }}>{detail.proNom.charAt(0)}</span>
+              </div>
+              <div>
+                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{detail.proNom}</div>
+                <div style={{ color: T.textLo, fontSize: 11 }}>{fmtDate(detail.createdAt)}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setDetailId(null)} className="lk-ghost" style={{ flex: 1 }}>{tr.back}</button>
+              {detail.proId !== account.id && detail.tel && (
+                <a href={`tel:${detail.tel}`} style={{ flex: 2, background: T.grad, color: "#fff", borderRadius: 12, padding: "12px", textAlign: "center", textDecoration: "none", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  {Icon.phone("#fff", 16)} {tr.contactSeller}
+                </a>
+              )}
+              {detail.proId === account.id && (
+                <button onClick={() => { setListings(p => p.filter(l => l.id !== detail.id)); setDetailId(null); }} style={{ flex: 2, background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 12, padding: "12px", color: T.danger, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                  {tr.deleteListing}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── PRO APP ─── */
-function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, onLogout, lang = "fr", setLang }) {
+function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -2986,6 +3188,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     { id: "missions", icon: Icon.list, l: tr.missions },
     { id: "active", icon: Icon.map, l: tr.inProgress },
     { id: "bons", icon: Icon.percent, l: tr.bonuses },
+    { id: "marketplace", icon: Icon.card, l: tr.marketplace },
     { id: "calendar", icon: Icon.calendar, l: tr.calendarTab },
     { id: "stats", icon: Icon.chart, l: tr.stats },
     { id: "history", icon: Icon.hist, l: tr.history },
@@ -3304,6 +3507,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             </div>
           ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />)}
           {tab === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
+          {tab === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} lang={lang} />}
           {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
           {tab === "history" && (
@@ -4492,6 +4696,7 @@ export default function App() {
   const [accounts, setAccounts] = useState(INIT_ACCOUNTS);
   const [bons, setBons] = useState(INIT_BONS);
   const [chatMessages, setChatMessages] = useState(INIT_CHAT);
+  const [listings, setListings] = useState(INIT_LISTINGS);
   const [interventionChats, setInterventionChats] = useState({});
   const [lang, setLang] = useState("fr");
   const [bannedList, setBannedList] = useState([]);
@@ -4499,7 +4704,7 @@ export default function App() {
 
   if (account) {
     if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
-    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} onLogout={logout} lang={lang} setLang={setLang} />;
     if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />;
   }
   if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
