@@ -470,7 +470,7 @@ const TRANS = {
 };
 
 const T = {
-  bg: "#f5f3ff", surface: "#ffffff", card: "#ffffff", border: "rgba(124,58,237,.1)",
+  bg: "#ffffff", surface: "#ffffff", card: "#f8f9ff", border: "rgba(0,0,0,.08)",
   borderHi: "rgba(124,58,237,.45)", accent: "#7c3aed", accent2: "#a78bfa",
   success: "#1e9e6b", warn: "#d97706", danger: "#dc2626",
   textHi: "#1c1c1c", textMid: "rgba(28,28,28,.55)", textLo: "rgba(28,28,28,.38)",
@@ -1187,24 +1187,22 @@ function PayLogo({ id, size = 44 }) {
     </div>
   );
   if (id === "apple") return (
-    <div style={{ ...s, background: "#000" }}>
-      <svg width={size * 0.75} height={size * 0.35} viewBox="0 0 72 32" fill="none">
-        <path d="M8.5 8C9.5 6.8 10.1 5.2 9.8 3.6 8.4 3.7 6.7 4.5 5.7 5.8 4.8 6.9 4 8.6 4.4 10.1 5.9 10.2 7.5 9.3 8.5 8z" fill="white"/>
-        <path d="M9.8 10.5c-1.9-.1-3.5 1.1-4.4 1.1-.9 0-2.3-1-3.8-1C-.3 10.7-2 12.5-2.9 15c-1.8 5.2.5 13 2.7 17.2.9 1.6 2 3.3 3.5 3.3 1.4 0 1.9-.9 3.6-.9 1.7 0 2.2.9 3.6.9 1.5 0 2.5-1.6 3.5-3.2.7-1.1 1.3-2.3 1.7-3.5-1.7-.7-2.9-2.4-2.9-4.4 0-1.7.8-3.2 2.1-4.2C14 18.9 12.1 17.9 10.2 17.9c-.1 0-.3 0-.4 0z" fill="white"/>
-        <text x="20" y="24" fontFamily="-apple-system,Arial,sans-serif" fontWeight="700" fontSize="18" fill="white">Pay</text>
+    <div style={{ ...s, background: "#000", flexDirection: "column", gap: 2 }}>
+      <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 20 20" fill="white">
+        <path d="M14.1 10.7c0-2 1.6-3 1.7-3-.9-1.4-2.4-1.5-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.3 2-1.4 2.4-.4 6 1 8 .7 1 1.5 2 2.5 2 1 0 1.4-.6 2.6-.6 1.2 0 1.5.6 2.6.6s1.8-1 2.5-2c.4-.6.8-1.3 1-2-2.2-.8-2.1-3.4-2.1-3.4zM12.3 4.7c.6-.7 1-1.6.9-2.5-.9 0-2 .6-2.6 1.3-.6.6-1.1 1.6-.9 2.5.9.1 1.9-.5 2.6-1.3z"/>
       </svg>
+      <span style={{ color: "#fff", fontSize: 9, fontWeight: 700, fontFamily: "-apple-system,Arial,sans-serif", letterSpacing: ".2px" }}>Pay</span>
     </div>
   );
   if (id === "google") return (
-    <div style={{ ...s, background: "#fff", border: "1.5px solid #e2e8f0" }}>
-      <svg width={size * 0.8} height={size * 0.45} viewBox="0 0 64 36" fill="none">
-        <text x="0" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#4285f4">G</text>
-        <text x="14" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#34a853">o</text>
-        <text x="25" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#fbbc05">o</text>
-        <text x="36" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#ea4335">g</text>
-        <text x="47" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#4285f4">le</text>
-        <text x="0" y="26" fontFamily="Arial,sans-serif" fontWeight="400" fontSize="14" fill="#5f6368" dy="0"> Pay</text>
+    <div style={{ ...s, background: "#fff", border: "1.5px solid #e2e8f0", flexDirection: "column", gap: 1 }}>
+      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
       </svg>
+      <span style={{ color: "#5f6368", fontSize: 8, fontWeight: 700, fontFamily: "Arial,sans-serif" }}>Pay</span>
     </div>
   );
   if (id === "virement") return (
@@ -3344,14 +3342,14 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
             {/* Stepper */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 22 }}>
               {[1,2,3].map((s, i) => (
-                <React.Fragment key={s}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: buyStep >= s ? T.accent : T.card, border: `1.5px solid ${buyStep >= s ? T.accent : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    {buyStep > s ? Icon.check("#fff", 12) : <span style={{ color: buyStep === s ? "#fff" : T.textLo, fontSize: 12, fontWeight: 700 }}>{s}</span>}
+                <div key={s} style={{ display: "contents" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: buyStep >= s ? T.accent : "#f1f5f9", border: `1.5px solid ${buyStep >= s ? T.accent : "rgba(0,0,0,.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {buyStep > s ? Icon.check("#fff", 12) : <span style={{ color: buyStep === s ? "#fff" : "#94a3b8", fontSize: 12, fontWeight: 700 }}>{s}</span>}
                   </div>
-                  <div style={{ flex: i < 2 ? 1 : 0, height: 2, background: buyStep > s ? T.accent : T.border, borderRadius: 2 }} />
-                </React.Fragment>
+                  {i < 2 && <div style={{ flex: 1, height: 2, background: buyStep > s ? T.accent : "rgba(0,0,0,.08)", borderRadius: 2 }} />}
+                </div>
               ))}
-              <div style={{ color: T.textMid, fontSize: 12, fontWeight: 600 }}>
+              <div style={{ color: T.textMid, fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
                 {buyStep === 1 ? tr.buyStep1Title : buyStep === 2 ? tr.buyStep2Title : tr.buyStep3Title}
               </div>
             </div>
@@ -3549,6 +3547,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   // Feature 5: audio recording
   const [recording, setRecording] = useState(false);
   const [audioData, setAudioData] = useState(null);
+  const [swipeTouchX, setSwipeTouchX] = useState(0);
   const mediaRecRef = useRef(null);
   const audioChunks = useRef([]);
   const raf = useRef(null);
@@ -3768,7 +3767,17 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           </div>
         )}
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined }}>
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined }}
+          onTouchStart={e => !isDesktop && setSwipeTouchX(e.touches[0].clientX)}
+          onTouchEnd={e => {
+            if (isDesktop) return;
+            const dx = e.changedTouches[0].clientX - swipeTouchX;
+            if (Math.abs(dx) < 60) return;
+            const ids = tabs.map(t => t.id);
+            const cur = ids.indexOf(tab);
+            if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
+            if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
+          }}>
           {tab === "missions" && (
             <div style={{ padding: "14px" }}>
               {hasPaymentBlock && (
@@ -4021,7 +4030,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [artisanGpsPos, setArtisanGpsPos] = useState(null);
   const raf = useRef(null);
   const t0 = useRef(null);
+  const artisanListRef = useRef(null);
   const { pos: clientPos, loading: geoLoading } = useGeoloc();
+  // Auto-scroll to artisan list on mobile when problem selected
+  useEffect(() => {
+    if (selProb && !isDesktop && artisanListRef.current) {
+      setTimeout(() => artisanListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    }
+  }, [selProb]);
   const myBk = bookings.filter(b => b.clientId === account.id);
   const liveBk = myBk.find(b => ["en_route", "assignée"].includes(b.statut));
   // Artisans = uniquement les pros inscrits réels (+ démo)
@@ -4423,7 +4439,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             </div>
           </div>
           {/* Colonne droite : liste artisans */}
-          <div>
+          <div ref={artisanListRef}>
             {selProb && (
               <div style={{ animation: "fadeUp .25s ease" }}>
                 <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
