@@ -471,11 +471,11 @@ const TRANS = {
 
 const T = {
   bg: "#ffffff", surface: "#ffffff", card: "#f8f9ff", border: "rgba(0,0,0,.08)",
-  borderHi: "rgba(124,58,237,.45)", accent: "#7c3aed", accent2: "#a78bfa",
+  borderHi: "rgba(201,160,48,.45)", accent: "#c9a030", accent2: "#e8c55a",
   success: "#1e9e6b", warn: "#d97706", danger: "#dc2626",
   textHi: "#1c1c1c", textMid: "rgba(28,28,28,.55)", textLo: "rgba(28,28,28,.38)",
-  grad: "linear-gradient(135deg,#7c3aed,#5b21b6)", gradBtn: "linear-gradient(135deg,#7c3aed,#5b21b6)",
-  gold: "#a78bfa",
+  grad: "linear-gradient(135deg,#c9a030,#a87820)", gradBtn: "linear-gradient(135deg,#c9a030,#a87820)",
+  gold: "#c9a030",
 };
 
 const PLATFORM_CUT = 0.10;
@@ -805,9 +805,9 @@ const PROB_ICONS = {
 };
 
 const METIERS = [
-  { id: "serrurier",    label: "Serrurier",    labelEn: "Locksmith",        color: "#7c3aed", icon: Icon.key,     desc: "Ouverture, serrure, blindage", descEn: "Opening, lock, reinforcement",
+  { id: "serrurier",    label: "Serrurier",    labelEn: "Locksmith",        color: "#1e3a8a", icon: Icon.key,     desc: "Ouverture, serrure, blindage", descEn: "Opening, lock, reinforcement",
     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
-    heroBg: "linear-gradient(135deg,#3b0764,#6d28d9)" },
+    heroBg: "linear-gradient(135deg,#1e3a8a,#1e40af)" },
   { id: "plombier",     label: "Plombier",     labelEn: "Plumber",          color: "#0ea5e9", icon: Icon.droplet, desc: "Fuite, débouchage, sanitaire",  descEn: "Leak, unclogging, sanitary",
     photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=800&q=80",
     heroBg: "linear-gradient(135deg,#0c4a6e,#0369a1)" },
@@ -823,7 +823,7 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#f5f3ff}
+body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#fffbf0}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#d0d0cc;border-radius:4px}
 .leaflet-container{background:#e8e8e4 !important}
@@ -838,16 +838,16 @@ body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;backgroun
 @keyframes checkPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes notif{0%{transform:translateY(-80px);opacity:0}15%{transform:translateY(0);opacity:1}80%{transform:translateY(0);opacity:1}100%{transform:translateY(-80px);opacity:0}}
-.lk-btn{background:linear-gradient(135deg,#7c3aed,#5b21b6);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif;box-shadow:0 2px 12px rgba(124,58,237,.35)}
-.lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(124,58,237,.45)}
+.lk-btn{background:linear-gradient(135deg,#c9a030,#a87820);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif;box-shadow:0 2px 12px rgba(201,160,48,.35)}
+.lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,160,48,.45)}
 .lk-btn:active{transform:translateY(0)}
 .lk-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
-.lk-ghost{background:#fff;border:1.5px solid rgba(124,58,237,.25);border-radius:10px;color:#5b21b6;font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(124,58,237,.1)}
-.lk-ghost:hover{background:#faf5ff;border-color:rgba(124,58,237,.5);box-shadow:0 4px 14px rgba(124,58,237,.18)}
-.lk-card{background:#ffffff;border:1.5px solid rgba(124,58,237,.15);border-radius:16px;transition:all .2s;box-shadow:0 4px 18px rgba(124,58,237,.1)}
-.lk-card:hover{border-color:rgba(124,58,237,.38);box-shadow:0 6px 26px rgba(124,58,237,.18)}
+.lk-ghost{background:#fff;border:1.5px solid rgba(201,160,48,.25);border-radius:10px;color:#a87820;font-size:13px;font-weight:600;cursor:pointer;padding:9px 14px;transition:all .15s;font-family:'Inter',sans-serif;box-shadow:0 2px 8px rgba(201,160,48,.1)}
+.lk-ghost:hover{background:#fffdf0;border-color:rgba(201,160,48,.5);box-shadow:0 4px 14px rgba(201,160,48,.18)}
+.lk-card{background:#ffffff;border:1.5px solid rgba(201,160,48,.15);border-radius:16px;transition:all .2s;box-shadow:0 4px 18px rgba(201,160,48,.1)}
+.lk-card:hover{border-color:rgba(201,160,48,.38);box-shadow:0 6px 26px rgba(201,160,48,.18)}
 .lk-input{width:100%;background:#f8f8f6;border:1px solid rgba(0,0,0,.12);border-radius:10px;color:#1c1c1c;font-size:14px;padding:12px 14px;outline:none;transition:border-color .15s;font-family:'Inter',sans-serif}
-.lk-input:focus{border-color:rgba(124,58,237,.5);background:#ffffff;box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+.lk-input:focus{border-color:rgba(201,160,48,.5);background:#ffffff;box-shadow:0 0 0 3px rgba(201,160,48,.12)}
 .lk-input::placeholder{color:rgba(28,28,28,.3)}
 .lk-label{display:block;color:rgba(28,28,28,.45);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
 .lk-tag-urgent{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);color:#dc2626;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.5px;text-transform:uppercase}
@@ -863,7 +863,7 @@ select.lk-input option{background:#ffffff;color:#1c1c1c}
   .lk-desktop-main{max-width:900px;margin:0 auto;padding:28px 32px}
   .lk-desktop-2col{display:grid;grid-template-columns:1fr 1fr;gap:24px}
   .lk-desktop-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-  .lk-card:hover{transform:translateY(-2px);border-color:rgba(124,58,237,.38);box-shadow:0 8px 30px rgba(124,58,237,.2)}
+  .lk-card:hover{transform:translateY(-2px);border-color:rgba(201,160,48,.38);box-shadow:0 8px 30px rgba(201,160,48,.2)}
 }
 @media (max-width: 767px) {
   .lk-desktop-sidebar{display:none!important}
@@ -1916,7 +1916,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           {/* Overlay dégradé sombre */}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(10,10,10,.45) 0%, rgba(10,10,10,.65) 40%, rgba(10,10,10,.93) 100%)" }} />
           {/* Reflets dorés */}
-          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 30%, rgba(201,160,48,.18) 0%, transparent 55%), radial-gradient(circle at 80% 70%, rgba(124,58,237,.12) 0%, transparent 50%)" }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 20% 30%, rgba(201,160,48,.18) 0%, transparent 55%), radial-gradient(circle at 80% 70%, rgba(201,160,48,.12) 0%, transparent 50%)" }} />
 
           {/* Contenu superposé */}
           <div style={{ position: "relative", padding: "48px 52px", color: "#fff" }}>
@@ -2033,7 +2033,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
             {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
           </div>
-          <div style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 14, padding: "16px 18px", textAlign: "center", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
+          <div style={{ background: "#fff", border: "1.5px solid rgba(201,160,48,.15)", borderRadius: 14, padding: "16px 18px", textAlign: "center", boxShadow: "0 2px 10px rgba(201,160,48,.08)" }}>
             <div style={{ color: T.textMid, fontSize: 13, marginBottom: 10 }}>{tr.notMember}</div>
             <button onClick={onRegister} className="lk-ghost" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               {tr.freeAccount} {Icon.arrow(T.accent, 14)}
@@ -2474,7 +2474,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
                 <div>
                   <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
                   <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
@@ -3038,7 +3038,7 @@ const MARKET_CATS = ["Outils", "Pièces", "Équipements", "Matériaux"];
 const MARKET_ETATS = ["Neuf", "Très bon état", "Occasion"];
 const MARKET_METIERS = [
   { id: "all",          label: "Tous secteurs", color: "#6b7280", icon: Icon.tool },
-  { id: "serrurier",    label: "Serrurerie",    color: "#7c3aed", icon: Icon.key,     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=70" },
+  { id: "serrurier",    label: "Serrurerie",    color: "#1e3a8a", icon: Icon.key,     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=70" },
   { id: "plombier",     label: "Plomberie",     color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
   { id: "electricien",  label: "Électricité",   color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
   { id: "chauffagiste", label: "Chauffage",     color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
@@ -3046,6 +3046,8 @@ const MARKET_METIERS = [
 
 function ProMarketplace({ account, listings, setListings, sales, setSales, lang }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
   const [selMetier, setSelMetier] = useState("all");
   const [filterCat, setFilterCat] = useState("all");
   const [filterOwn, setFilterOwn] = useState(false);
@@ -3088,7 +3090,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
         <img src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=900&q=80" alt=""
           onError={e => { e.target.style.display="none"; }}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 60%" }} />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(124,58,237,.88) 0%,rgba(91,33,182,.75) 60%,rgba(30,30,30,.6) 100%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(201,160,48,.88) 0%,rgba(168,120,32,.75) 60%,rgba(30,30,30,.6) 100%)" }} />
         <div style={{ position: "relative", height: "100%", padding: "0 18px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,.2)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -3189,7 +3191,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
                       </div>
                     </div>
                     <div style={{ position: "absolute", top: 5, right: 5, background: l.etat === "Neuf" ? "rgba(62,207,142,.9)" : "rgba(201,160,48,.85)", borderRadius: 20, padding: "2px 6px", fontSize: 8, fontWeight: 700, color: "#fff" }}>{l.etat}</div>
-                    {isMine && <div style={{ position: "absolute", top: 5, left: 5, background: "rgba(124,58,237,.85)", borderRadius: 20, padding: "2px 6px", fontSize: 8, fontWeight: 700, color: "#fff" }}>Moi</div>}
+                    {isMine && <div style={{ position: "absolute", top: 5, left: 5, background: "rgba(201,160,48,.85)", borderRadius: 20, padding: "2px 6px", fontSize: 8, fontWeight: 700, color: "#fff" }}>Moi</div>}
                     <div style={{ position: "absolute", bottom: 5, left: 6, background: `${mc}cc`, borderRadius: 8, padding: "1px 6px", fontSize: 8, color: "#fff", fontWeight: 700 }}>{metierLabel(l.metier)}</div>
                   </div>
                   <div style={{ padding: "9px 10px 11px" }}>
@@ -3260,8 +3262,8 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
 
       {/* Modal détail annonce */}
       {detail && buyStep === 0 && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 32px", animation: "slideUp .3s ease", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 999, display: "flex", alignItems: isDesktop ? "center" : "flex-end", justifyContent: "center", padding: isDesktop ? "20px" : 0 }}>
+          <div style={{ background: T.surface, borderRadius: isDesktop ? 20 : "20px 20px 0 0", width: "100%", maxWidth: isDesktop ? 560 : 480, padding: "20px 24px 32px", animation: isDesktop ? "fadeUp .2s ease" : "slideUp .3s ease", maxHeight: isDesktop ? "88vh" : "90vh", overflowY: "auto", boxShadow: isDesktop ? "0 24px 80px rgba(0,0,0,.25)" : "none" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 18px" }} />
             {/* Header with sector photo */}
             {(() => {
@@ -3302,7 +3304,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
               {detail.tel && <a href={`tel:${detail.tel}`} style={{ color: T.accent, fontSize: 12, fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>{Icon.phone(T.accent, 14)} Appeler</a>}
             </div>
             {/* Commission info */}
-            <div style={{ background: "rgba(124,58,237,.06)", border: "1px solid rgba(124,58,237,.15)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
               {Icon.percent(T.accent, 13)}
               <span style={{ color: T.textMid, fontSize: 12 }}>15% de commission LOCKR inclus dans le prix affiché</span>
             </div>
@@ -3336,8 +3338,8 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
       )}
       {/* ── Tunnel d'achat ── */}
       {detail && buyStep > 0 && buyStep < 4 && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 36px", animation: "slideUp .3s ease", maxHeight: "92vh", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000, display: "flex", alignItems: isDesktop ? "center" : "flex-end", justifyContent: "center", padding: isDesktop ? "20px" : 0 }}>
+          <div style={{ background: T.surface, borderRadius: isDesktop ? 20 : "20px 20px 0 0", width: "100%", maxWidth: isDesktop ? 560 : 480, padding: "20px 24px 36px", animation: isDesktop ? "fadeUp .2s ease" : "slideUp .3s ease", maxHeight: isDesktop ? "90vh" : "92vh", overflowY: "auto", boxShadow: isDesktop ? "0 24px 80px rgba(0,0,0,.25)" : "none" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 16px" }} />
             {/* Stepper */}
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 22 }}>
@@ -3417,7 +3419,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
                   {PAY_METHODS.map(m => (
                     <button key={m.id} onClick={() => setBuyForm(p => ({ ...p, payMethod: m.id }))}
-                      style={{ background: buyForm.payMethod === m.id ? "rgba(124,58,237,.06)" : T.card, border: `1.5px solid ${buyForm.payMethod === m.id ? T.accent : T.border}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif", transition: "all .12s" }}>
+                      style={{ background: buyForm.payMethod === m.id ? "rgba(201,160,48,.06)" : T.card, border: `1.5px solid ${buyForm.payMethod === m.id ? T.accent : T.border}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif", transition: "all .12s" }}>
                       <PayLogo id={m.id} size={36} />
                       <span style={{ color: T.textHi, fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>{m.label}</span>
                     </button>
@@ -3562,6 +3564,43 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   // Feature 2: payment block check (unpaid > 7 days)
   const sevenDaysAgo = Date.now() - 7 * 86400000;
   const hasPaymentBlock = done.some(b => b.statutPaiement === "en_attente" && new Date(b.createdAt).getTime() < sevenDaysAgo);
+
+  // Notification sonore + vibration quand nouvelle mission dans le rayon
+  const lastBonCount = useRef(0);
+  useEffect(() => {
+    const proMetier = account.metier || "";
+    const proRegion = (account.ville || "").toLowerCase().trim();
+    const relevant = bookings.filter(b =>
+      b.statut === "en_attente" &&
+      (!proMetier || !b.metier || b.metier === proMetier) &&
+      (!proRegion || !b.region || b.region.toLowerCase().includes(proRegion) || proRegion.includes(b.region?.toLowerCase()))
+    );
+    if (lastBonCount.current > 0 && relevant.length > lastBonCount.current) {
+      // Son d'alerte via Web Audio API
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const playTone = (freq, start, dur) => {
+          const o = ctx.createOscillator(); const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.frequency.value = freq; o.type = "sine";
+          g.gain.setValueAtTime(0, ctx.currentTime + start);
+          g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + start + 0.02);
+          g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+          o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur + 0.05);
+        };
+        playTone(880, 0, 0.12); playTone(1100, 0.15, 0.12); playTone(1320, 0.30, 0.2);
+      } catch (e) { /* Audio non disponible */ }
+      // Vibration
+      if (navigator.vibrate) navigator.vibrate([150, 80, 150, 80, 300]);
+      // Notification navigateur
+      if (Notification.permission === "granted") {
+        new Notification("🔔 Nouvelle mission LOCKR", { body: "Une intervention disponible près de chez vous !", icon: "/favicon.ico" });
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission();
+      }
+    }
+    lastBonCount.current = relevant.length;
+  }, [bookings]);
 
   const startMission = b => {
     // Feature 8: add rdvDate for immediate missions
@@ -4231,9 +4270,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           <span style={{ fontSize: 17, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {clientPos && <div style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(30,158,107,.08)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 20, padding: "4px 10px" }}>{Icon.pin(T.success, 11)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.gpsActive}</span></div>}
+          {/* GPS tracking active silently — badge removed */}
           {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
-          <button onClick={() => setProfileModal(true)} style={{ background: "none", border: "1px solid rgba(124,58,237,.2)", borderRadius: 8, padding: "6px 9px", cursor: "pointer", display: "flex", alignItems: "center", color: T.accent, fontFamily: "'Inter',sans-serif" }}>{Icon.user(T.accent, 15)}</button>
+          <button onClick={() => setProfileModal(true)} style={{ background: "none", border: "1px solid rgba(201,160,48,.2)", borderRadius: 8, padding: "6px 9px", cursor: "pointer", display: "flex", alignItems: "center", color: T.accent, fontFamily: "'Inter',sans-serif" }}>{Icon.user(T.accent, 15)}</button>
           <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
         </div>
       </div>
@@ -4253,7 +4292,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 380px", gap: 28 }}>
           {/* Colonne principale */}
           <div>
-            <div style={{ background: "linear-gradient(135deg,rgba(124,58,237,.08),rgba(91,33,182,.05))", border: "1.5px solid rgba(124,58,237,.2)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
+            <div style={{ background: "linear-gradient(135deg,rgba(201,160,48,.08),rgba(168,120,32,.05))", border: "1.5px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
               <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {account.nom.split(" ")[0]} 👋</div>
               <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
               <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
@@ -4294,7 +4333,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                     const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
                     const hasLitige = litiges.find(l => l.bookingId === b.id);
                     return (
-                      <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
+                      <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(201,160,48,.15)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 2px 10px rgba(201,160,48,.08)" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (b.statut === "assignée" || (b.statut === "terminée" && !hasLitige)) ? 8 : 0 }}>
                           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                             <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
@@ -4331,7 +4370,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                   const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
                   const hasLitige = litiges.find(l => l.bookingId === b.id);
                   return (
-                    <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(124,58,237,.15)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 2px 10px rgba(124,58,237,.08)" }}>
+                    <div key={b.id} style={{ background: "#fff", border: "1.5px solid rgba(201,160,48,.15)", borderRadius: 12, padding: "12px 14px", boxShadow: "0 2px 10px rgba(201,160,48,.08)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (b.statut === "assignée" || (b.statut === "terminée" && !hasLitige)) ? 8 : 0 }}>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
@@ -4419,7 +4458,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 const metierPhoto = METIERS.find(m => m.id === p.metier)?.photo;
                 const isSelected = selProb?.id === p.id;
                 return (
-                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: isSelected ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${isSelected ? metierColor : "rgba(0,0,0,.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif", boxShadow: isSelected ? `0 4px 16px ${metierColor}30` : "0 1px 6px rgba(0,0,0,.07)", transition: "all .15s" }}>
+                <button key={p.id} onClick={() => setSelProb(p)} style={{ background: isSelected ? "linear-gradient(135deg,#f5f3ff,#fdf6dc)" : "#ffffff", border: `1.5px solid ${isSelected ? metierColor : "rgba(0,0,0,.1)"}`, borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif", boxShadow: isSelected ? `0 4px 16px ${metierColor}30` : "0 1px 6px rgba(0,0,0,.07)", transition: "all .15s" }}>
                   {/* Miniature photo du métier */}
                   <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", position: "relative", flexShrink: 0, background: `${metierColor}15` }}>
                     {metierPhoto && <img src={metierPhoto} alt="" onError={e => { e.target.style.display="none"; }}
@@ -4448,7 +4487,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {artisanList.map(a => (
-                    <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${selArt?.id === a.id ? T.accent : "rgba(124,58,237,.18)"}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s", boxShadow: selArt?.id === a.id ? "0 4px 16px rgba(124,58,237,.2)" : "0 2px 8px rgba(124,58,237,.07)" }}>
+                    <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? "linear-gradient(135deg,#f5f3ff,#fdf6dc)" : "#ffffff", border: `1.5px solid ${selArt?.id === a.id ? T.accent : "rgba(201,160,48,.18)"}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s", boxShadow: selArt?.id === a.id ? "0 4px 16px rgba(201,160,48,.2)" : "0 2px 8px rgba(201,160,48,.07)" }}>
                       <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                         <div style={{ width: 46, height: 46, borderRadius: 12, background: `${a.color}15`, border: `1px solid ${a.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <span style={{ color: a.color, fontWeight: 800, fontSize: 18 }}>{a.nom.charAt(0)}</span>
@@ -4889,7 +4928,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               return pendingPros.map(pro => (
                 <div key={pro.id} className="lk-card" style={{ padding: "16px", marginBottom: 12 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(124,58,237,.1)", border: "2px solid rgba(124,58,237,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(201,160,48,.1)", border: "2px solid rgba(201,160,48,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: T.accent, fontWeight: 700, fontSize: 18 }}>{pro.nom.charAt(0)}</span>
                     </div>
                     <div style={{ flex: 1 }}>
@@ -4963,7 +5002,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               return pendingPros.map(pro => (
                 <div key={pro.id} className="lk-card" style={{ padding: "16px", marginBottom: 12 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(124,58,237,.1)", border: "2px solid rgba(124,58,237,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 46, height: 46, borderRadius: "50%", background: "rgba(201,160,48,.1)", border: "2px solid rgba(201,160,48,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <span style={{ color: T.accent, fontWeight: 700, fontSize: 18 }}>{pro.nom.charAt(0)}</span>
                     </div>
                     <div style={{ flex: 1 }}>
@@ -5077,7 +5116,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               <div style={{ position: "relative", height: 110, borderRadius: 16, overflow: "hidden", marginBottom: 16 }}>
                 <img src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=900&q=80" alt="" onError={e => { e.target.style.display = "none"; }}
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 60%" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(124,58,237,.9),rgba(30,30,30,.7))" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,rgba(201,160,48,.9),rgba(30,30,30,.7))" }} />
                 <div style={{ position: "relative", height: "100%", padding: "0 20px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
                   <div style={{ color: "#fff", fontWeight: 900, fontSize: 18 }}>{tr.adminMarketplace}</div>
                   <div style={{ color: "rgba(255,255,255,.75)", fontSize: 12 }}>{tr.adminMarketplaceDesc}</div>
