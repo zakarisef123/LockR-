@@ -220,9 +220,6 @@ const TRANS = {
     myLitiges: "Mes litiges", noLitige: "Aucun litige en cours",
     cancelBooking: "Annuler", bookingCancelled: "Réservation annulée",
     myProfile: "Mon Profil", saveChanges: "Enregistrer",
-    selectMetier: "Choisir un métier",
-    metierSerrurier: "Serrurier", metierPlombier: "Plombier", metierElectricien: "Électricien", metierChauffagiste: "Chauffagiste",
-    allMetiers: "Tous les métiers",
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -424,7 +421,6 @@ const TRANS = {
     myLitiges: "My disputes", noLitige: "No open disputes",
     cancelBooking: "Cancel", bookingCancelled: "Booking cancelled",
     myProfile: "My Profile", saveChanges: "Save",
-    selectMetier: "Choose a trade", metierSerrurier: "Locksmith", metierPlombier: "Plumber", metierElectricien: "Electrician", metierChauffagiste: "Heating engineer", allMetiers: "All trades",
   }
 };
 
@@ -595,60 +591,19 @@ function PhoneInput({ value, onChange, placeholder }) {
 /* ─── DATA ─── */
 // Artisans réels (pas de faux) — uniquement utilisés en mode démo
 const DEMO_ARTISANS = [
-  { id: "a1", nom: "Karim Benali", note: 4.9, avis: 127, tarif: 90, distance: 1.2, dispo: true, certif: "RGE Certifié", color: "#5b8def", tel: "0601020304", ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true, transport: "voiture", metier: "serrurier" },
-  { id: "a2", nom: "Youssef Mrani", note: 4.7, avis: 89, tarif: 80, distance: 2.1, dispo: true, certif: "Qualibat", color: "#7b6ef6", tel: "0605060708", ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true, transport: "scooter", metier: "serrurier" },
-  { id: "a3", nom: "Ahmed Tazi", note: 4.8, avis: 203, tarif: 95, distance: 3.4, dispo: false, certif: "Pro Certifié", color: "#3ecf8e", tel: "0609101112", ville: "Paris", lat: 48.850, lng: 2.360, isDemo: true, transport: "voiture", metier: "serrurier" },
-  { id: "a4", nom: "Thomas Leclerc", note: 4.6, avis: 54, tarif: 75, distance: 4.8, dispo: true, certif: "Artisan Agréé", color: "#f5a623", tel: "0612131415", ville: "Lyon", lat: 45.764, lng: 4.834, isDemo: true, transport: "scooter", metier: "serrurier" },
-  // Plombiers
-  { id: "a5", nom: "Marc Fontaine", note: 4.8, avis: 92, tarif: 85, distance: 1.8, dispo: true, certif: "Qualibat", color: "#0ea5e9", tel: "0614151617", ville: "Paris", lat: 48.862, lng: 2.342, isDemo: true, transport: "voiture", metier: "plombier" },
-  { id: "a6", nom: "Julien Moreau", note: 4.6, avis: 64, tarif: 75, distance: 3.2, dispo: true, certif: "Pro Certifié", color: "#38bdf8", tel: "0618192021", ville: "Paris", lat: 48.858, lng: 2.352, isDemo: true, transport: "scooter", metier: "plombier" },
-  // Électriciens
-  { id: "a7", nom: "Nicolas Laurent", note: 4.9, avis: 148, tarif: 90, distance: 2.0, dispo: true, certif: "RGE Certifié", color: "#f59e0b", tel: "0622232425", ville: "Paris", lat: 48.868, lng: 2.335, isDemo: true, transport: "voiture", metier: "electricien" },
-  { id: "a8", nom: "David Petit", note: 4.7, avis: 77, tarif: 80, distance: 2.9, dispo: false, certif: "Qualibat", color: "#fbbf24", tel: "0626272829", ville: "Paris", lat: 48.855, lng: 2.358, isDemo: true, transport: "voiture", metier: "electricien" },
-  // Chauffagistes
-  { id: "a9", nom: "Pierre Rousseau", note: 4.8, avis: 113, tarif: 95, distance: 1.5, dispo: true, certif: "RGE Certifié", color: "#ef4444", tel: "0630313233", ville: "Paris", lat: 48.870, lng: 2.328, isDemo: true, transport: "voiture", metier: "chauffagiste" },
-  { id: "a10", nom: "Antoine Bernard", note: 4.5, avis: 58, tarif: 85, distance: 3.7, dispo: true, certif: "Pro Certifié", color: "#f87171", tel: "0634353637", ville: "Lyon", lat: 45.760, lng: 4.840, isDemo: true, transport: "voiture", metier: "chauffagiste" },
+  { id: "a1", nom: "Karim Benali", note: 4.9, avis: 127, tarif: 90, distance: 1.2, dispo: true, certif: "RGE Certifié", color: "#5b8def", tel: "0601020304", ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true, transport: "voiture" },
+  { id: "a2", nom: "Youssef Mrani", note: 4.7, avis: 89, tarif: 80, distance: 2.1, dispo: true, certif: "Qualibat", color: "#7b6ef6", tel: "0605060708", ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true, transport: "scooter" },
+  { id: "a3", nom: "Ahmed Tazi", note: 4.8, avis: 203, tarif: 95, distance: 3.4, dispo: false, certif: "Pro Certifié", color: "#3ecf8e", tel: "0609101112", ville: "Paris", lat: 48.850, lng: 2.360, isDemo: true, transport: "voiture" },
+  { id: "a4", nom: "Thomas Leclerc", note: 4.6, avis: 54, tarif: 75, distance: 4.8, dispo: true, certif: "Artisan Agréé", color: "#f5a623", tel: "0612131415", ville: "Lyon", lat: 45.764, lng: 4.834, isDemo: true, transport: "scooter" },
 ];
 
 const PROBLEMES = [
-  // ── Serrurier ──
-  { id: "ouverture",   metier: "serrurier",    label: "Porte claquée",           labelEn: "Locked out",              urgence: true,  desc: "Ouverture sans destruction",          descEn: "Non-destructive opening" },
-  { id: "serrure",     metier: "serrurier",    label: "Changer la serrure",       labelEn: "Change the lock",         urgence: false, desc: "Cylindre ou serrure multipoints",     descEn: "Cylinder or multipoint lock" },
-  { id: "blindage",    metier: "serrurier",    label: "Blindage de porte",        labelEn: "Door reinforcement",      urgence: false, desc: "Renforcement anti-effraction",        descEn: "Anti-burglary reinforcement" },
-  { id: "digicode",    metier: "serrurier",    label: "Badge / Digicode",         labelEn: "Badge / Digicode",        urgence: false, desc: "Installation ou remplacement",        descEn: "Installation or replacement" },
-  { id: "coffre",      metier: "serrurier",    label: "Coffre-fort bloqué",       labelEn: "Blocked safe",            urgence: true,  desc: "Ouverture sans dommage",              descEn: "Opening without damage" },
-  { id: "serrure_autre", metier: "serrurier",  label: "Autre serrurerie",         labelEn: "Other locksmith work",    urgence: false, desc: "Décrivez votre besoin",               descEn: "Describe your need" },
-  // ── Plombier ──
-  { id: "fuite_eau",   metier: "plombier",     label: "Fuite d'eau urgente",      labelEn: "Urgent water leak",       urgence: true,  desc: "Détection et réparation rapide",      descEn: "Fast detection and repair" },
-  { id: "debouchage",  metier: "plombier",     label: "Débouchage canalisation",  labelEn: "Drain unclogging",        urgence: true,  desc: "Évier, douche, WC, colonne",          descEn: "Sink, shower, toilet, pipe" },
-  { id: "chauffe_eau", metier: "plombier",     label: "Chauffe-eau / Ballon",     labelEn: "Water heater / Boiler",   urgence: false, desc: "Panne, fuite ou remplacement",        descEn: "Failure, leak or replacement" },
-  { id: "robinetterie",metier: "plombier",     label: "Robinetterie / Mitigeur",  labelEn: "Tap / Mixer",             urgence: false, desc: "Réparation ou installation",          descEn: "Repair or installation" },
-  { id: "wc",          metier: "plombier",     label: "WC / Chasse d'eau",        labelEn: "Toilet / Flush",          urgence: false, desc: "Fuite, bruit ou remplacement",        descEn: "Leak, noise or replacement" },
-  { id: "salle_bain",  metier: "plombier",     label: "Salle de bain complète",   labelEn: "Full bathroom",           urgence: false, desc: "Installation ou rénovation",          descEn: "Installation or renovation" },
-  { id: "plomb_autre", metier: "plombier",     label: "Autre plomberie",          labelEn: "Other plumbing",          urgence: false, desc: "Décrivez votre besoin",               descEn: "Describe your need" },
-  // ── Électricien ──
-  { id: "panne_elec",  metier: "electricien",  label: "Panne électrique",         labelEn: "Power failure",           urgence: true,  desc: "Diagnostic et remise en service",     descEn: "Diagnosis and restart" },
-  { id: "disjoncteur", metier: "electricien",  label: "Tableau / Disjoncteur",    labelEn: "Panel / Circuit breaker", urgence: false, desc: "Mise aux normes ou remplacement",     descEn: "Compliance or replacement" },
-  { id: "prise",       metier: "electricien",  label: "Prise / Interrupteur",     labelEn: "Socket / Switch",         urgence: false, desc: "Pose ou remplacement",                descEn: "Installation or replacement" },
-  { id: "eclairage",   metier: "electricien",  label: "Éclairage / Spots LED",    labelEn: "Lighting / LED Spots",    urgence: false, desc: "Installation ou dépannage",           descEn: "Installation or repair" },
-  { id: "domotique",   metier: "electricien",  label: "Domotique / Alarme",       labelEn: "Smart home / Alarm",      urgence: false, desc: "Installation ou programmation",       descEn: "Installation or programming" },
-  { id: "tableau_elec",metier: "electricien",  label: "Mise aux normes NF C 15",  labelEn: "Electrical compliance",   urgence: false, desc: "Audit et mise en conformité",         descEn: "Audit and compliance" },
-  { id: "elec_autre",  metier: "electricien",  label: "Autre électricité",        labelEn: "Other electrical work",   urgence: false, desc: "Décrivez votre besoin",               descEn: "Describe your need" },
-  // ── Chauffagiste ──
-  { id: "chaudiere",   metier: "chauffagiste", label: "Chaudière en panne",       labelEn: "Boiler breakdown",        urgence: true,  desc: "Dépannage toutes marques",            descEn: "Repair all brands" },
-  { id: "entretien_ch",metier: "chauffagiste", label: "Entretien chaudière",      labelEn: "Boiler maintenance",      urgence: false, desc: "Révision annuelle obligatoire",       descEn: "Annual mandatory service" },
-  { id: "radiateur",   metier: "chauffagiste", label: "Radiateur / Robinet TRV",  labelEn: "Radiator / TRV valve",    urgence: false, desc: "Purge, remplacement, pose",           descEn: "Bleed, replace, install" },
-  { id: "pac",         metier: "chauffagiste", label: "Pompe à chaleur",          labelEn: "Heat pump",               urgence: false, desc: "Installation ou dépannage PAC",       descEn: "Heat pump install or repair" },
-  { id: "clim",        metier: "chauffagiste", label: "Climatisation réversible", labelEn: "Reversible AC",           urgence: false, desc: "Pose, entretien, recharge gaz",       descEn: "Install, maintenance, gas" },
-  { id: "plancher_ch", metier: "chauffagiste", label: "Plancher chauffant",       labelEn: "Underfloor heating",      urgence: false, desc: "Installation ou dépannage",           descEn: "Installation or repair" },
-  { id: "chauff_autre",metier: "chauffagiste", label: "Autre chauffage",          labelEn: "Other heating work",      urgence: false, desc: "Décrivez votre besoin",               descEn: "Describe your need" },
-];
-
-const METIERS = [
-  { id: "serrurier",    label: "Serrurier",    labelEn: "Locksmith",        color: "#7c3aed", icon: Icon.key,     desc: "Ouverture, serrure, blindage", descEn: "Opening, lock, reinforcement" },
-  { id: "plombier",     label: "Plombier",     labelEn: "Plumber",          color: "#0ea5e9", icon: Icon.droplet, desc: "Fuite, débouchage, sanitaire",  descEn: "Leak, unclogging, sanitary" },
-  { id: "electricien",  label: "Électricien",  labelEn: "Electrician",      color: "#f59e0b", icon: Icon.bolt,    desc: "Panne, tableau, installation",  descEn: "Failure, panel, installation" },
-  { id: "chauffagiste", label: "Chauffagiste", labelEn: "Heating engineer", color: "#ef4444", icon: Icon.flame,   desc: "Chaudière, PAC, radiateur",     descEn: "Boiler, heat pump, radiator" },
+  { id: "ouverture", label: "Porte claquée", urgence: true, desc: "Ouverture sans destruction" },
+  { id: "serrure", label: "Changer la serrure", urgence: false, desc: "Cylindre ou serrure multipoints" },
+  { id: "blindage", label: "Blindage de porte", urgence: false, desc: "Renforcement anti-effraction" },
+  { id: "digicode", label: "Badge / Digicode", urgence: false, desc: "Installation ou remplacement" },
+  { id: "coffre", label: "Coffre-fort bloqué", urgence: true, desc: "Ouverture sans dommage" },
+  { id: "autre", label: "Autre demande", urgence: false, desc: "Décrivez votre besoin" },
 ];
 
 const INIT_ACCOUNTS = [
@@ -656,12 +611,6 @@ const INIT_ACCOUNTS = [
   { id: "c2", role: "client", nom: "Sophie Bernard", email: "sophie@demo.fr", pass: "1234", verified: true, isDemo: true },
   { id: "p1", role: "pro", artisanId: "a1", nom: "Karim Benali", email: "karim@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.8566, lng: 2.3522, isDemo: true, dossierStatus: "approved" },
   { id: "p2", role: "pro", artisanId: "a2", nom: "Youssef Mrani", email: "youssef@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.860, lng: 2.340, isDemo: true, dossierStatus: "approved" },
-  { id: "p3", role: "pro", artisanId: "a5", nom: "Marc Fontaine",    email: "marc@demo.fr",    pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.862, lng: 2.342, isDemo: true, dossierStatus: "approved" },
-  { id: "p4", role: "pro", artisanId: "a6", nom: "Julien Moreau",    email: "julien@demo.fr",  pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.858, lng: 2.352, isDemo: true, dossierStatus: "approved" },
-  { id: "p5", role: "pro", artisanId: "a7", nom: "Nicolas Laurent",  email: "nicolas@demo.fr", pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.868, lng: 2.335, isDemo: true, dossierStatus: "approved" },
-  { id: "p6", role: "pro", artisanId: "a8", nom: "David Petit",      email: "david@demo.fr",   pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.855, lng: 2.358, isDemo: true, dossierStatus: "approved" },
-  { id: "p7", role: "pro", artisanId: "a9", nom: "Pierre Rousseau",  email: "pierre@demo.fr",  pass: "1234", verified: true, photo: null, ville: "Paris", lat: 48.870, lng: 2.328, isDemo: true, dossierStatus: "approved" },
-  { id: "p8", role: "pro", artisanId: "a10", nom: "Antoine Bernard", email: "antoine@demo.fr", pass: "1234", verified: true, photo: null, ville: "Lyon",  lat: 45.760, lng: 4.840, isDemo: true, dossierStatus: "approved" },
   { id: "admin1", role: "admin", nom: "Admin LOCKR", email: "admin@lockr.fr", pass: "admin2024", verified: true },
   { id: "admin2", role: "admin", nom: "Soze", email: "soze@lockr.fr", pass: "soze2024", verified: true },
   { id: "admin3", role: "admin", nom: "Emma", email: "emma@lockr.fr", pass: "emma2024", verified: true },
@@ -672,19 +621,12 @@ const INIT_BOOKINGS = [
   { id: "b0", clientId: "c1", artisanId: "a1", clientNom: "Martin Dupont", adresse: "12 rue de la Paix, Paris", probleme: "ouverture", montant: 130, statut: "terminée", montantFinal: 130, statutPaiement: "payé", createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), bonType: "platform", factureImg: null, factureClient: null },
   { id: "b1", clientId: "c1", artisanId: "a1", clientNom: "Martin Dupont", adresse: "12 rue de la Paix, Paris", probleme: "serrure", montant: 95, statut: "terminée", montantFinal: 95, statutPaiement: "en_attente", createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), bonType: "platform", factureImg: null, factureClient: null },
   { id: "b2", clientId: "c2", artisanId: "a2", clientNom: "Sophie Bernard", adresse: "8 avenue Montaigne, Paris", probleme: "blindage", montant: 350, statut: "terminée", montantFinal: 350, statutPaiement: "payé", createdAt: new Date(Date.now() - 86400000 * 10).toISOString(), bonType: "platform", factureImg: null, factureClient: null },
-  { id: "b3", clientId: "c1", artisanId: "a5", clientNom: "Martin Dupont",  adresse: "12 rue de la Paix, Paris", probleme: "fuite_eau",  montant: 110, statut: "terminée", montantFinal: 110, statutPaiement: "payé", createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), bonType: "platform", factureImg: null, factureClient: null },
-  { id: "b4", clientId: "c2", artisanId: "a7", clientNom: "Sophie Bernard", adresse: "8 avenue Montaigne, Paris", probleme: "panne_elec", montant: 130, statut: "terminée", montantFinal: 130, statutPaiement: "payé", createdAt: new Date(Date.now() - 86400000 * 7).toISOString(), bonType: "platform", factureImg: null, factureClient: null },
-  { id: "b5", clientId: "c1", artisanId: "a9", clientNom: "Martin Dupont",  adresse: "12 rue de la Paix, Paris", probleme: "chaudiere",  montant: 150, statut: "assignée", montantFinal: null, statutPaiement: null, createdAt: new Date(Date.now() - 3600000).toISOString(), bonType: "platform", factureImg: null, factureClient: null },
 ];
 
 const INIT_BONS = [
   { id: "bon1", titre: "Porte claquée urgence", adresse: "15 rue Lepic, Paris 18", probleme: "ouverture", urgence: true, montantEstime: 140, postedBy: "platform", postedByNom: "LOCKR", region: "Paris", lat: 48.884, lng: 2.337, createdAt: new Date(Date.now() - 3600000).toISOString(), techPct: 40 },
   { id: "bon2", titre: "Changement serrure 3 points", adresse: "42 bd Haussmann, Paris 9", probleme: "serrure", urgence: false, montantEstime: 190, postedBy: "p1", postedByNom: "Karim Benali", region: "Paris", lat: 48.874, lng: 2.330, createdAt: new Date(Date.now() - 7200000).toISOString(), techPct: 35 },
   { id: "bon3", titre: "Blindage porte appartement", adresse: "8 rue du Commerce, Lyon", probleme: "blindage", urgence: false, montantEstime: 420, postedBy: "platform", postedByNom: "LOCKR", region: "Lyon", lat: 45.750, lng: 4.830, createdAt: new Date(Date.now() - 14400000).toISOString(), techPct: 40 },
-  { id: "bon4", titre: "Fuite sous évier urgent",         adresse: "22 rue Oberkampf, Paris 11", probleme: "fuite_eau",   urgence: true,  montantEstime: 120, postedBy: "platform", postedByNom: "LOCKR", region: "Paris", lat: 48.864, lng: 2.370, createdAt: new Date(Date.now() - 1800000).toISOString(),  techPct: 38 },
-  { id: "bon5", titre: "Tableau électrique hors normes",  adresse: "3 rue de Rivoli, Paris 1",   probleme: "disjoncteur", urgence: false, montantEstime: 280, postedBy: "platform", postedByNom: "LOCKR", region: "Paris", lat: 48.856, lng: 2.348, createdAt: new Date(Date.now() - 5400000).toISOString(),  techPct: 35 },
-  { id: "bon6", titre: "Chaudière Vaillant en panne",     adresse: "18 rue de la Croix, Lyon",   probleme: "chaudiere",   urgence: true,  montantEstime: 200, postedBy: "platform", postedByNom: "LOCKR", region: "Lyon",  lat: 45.755, lng: 4.845, createdAt: new Date(Date.now() - 9000000).toISOString(),  techPct: 40 },
-  { id: "bon7", titre: "Installation pompe à chaleur",    adresse: "5 allée des Roses, Paris 14", probleme: "pac",         urgence: false, montantEstime: 600, postedBy: "platform", postedByNom: "LOCKR", region: "Paris", lat: 48.833, lng: 2.330, createdAt: new Date(Date.now() - 18000000).toISOString(), techPct: 35 },
 ];
 
 const INIT_CHAT = {
@@ -736,22 +678,9 @@ const Icon = {
   plus: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   warning: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
   eye: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  droplet: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12 2C12 2 4 10.5 4 15a8 8 0 0 0 16 0c0-4.5-8-13-8-13z"/></svg>,
-  bolt: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg>,
-  flame: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill={c}><path d="M12 2c0 0-8 8-8 14a8 8 0 0 0 16 0c0-3-2-6-2-6s-1 3-4 3c-2 0-3-2-3-4 0-2 1-4 1-7z"/></svg>,
-  settings: (c="currentColor",s=18)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
 };
 
-const PROB_ICONS = {
-  // Serrurier
-  ouverture: Icon.door, serrure: Icon.key, blindage: Icon.shield, coffre: Icon.safe, digicode: Icon.code, serrure_autre: Icon.tool,
-  // Plombier
-  fuite_eau: Icon.droplet, debouchage: Icon.droplet, chauffe_eau: Icon.droplet, robinetterie: Icon.droplet, wc: Icon.droplet, salle_bain: Icon.droplet, plomb_autre: Icon.tool,
-  // Électricien
-  panne_elec: Icon.bolt, disjoncteur: Icon.bolt, prise: Icon.bolt, eclairage: Icon.bolt, domotique: Icon.bolt, tableau_elec: Icon.bolt, elec_autre: Icon.tool,
-  // Chauffagiste
-  chaudiere: Icon.flame, entretien_ch: Icon.flame, radiateur: Icon.flame, pac: Icon.flame, clim: Icon.flame, plancher_ch: Icon.flame, chauff_autre: Icon.tool,
-};
+const PROB_ICONS = { ouverture: Icon.door, serrure: Icon.key, blindage: Icon.shield, coffre: Icon.safe, digicode: Icon.code, autre: Icon.tool };
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -1482,7 +1411,6 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [transport, setTransport] = useState("voiture");
-  const [metier, setMetier] = useState("serrurier");
   const [siret, setSiret] = useState("");
   const [iban, setIban] = useState("");
   const [certif, setCertif] = useState("aucune");
@@ -1527,8 +1455,9 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
     const acc = {
       id: uid(), role: "pro", artisanId: "a" + uid(),
       nom: prenom + " " + nom, email, pass, verified: false,
-      photo: null, ville, tel, transport, metier, siret, iban, certif,
+      photo: null, ville, tel, transport, siret, iban, certif,
       hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile, dossierStatus: "pending",
+      dossierStatus: "pending",
     };
     setPending(acc);
     setModal(true);
@@ -1599,15 +1528,6 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
                 <option value="moto">{tr.motorcycle}</option>
                 <option value="velo">{tr.bicycle}</option>
                 <option value="pied">{tr.onFoot}</option>
-              </select>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.selectMetier}</label>
-              <select className="lk-input" value={metier} onChange={e => setMetier(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="serrurier">{tr.metierSerrurier}</option>
-                <option value="plombier">{tr.metierPlombier}</option>
-                <option value="electricien">{tr.metierElectricien}</option>
-                <option value="chauffagiste">{tr.metierChauffagiste}</option>
               </select>
             </div>
             <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
@@ -3346,7 +3266,6 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [screen, setScreen] = useState("home");
   const [selProb, setSelProb] = useState(null);
   const [selArt, setSelArt] = useState(null);
-  const [selMetier, setSelMetier] = useState(null);
   const [activeBk, setActiveBk] = useState(null);
   const [progress, setProgress] = useState(0);
   const [payModal, setPayModal] = useState(false);
@@ -3404,7 +3323,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       }));
     return [...demoArts, ...realArts];
   };
-  const artisanList = getArtisanList().filter(a => !selProb || !a.metier || a.metier === selProb.metier);
+  const artisanList = getArtisanList();
 
   const artOf = b => artisanList.find(a => a.id === b?.artisanId) || DEMO_ARTISANS.find(a => a.id === b?.artisanId);
   const bk = liveBk || activeBk;
@@ -3593,14 +3512,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             </div>
             <div style={{ marginBottom: 22 }}>
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
-              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "1fr 1fr", gap: 10 }}>
-                {METIERS.map(m => (
-                  <button key={m.id} onClick={() => { setSelMetier(m.id); setSelProb(null); setScreen("choose"); }} className="lk-card" style={{ borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", background: "#fff" }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 10, background: `${m.color}15`, border: `1px solid ${m.color}30`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>{m.icon(m.color, 18)}</div>
-                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12 }}>{m.label}</div>
-                    <div style={{ color: T.textLo, fontSize: 11, marginTop: 3 }}>{m.desc}</div>
+              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3,1fr)" : "1fr 1fr", gap: 10 }}>
+                {PROBLEMES.slice(0, isDesktop ? 6 : 4).map(p => { const IC = PROB_ICONS[p.id]; return (
+                  <button key={p.id} onClick={() => { setSelProb(p); setScreen("choose"); }} className="lk-card" style={{ borderRadius: 14, padding: "14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", background: "#fff" }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.15)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>{IC ? IC(T.accent, 18) : null}</div>
+                    <div style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{p.label}</div>
+                    {p.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginTop: 4 }}>URGENT</div>}
                   </button>
-                ))}
+                ); })}
               </div>
             </div>
             {/* Mes interventions — mobile only dans la colonne principale */}
@@ -3685,29 +3604,16 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", paddingBottom: 90 }}>
       <style>{CSS}</style>
       <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
-        <button onClick={() => { setSelProb(null); setSelMetier(null); setScreen("home"); }} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
+        <button onClick={() => { setSelProb(null); setScreen("home"); }} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <span style={{ color: T.textHi, fontWeight: 700 }}>{tr.newRequest}</span>
       </div>
       <div style={{ padding: isDesktop ? "28px 32px" : "18px 14px", maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? "0 auto" : undefined }}>
-        {/* Sélection du métier */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.selectMetier}</div>
-          <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 10 }}>
-            {METIERS.map(m => (
-              <button key={m.id} onClick={() => { setSelMetier(m.id === selMetier ? null : m.id); setSelProb(null); }} style={{ background: selMetier === m.id ? `${m.color}15` : "#fff", border: `2px solid ${selMetier === m.id ? m.color : "rgba(0,0,0,.1)"}`, borderRadius: 14, padding: "14px 12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${m.color}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>{m.icon(m.color, 22)}</div>
-                <div style={{ color: selMetier === m.id ? m.color : T.textHi, fontWeight: 700, fontSize: 13 }}>{m.label}</div>
-                <div style={{ color: T.textLo, fontSize: 11, textAlign: "center" }}>{m.desc}</div>
-              </button>
-            ))}
-          </div>
-        </div>
         <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
           {/* Colonne gauche : sélection du problème */}
           <div>
-            {selMetier && <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>}
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.interventionType}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 22 }}>
-              {PROBLEMES.filter(p => !selMetier || p.metier === selMetier).map(p => { const IC = PROB_ICONS[p.id]; return (
+              {PROBLEMES.map(p => { const IC = PROB_ICONS[p.id]; return (
                 <button key={p.id} onClick={() => setSelProb(p)} style={{ background: selProb?.id === p.id ? "linear-gradient(135deg,#f5f3ff,#ede9fe)" : "#ffffff", border: `1.5px solid ${selProb?.id === p.id ? T.accent : "rgba(124,58,237,.18)"}`, borderRadius: 14, padding: "14px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, textAlign: "left", fontFamily: "'Inter',sans-serif", boxShadow: selProb?.id === p.id ? "0 4px 16px rgba(124,58,237,.2)" : "0 2px 8px rgba(124,58,237,.07)", transition: "all .15s" }}>
                   <div style={{ width: 38, height: 38, borderRadius: 10, background: selProb?.id === p.id ? "rgba(124,58,237,.12)" : "rgba(124,58,237,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC ? IC(selProb?.id === p.id ? T.accent : T.accent, 18) : null}</div>
                   <div style={{ flex: 1 }}>
