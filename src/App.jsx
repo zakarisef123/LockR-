@@ -152,6 +152,13 @@ const TRANS = {
     postListing: "Publier l'annonce", listingPosted: "Annonce publiée !",
     deleteListing: "Supprimer", filterAll: "Tout", catTools: "Outils", catParts: "Pièces", catEquip: "Équipements", catMat: "Matériaux",
     markSold: "Marquer vendu", soldLabel: "VENDU",
+    buyBtn: "Acheter maintenant", buyStep1Title: "Adresse de livraison", buyStep2Title: "Paiement sécurisé", buyStep3Title: "Confirmation",
+    buyFullName: "Nom complet", buyAddress: "Adresse", buyCity: "Ville", buyZip: "Code postal", buyPhone: "Téléphone",
+    buyCardNum: "Numéro de carte", buyExpiry: "Date d'expiration (MM/AA)", buyCvv: "CVV",
+    buyNext: "Continuer", buyConfirm: "Confirmer la commande",
+    buySuccess: "Commande confirmée !", buySuccessDesc: "Votre commande a été transmise au vendeur. Il vous contactera pour la livraison.",
+    buyTotal: "Total TTC", buySellerGets: "Le vendeur reçoit", buyCommInfo: "dont 15% de commission LOCKR",
+    buyDelivery: "Livraison", buyPayment: "Paiement", buyRecap: "Récapitulatif",
     adminMarketplace: "Marketplace", adminMarketplaceDesc: "Suivi des ventes & commissions",
     totalSales: "Ventes totales", totalCommission: "Commissions LOCKR (15%)",
     salesHistory: "Historique des ventes", noSales: "Aucune vente enregistrée",
@@ -369,6 +376,13 @@ const TRANS = {
     postListing: "Post listing", listingPosted: "Listing posted!",
     deleteListing: "Delete", filterAll: "All", catTools: "Tools", catParts: "Parts", catEquip: "Equipment", catMat: "Materials",
     markSold: "Mark as sold", soldLabel: "SOLD",
+    buyBtn: "Buy now", buyStep1Title: "Delivery address", buyStep2Title: "Secure payment", buyStep3Title: "Confirmation",
+    buyFullName: "Full name", buyAddress: "Address", buyCity: "City", buyZip: "Postal code", buyPhone: "Phone",
+    buyCardNum: "Card number", buyExpiry: "Expiry date (MM/YY)", buyCvv: "CVV",
+    buyNext: "Continue", buyConfirm: "Confirm order",
+    buySuccess: "Order confirmed!", buySuccessDesc: "Your order has been sent to the seller. They will contact you for delivery.",
+    buyTotal: "Total", buySellerGets: "Seller receives", buyCommInfo: "incl. 15% LOCKR commission",
+    buyDelivery: "Delivery", buyPayment: "Payment", buyRecap: "Summary",
     adminMarketplace: "Marketplace", adminMarketplaceDesc: "Sales & commissions tracking",
     totalSales: "Total sales", totalCommission: "LOCKR commissions (15%)",
     salesHistory: "Sales history", noSales: "No sales recorded",
@@ -1128,13 +1142,80 @@ function NotifBanner({ notifs }) {
 
 /* ─── PAY MODAL ─── */
 const PAY_METHODS = [
-  { id: "stripe", label: "Carte / Stripe", abbr: "S", color: "#635bff", bg: "#f0efff" },
-  { id: "apple", label: "Apple Pay", abbr: "A", color: "#e8e8e8", bg: "#f5f5f5" },
-  { id: "google", label: "Google Pay", abbr: "G", color: "#4285f4", bg: "#eef4ff" },
-  { id: "paypal", label: "PayPal", abbr: "PP", color: "#009cde", bg: "#e8f6ff" },
+  { id: "visa",       label: "Visa",             type: "card",   color: "#1a1f71" },
+  { id: "mastercard", label: "Mastercard",        type: "card",   color: "#eb001b" },
+  { id: "cb",         label: "Carte Bancaire",    type: "card",   color: "#0052cc" },
+  { id: "paypal",     label: "PayPal",            type: "wallet", color: "#003087" },
+  { id: "apple",      label: "Apple Pay",         type: "wallet", color: "#000000" },
+  { id: "google",     label: "Google Pay",        type: "wallet", color: "#4285f4" },
+  { id: "virement",   label: "Virement bancaire", type: "bank",   color: "#059669" },
 ];
 const fmtCard = v => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
+
+function PayLogo({ id, size = 44 }) {
+  const s = { width: size, height: size, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
+  if (id === "visa") return (
+    <div style={{ ...s, background: "#fff", border: "1.5px solid #e2e8f0" }}>
+      <svg width={size * 0.72} height={size * 0.28} viewBox="0 0 72 28">
+        <text x="0" y="22" fontFamily="Arial,sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill="#1a1f71" letterSpacing="-1">VISA</text>
+      </svg>
+    </div>
+  );
+  if (id === "mastercard") return (
+    <div style={{ ...s, background: "#fff", border: "1.5px solid #e2e8f0" }}>
+      <svg width={size * 0.7} height={size * 0.44} viewBox="0 0 44 28">
+        <circle cx="16" cy="14" r="13" fill="#eb001b"/>
+        <circle cx="28" cy="14" r="13" fill="#f79e1b"/>
+        <path d="M22 5.3a13 13 0 0 1 0 17.4A13 13 0 0 1 22 5.3z" fill="#ff5f00"/>
+      </svg>
+    </div>
+  );
+  if (id === "cb") return (
+    <div style={{ ...s, background: "#0052cc", border: "1.5px solid #0041a3" }}>
+      <svg width={size * 0.6} height={size * 0.4} viewBox="0 0 36 24">
+        <text x="2" y="19" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="20" fill="#fff">CB</text>
+      </svg>
+    </div>
+  );
+  if (id === "paypal") return (
+    <div style={{ ...s, background: "#fff", border: "1.5px solid #e2e8f0" }}>
+      <svg width={size * 0.75} height={size * 0.55} viewBox="0 0 60 44" fill="none">
+        <text x="0" y="32" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="18" fill="#003087">Pay</text>
+        <text x="31" y="32" fontFamily="Arial,sans-serif" fontWeight="900" fontSize="18" fill="#009cde">Pal</text>
+      </svg>
+    </div>
+  );
+  if (id === "apple") return (
+    <div style={{ ...s, background: "#000" }}>
+      <svg width={size * 0.75} height={size * 0.35} viewBox="0 0 72 32" fill="none">
+        <path d="M8.5 8C9.5 6.8 10.1 5.2 9.8 3.6 8.4 3.7 6.7 4.5 5.7 5.8 4.8 6.9 4 8.6 4.4 10.1 5.9 10.2 7.5 9.3 8.5 8z" fill="white"/>
+        <path d="M9.8 10.5c-1.9-.1-3.5 1.1-4.4 1.1-.9 0-2.3-1-3.8-1C-.3 10.7-2 12.5-2.9 15c-1.8 5.2.5 13 2.7 17.2.9 1.6 2 3.3 3.5 3.3 1.4 0 1.9-.9 3.6-.9 1.7 0 2.2.9 3.6.9 1.5 0 2.5-1.6 3.5-3.2.7-1.1 1.3-2.3 1.7-3.5-1.7-.7-2.9-2.4-2.9-4.4 0-1.7.8-3.2 2.1-4.2C14 18.9 12.1 17.9 10.2 17.9c-.1 0-.3 0-.4 0z" fill="white"/>
+        <text x="20" y="24" fontFamily="-apple-system,Arial,sans-serif" fontWeight="700" fontSize="18" fill="white">Pay</text>
+      </svg>
+    </div>
+  );
+  if (id === "google") return (
+    <div style={{ ...s, background: "#fff", border: "1.5px solid #e2e8f0" }}>
+      <svg width={size * 0.8} height={size * 0.45} viewBox="0 0 64 36" fill="none">
+        <text x="0" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#4285f4">G</text>
+        <text x="14" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#34a853">o</text>
+        <text x="25" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#fbbc05">o</text>
+        <text x="36" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#ea4335">g</text>
+        <text x="47" y="26" fontFamily="Arial,sans-serif" fontWeight="700" fontSize="19" fill="#4285f4">le</text>
+        <text x="0" y="26" fontFamily="Arial,sans-serif" fontWeight="400" fontSize="14" fill="#5f6368" dy="0"> Pay</text>
+      </svg>
+    </div>
+  );
+  if (id === "virement") return (
+    <div style={{ ...s, background: "#059669" }}>
+      <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none">
+        <path d="M3 21v-2h18v2H3zm0-14v-2l9-5 9 5v2H3zm2-2h14l-7-3.9L5 5zm7 11c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1zm-5 0c-.6 0-1-.4-1-1v-7c0-.6.4-1 1-1s1 .4 1 1v7c0 .6-.4 1-1 1zm10 0c-.6 0-1-.4-1-1v-7c0-.6.4-1 1-1s1 .4 1 1v7c0 .6-.4 1-1 1zm-5-5c-.6 0-1-.4-1-1v-3c0-.6.4-1 1-1s1 .4 1 1v3c0 .6-.4 1-1 1z" fill="white"/>
+      </svg>
+    </div>
+  );
+  return <div style={{ ...s, background: "#f1f5f9" }} />;
+}
 
 function PayModal({ amount, onClose, onDone, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -1143,7 +1224,12 @@ function PayModal({ amount, onClose, onDone, lang = "fr" }) {
   const [card, setCard] = useState({ num: "", exp: "", cvv: "", nom: "" });
   const [err, setErr] = useState("");
 
-  const pick = m => { setMethod(m); setStep(m.id === "stripe" ? "card" : "confirm"); };
+  const pick = m => {
+    setMethod(m);
+    if (m.type === "card") setStep("card");
+    else if (m.type === "bank") setStep("bank");
+    else setStep("confirm");
+  };
   const payCard = () => {
     if (card.num.replace(/\s/g, "").length < 16) return setErr(tr.cardInvalid);
     if (card.exp.length < 5) return setErr(tr.expInvalid);
@@ -1168,11 +1254,9 @@ function PayModal({ amount, onClose, onDone, lang = "fr" }) {
           <>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
               {PAY_METHODS.map(m => (
-                <button key={m.id} onClick={() => pick(m)} style={{ background: m.bg, border: "1px solid rgba(0,0,0,.06)", borderRadius: 14, padding: "14px 12px", cursor: "pointer", textAlign: "left", transition: "all .15s", fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, background: `${m.color}18`, border: `1px solid ${m.color}30`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
-                    <span style={{ color: m.color, fontWeight: 800, fontSize: 13 }}>{m.abbr}</span>
-                  </div>
-                  <div style={{ color: T.textHi, fontSize: 13, fontWeight: 600 }}>{m.label}</div>
+                <button key={m.id} onClick={() => pick(m)} style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: "12px", cursor: "pointer", textAlign: "left", transition: "all .15s", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 10 }}>
+                  <PayLogo id={m.id} size={40} />
+                  <span style={{ color: T.textHi, fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{m.label}</span>
                 </button>
               ))}
             </div>
@@ -1184,7 +1268,11 @@ function PayModal({ amount, onClose, onDone, lang = "fr" }) {
         )}
         {step === "card" && (
           <>
-            <button onClick={() => setStep("method")} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.back(T.accent, 14)} {tr.back}</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <button onClick={() => setStep("method")} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.back(T.accent, 14)} {tr.back}</button>
+              {method && <PayLogo id={method.id} size={32} />}
+              <span style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{method?.label}</span>
+            </div>
             <div style={{ marginBottom: 12 }}><label className="lk-label">{tr.cardNumber}</label><input className="lk-input" value={card.num} onChange={e => setCard(p => ({ ...p, num: fmtCard(e.target.value) }))} placeholder="1234 5678 9012 3456" inputMode="numeric" /></div>
             <div style={{ marginBottom: 12 }}><label className="lk-label">{tr.cardHolder}</label><input className="lk-input" value={card.nom} onChange={e => setCard(p => ({ ...p, nom: e.target.value }))} placeholder="Jean Dupont" /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
@@ -1195,10 +1283,25 @@ function PayModal({ amount, onClose, onDone, lang = "fr" }) {
             <button onClick={payCard} className="lk-btn">{tr.pay} {fmt(amount)}</button>
           </>
         )}
+        {step === "bank" && (
+          <>
+            <button onClick={() => setStep("method")} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.back(T.accent, 14)} {tr.back}</button>
+            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
+              <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>IBAN</div>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, fontFamily: "monospace", letterSpacing: ".5px", marginBottom: 12 }}>FR76 3000 6000 0112 3456 7890 189</div>
+              <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>BIC / SWIFT</div>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, fontFamily: "monospace", marginBottom: 12 }}>BNPAFRPPXXX</div>
+              <div style={{ color: T.textLo, fontSize: 11, marginBottom: 4 }}>Référence</div>
+              <div style={{ color: T.accent, fontWeight: 700, fontSize: 13, fontFamily: "monospace" }}>LOCKR-{uid().slice(0, 8).toUpperCase()}</div>
+            </div>
+            <div style={{ color: T.textMid, fontSize: 12, lineHeight: 1.6, marginBottom: 20 }}>Effectuez le virement de <strong>{fmt(amount)}</strong> avec la référence ci-dessus. Votre paiement sera confirmé sous 1–2 jours ouvrés.</div>
+            <button onClick={payNow} className="lk-btn">{tr.confirmPayment}</button>
+          </>
+        )}
         {step === "confirm" && method && (
           <div style={{ textAlign: "center", padding: "8px 0" }}>
-            <div style={{ width: 72, height: 72, background: `${method.color}12`, border: `1px solid ${method.color}30`, borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <span style={{ color: method.color, fontWeight: 800, fontSize: 22 }}>{method.abbr}</span>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <PayLogo id={method.id} size={72} />
             </div>
             <div style={{ color: T.textHi, fontWeight: 700, fontSize: 17, marginBottom: 4 }}>{tr.confirmWith} {method.label}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: T.accent, letterSpacing: "-1px", marginBottom: 20 }}>{fmt(amount)}</div>
@@ -2953,6 +3056,9 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
   const [form, setForm] = useState({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier" });
   const [posted, setPosted] = useState(false);
   const [detailId, setDetailId] = useState(null);
+  const [buyStep, setBuyStep] = useState(0); // 0=none 1=address 2=payment 3=success
+  const [buyForm, setBuyForm] = useState({ nom: "", adresse: "", ville: "", zip: "", tel: "", cardNum: "", expiry: "", cvv: "" });
+  const [buyError, setBuyError] = useState("");
 
   const visible = listings.filter(l => {
     if (filterOwn && l.proId !== account.id) return false;
@@ -3155,37 +3261,62 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
       )}
 
       {/* Modal détail annonce */}
-      {detail && (
+      {detail && buyStep === 0 && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 32px", animation: "slideUp .3s ease" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 32px", animation: "slideUp .3s ease", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 18px" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, lineHeight: 1.3, marginBottom: 6 }}>{detail.titre}</div>
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "2px 8px", fontSize: 11, color: T.gold, fontWeight: 600 }}>{detail.categorie}</span>
-                  <span style={{ background: detail.etat === "Neuf" ? "rgba(62,207,142,.1)" : "rgba(201,160,48,.1)", border: `1px solid ${detail.etat === "Neuf" ? "rgba(62,207,142,.25)" : "rgba(201,160,48,.2)"}`, borderRadius: 20, padding: "2px 8px", fontSize: 11, color: detail.etat === "Neuf" ? T.success : T.gold, fontWeight: 600 }}>{detail.etat}</span>
+            {/* Header with sector photo */}
+            {(() => {
+              const mc = metierColor(detail.metier);
+              const mPhoto = MARKET_METIERS.find(m => m.id === detail.metier)?.photo;
+              return (
+                <div style={{ position: "relative", height: 90, borderRadius: 14, overflow: "hidden", marginBottom: 16 }}>
+                  {mPhoto && <img src={mPhoto} alt="" onError={e => { e.target.style.display="none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+                  <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,${mc}dd,${mc}88)` }} />
+                  <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px" }}>
+                    <div>
+                      <div style={{ color: "#fff", fontWeight: 900, fontSize: 20 }}>{fmt(detail.prix)}</div>
+                      <div style={{ color: "rgba(255,255,255,.8)", fontSize: 11 }}>Le vendeur reçoit {fmt(detail.prix * (1 - LOCKR_COMMISSION))}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 20, padding: "3px 10px", fontSize: 10, color: "#fff", fontWeight: 700 }}>{detail.etat}</div>
+                      <div style={{ color: "rgba(255,255,255,.7)", fontSize: 10, marginTop: 4 }}>{metierLabel(detail.metier)}</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div style={{ color: metierColor(detail.metier), fontWeight: 900, fontSize: 22 }}>{fmt(detail.prix)}</div>
+              );
+            })()}
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, lineHeight: 1.3, marginBottom: 8 }}>{detail.titre}</div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
+              <span style={{ background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "2px 8px", fontSize: 11, color: T.gold, fontWeight: 600 }}>{detail.categorie}</span>
+              <span style={{ background: detail.etat === "Neuf" ? "rgba(62,207,142,.1)" : "rgba(201,160,48,.1)", border: `1px solid ${detail.etat === "Neuf" ? "rgba(62,207,142,.25)" : "rgba(201,160,48,.2)"}`, borderRadius: 20, padding: "2px 8px", fontSize: 11, color: detail.etat === "Neuf" ? T.success : T.gold, fontWeight: 600 }}>{detail.etat}</span>
             </div>
             <p style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>{detail.desc || "Aucune description."}</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 16 }}>
+            {/* Seller */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: `${metierColor(detail.metier)}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <span style={{ color: metierColor(detail.metier), fontWeight: 800, fontSize: 14 }}>{detail.proNom.charAt(0)}</span>
               </div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{detail.proNom}</div>
                 <div style={{ color: T.textLo, fontSize: 11 }}>{fmtDate(detail.createdAt)}</div>
               </div>
+              {detail.tel && <a href={`tel:${detail.tel}`} style={{ color: T.accent, fontSize: 12, fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>{Icon.phone(T.accent, 14)} Appeler</a>}
             </div>
+            {/* Commission info */}
+            <div style={{ background: "rgba(124,58,237,.06)", border: "1px solid rgba(124,58,237,.15)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
+              {Icon.percent(T.accent, 13)}
+              <span style={{ color: T.textMid, fontSize: 12 }}>15% de commission LOCKR inclus dans le prix affiché</span>
+            </div>
+            {/* Actions */}
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setDetailId(null)} className="lk-ghost" style={{ flex: 1 }}>{tr.back}</button>
-              {detail.proId !== account.id && detail.tel && (
-                <a href={`tel:${detail.tel}`} style={{ flex: 2, background: T.grad, color: "#fff", borderRadius: 12, padding: "12px", textAlign: "center", textDecoration: "none", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  {Icon.phone("#fff", 16)} {tr.contactSeller}
-                </a>
+              {detail.proId !== account.id && !detail.sold && (
+                <button onClick={() => setBuyStep(1)} style={{ flex: 2, background: T.grad, border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  {Icon.card ? Icon.card("#fff", 16) : null} {tr.buyBtn}
+                </button>
               )}
+              {detail.sold && <div style={{ flex: 2, background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 12, padding: "12px", color: T.success, fontWeight: 700, fontSize: 13, textAlign: "center" }}>{tr.soldLabel}</div>}
               {detail.proId === account.id && !detail.sold && (
                 <button onClick={() => {
                   const commission = Math.round(detail.prix * LOCKR_COMMISSION * 100) / 100;
@@ -3196,17 +3327,201 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
                   {Icon.check("#fff", 15)} {tr.markSold}
                 </button>
               )}
-              {detail.proId === account.id && detail.sold && (
-                <div style={{ flex: 2, background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.3)", borderRadius: 12, padding: "12px", color: T.success, fontWeight: 700, fontSize: 13, textAlign: "center" }}>
-                  {tr.soldLabel}
-                </div>
-              )}
               {detail.proId === account.id && (
                 <button onClick={() => { setListings(p => p.filter(l => l.id !== detail.id)); setDetailId(null); }} style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 12, padding: "12px", color: T.danger, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
                   {Icon.trash(T.danger, 15)}
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── Tunnel d'achat ── */}
+      {detail && buyStep > 0 && buyStep < 4 && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 20px 36px", animation: "slideUp .3s ease", maxHeight: "92vh", overflowY: "auto" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 16px" }} />
+            {/* Stepper */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 22 }}>
+              {[1,2,3].map((s, i) => (
+                <React.Fragment key={s}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: buyStep >= s ? T.accent : T.card, border: `1.5px solid ${buyStep >= s ? T.accent : T.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {buyStep > s ? Icon.check("#fff", 12) : <span style={{ color: buyStep === s ? "#fff" : T.textLo, fontSize: 12, fontWeight: 700 }}>{s}</span>}
+                  </div>
+                  <div style={{ flex: i < 2 ? 1 : 0, height: 2, background: buyStep > s ? T.accent : T.border, borderRadius: 2 }} />
+                </React.Fragment>
+              ))}
+              <div style={{ color: T.textMid, fontSize: 12, fontWeight: 600 }}>
+                {buyStep === 1 ? tr.buyStep1Title : buyStep === 2 ? tr.buyStep2Title : tr.buyStep3Title}
+              </div>
+            </div>
+            {/* Récap article */}
+            <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 14px", marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, flex: 1, marginRight: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{detail.titre}</div>
+              <div style={{ color: T.accent, fontWeight: 900, fontSize: 15, flexShrink: 0 }}>{fmt(detail.prix)}</div>
+            </div>
+            {/* STEP 1 — Adresse de livraison */}
+            {buyStep === 1 && (
+              <>
+                <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{tr.buyStep1Title}</div>
+                <div style={{ marginBottom: 12 }}>
+                  <label className="lk-label">{tr.buyFullName}</label>
+                  <input className="lk-input" value={buyForm.nom} onChange={e => setBuyForm(p => ({ ...p, nom: e.target.value }))} placeholder="Jean Dupont" />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label className="lk-label">{tr.buyAddress}</label>
+                  <input className="lk-input" value={buyForm.adresse} onChange={e => setBuyForm(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix" />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginBottom: 12 }}>
+                  <div>
+                    <label className="lk-label">{tr.buyCity}</label>
+                    <input className="lk-input" value={buyForm.ville} onChange={e => setBuyForm(p => ({ ...p, ville: e.target.value }))} placeholder="Paris" />
+                  </div>
+                  <div>
+                    <label className="lk-label">{tr.buyZip}</label>
+                    <input className="lk-input" value={buyForm.zip} onChange={e => setBuyForm(p => ({ ...p, zip: e.target.value }))} placeholder="75001" inputMode="numeric" />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                  <label className="lk-label">{tr.buyPhone}</label>
+                  <input className="lk-input" value={buyForm.tel} onChange={e => setBuyForm(p => ({ ...p, tel: e.target.value }))} placeholder="06 12 34 56 78" inputMode="tel" />
+                </div>
+                {buyError && <div style={{ background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, marginBottom: 14 }}>{buyError}</div>}
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => { setBuyStep(0); setBuyError(""); }} className="lk-ghost" style={{ flex: 1 }}>{tr.back}</button>
+                  <button onClick={() => {
+                    if (!buyForm.nom || !buyForm.adresse || !buyForm.ville || !buyForm.zip || !buyForm.tel) return setBuyError("Veuillez remplir tous les champs.");
+                    setBuyError(""); setBuyStep(2);
+                  }} className="lk-btn" style={{ flex: 2 }}>{tr.buyNext}</button>
+                </div>
+              </>
+            )}
+            {/* STEP 2 — Paiement */}
+            {buyStep === 2 && (
+              <>
+                <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, marginBottom: 16 }}>{tr.buyStep2Title}</div>
+                {/* Total breakdown */}
+                <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ color: T.textMid, fontSize: 13 }}>Prix article</span>
+                    <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{fmt(detail.prix)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ color: T.textMid, fontSize: 13 }}>Commission LOCKR (15%)</span>
+                    <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>incluse</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
+                    <span style={{ color: T.textHi, fontWeight: 800, fontSize: 14 }}>{tr.buyTotal}</span>
+                    <span style={{ color: T.accent, fontWeight: 900, fontSize: 16 }}>{fmt(detail.prix)}</span>
+                  </div>
+                </div>
+                {/* Payment methods grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                  {PAY_METHODS.map(m => (
+                    <button key={m.id} onClick={() => setBuyForm(p => ({ ...p, payMethod: m.id }))}
+                      style={{ background: buyForm.payMethod === m.id ? "rgba(124,58,237,.06)" : T.card, border: `1.5px solid ${buyForm.payMethod === m.id ? T.accent : T.border}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif", transition: "all .12s" }}>
+                      <PayLogo id={m.id} size={36} />
+                      <span style={{ color: T.textHi, fontSize: 11, fontWeight: 600, lineHeight: 1.3 }}>{m.label}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Card fields if card method selected */}
+                {buyForm.payMethod && PAY_METHODS.find(m => m.id === buyForm.payMethod)?.type === "card" && (
+                  <>
+                    <div style={{ marginBottom: 10 }}>
+                      <label className="lk-label">{tr.buyCardNum}</label>
+                      <input className="lk-input" value={buyForm.cardNum || ""} onChange={e => setBuyForm(p => ({ ...p, cardNum: fmtCard(e.target.value) }))} placeholder="1234 5678 9012 3456" inputMode="numeric" />
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <label className="lk-label">Titulaire de la carte</label>
+                      <input className="lk-input" value={buyForm.cardName || ""} onChange={e => setBuyForm(p => ({ ...p, cardName: e.target.value }))} placeholder="Jean Dupont" />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <label className="lk-label">{tr.buyExpiry}</label>
+                        <input className="lk-input" value={buyForm.expiry || ""} onChange={e => setBuyForm(p => ({ ...p, expiry: fmtExp(e.target.value) }))} placeholder="MM/AA" inputMode="numeric" />
+                      </div>
+                      <div>
+                        <label className="lk-label">{tr.buyCvv}</label>
+                        <input className="lk-input" type="password" value={buyForm.cvv || ""} onChange={e => setBuyForm(p => ({ ...p, cvv: e.target.value.slice(0, 4) }))} placeholder="123" inputMode="numeric" />
+                      </div>
+                    </div>
+                  </>
+                )}
+                {/* IBAN for bank transfer */}
+                {buyForm.payMethod === "virement" && (
+                  <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "14px", marginBottom: 10 }}>
+                    <div style={{ color: T.textLo, fontSize: 11, marginBottom: 3 }}>IBAN</div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12, fontFamily: "monospace", marginBottom: 8 }}>FR76 3000 6000 0112 3456 7890 189</div>
+                    <div style={{ color: T.textLo, fontSize: 11, marginBottom: 3 }}>BIC / SWIFT</div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12, fontFamily: "monospace", marginBottom: 8 }}>BNPAFRPPXXX</div>
+                    <div style={{ color: T.textLo, fontSize: 11, marginBottom: 3 }}>Montant exact</div>
+                    <div style={{ color: T.accent, fontWeight: 800, fontSize: 13 }}>{fmt(detail.prix)}</div>
+                  </div>
+                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+                  {Icon.shield(T.success, 13)}
+                  <span style={{ color: T.success, fontSize: 11, fontWeight: 500 }}>Paiement 100% sécurisé — Données chiffrées</span>
+                </div>
+                {buyError && <div style={{ background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, marginBottom: 14 }}>{buyError}</div>}
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => { setBuyStep(1); setBuyError(""); }} className="lk-ghost" style={{ flex: 1 }}>{tr.back}</button>
+                  <button onClick={() => {
+                    if (!buyForm.payMethod) return setBuyError("Veuillez sélectionner un mode de paiement.");
+                    const pm = PAY_METHODS.find(m => m.id === buyForm.payMethod);
+                    if (pm?.type === "card") {
+                      if (!buyForm.cardNum || buyForm.cardNum.replace(/\s/g,"").length < 16) return setBuyError("Numéro de carte invalide.");
+                      if (!buyForm.cardName) return setBuyError("Nom du titulaire requis.");
+                      if (!buyForm.expiry || buyForm.expiry.length < 5) return setBuyError("Date d'expiration invalide.");
+                      if (!buyForm.cvv || buyForm.cvv.length < 3) return setBuyError("CVV invalide.");
+                    }
+                    setBuyError(""); setBuyStep(3);
+                  }} className="lk-btn" style={{ flex: 2 }}>{tr.buyConfirm}</button>
+                </div>
+              </>
+            )}
+            {/* STEP 3 — Confirmation success */}
+            {buyStep === 3 && (() => {
+              const commission = Math.round(detail.prix * LOCKR_COMMISSION * 100) / 100;
+              return (
+                <div style={{ textAlign: "center", padding: "8px 0" }}>
+                  <div style={{ width: 80, height: 80, background: "rgba(62,207,142,.1)", border: "2px solid rgba(62,207,142,.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", animation: "checkPop .4s ease" }}>
+                    {Icon.check(T.success, 34)}
+                  </div>
+                  <div style={{ color: T.success, fontWeight: 900, fontSize: 20, marginBottom: 6 }}>{tr.buySuccess}</div>
+                  <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6, marginBottom: 20, padding: "0 10px" }}>{tr.buySuccessDesc}</div>
+                  {/* Récap */}
+                  <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px", textAlign: "left", marginBottom: 20 }}>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Récapitulatif de commande</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ color: T.textMid, fontSize: 12 }}>Article</span>
+                      <span style={{ color: T.textHi, fontWeight: 600, fontSize: 12, maxWidth: 180, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{detail.titre}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ color: T.textMid, fontSize: 12 }}>Montant payé</span>
+                      <span style={{ color: T.accent, fontWeight: 800, fontSize: 13 }}>{fmt(detail.prix)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ color: T.textMid, fontSize: 12 }}>Commission LOCKR (15%)</span>
+                      <span style={{ color: T.success, fontWeight: 600, fontSize: 12 }}>{fmt(commission)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ color: T.textMid, fontSize: 12 }}>Livraison à</span>
+                      <span style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{buyForm.ville}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: T.textMid, fontSize: 12 }}>Mode de paiement</span>
+                      <span style={{ color: T.textHi, fontWeight: 600, fontSize: 12 }}>{PAY_METHODS.find(m => m.id === buyForm.payMethod)?.label || "—"}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => {
+                    setSales && setSales(p => [...p, { id: uid(), listingId: detail.id, vendeurId: detail.proId, vendeurNom: detail.proNom, acheteurNom: buyForm.nom, acheteurVille: buyForm.ville, metier: detail.metier, titre: detail.titre, prix: detail.prix, commission, payMethod: buyForm.payMethod, createdAt: ts() }]);
+                    setListings(p => p.map(l => l.id === detail.id ? { ...l, sold: true } : l));
+                    setBuyStep(0); setBuyForm({ nom: "", adresse: "", ville: "", zip: "", tel: "", cardNum: "", expiry: "", cvv: "" }); setDetailId(null);
+                  }} className="lk-btn">{tr.close}</button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
