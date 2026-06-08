@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const fmt = n => `${Math.round(Number(n))} €`;
@@ -3260,9 +3261,9 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
         </div>
       )}
 
-      {/* Modal détail annonce */}
-      {detail && buyStep === 0 && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 999, display: "flex", alignItems: isDesktop ? "center" : "flex-end", justifyContent: "center", padding: isDesktop ? "20px" : 0 }}>
+      {/* Modal détail annonce — portal pour éviter tout problème de stacking context */}
+      {detail && buyStep === 0 && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9999, display: "flex", alignItems: isDesktop ? "center" : "flex-end", justifyContent: "center", padding: isDesktop ? "20px" : 0 }}>
           <div style={{ background: T.surface, borderRadius: isDesktop ? 20 : "20px 20px 0 0", width: "100%", maxWidth: isDesktop ? 560 : 480, padding: "20px 24px 32px", animation: isDesktop ? "fadeUp .2s ease" : "slideUp .3s ease", maxHeight: isDesktop ? "88vh" : "90vh", overflowY: "auto", boxShadow: isDesktop ? "0 24px 80px rgba(0,0,0,.25)" : "none" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 18px" }} />
             {/* Header with sector photo */}
@@ -3335,10 +3336,10 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
             </div>
           </div>
         </div>
-      )}
-      {/* ── Tunnel d'achat ── */}
-      {detail && buyStep > 0 && buyStep < 4 && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 1000, display: "flex", alignItems: isDesktop ? "center" : "flex-end", justifyContent: "center", padding: isDesktop ? "20px" : 0 }}>
+      , document.body)}
+      {/* ── Tunnel d'achat — portal ── */}
+      {detail && buyStep > 0 && buyStep < 4 && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 9999, display: "flex", alignItems: isDesktop ? "center" : "flex-end", justifyContent: "center", padding: isDesktop ? "20px" : 0 }}>
           <div style={{ background: T.surface, borderRadius: isDesktop ? 20 : "20px 20px 0 0", width: "100%", maxWidth: isDesktop ? 560 : 480, padding: "20px 24px 36px", animation: isDesktop ? "fadeUp .2s ease" : "slideUp .3s ease", maxHeight: isDesktop ? "90vh" : "92vh", overflowY: "auto", boxShadow: isDesktop ? "0 24px 80px rgba(0,0,0,.25)" : "none" }}>
             <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 16px" }} />
             {/* Stepper */}
@@ -3524,7 +3525,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
             })()}
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }
@@ -3659,7 +3660,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const bk = activeMission ? (bookings.find(b => b.id === activeMission.id) || activeMission) : null;
   const prob = bk ? PROBLEMES.find(p => p.id === bk.probleme) : null;
 
-  const acomptesPending = myM.filter(b => b.acompte > 0 && !b.acompteRecu && b.statut !== "terminée");
+  const acomptesPending = []; // acomptes gérés par LOCKR — aucune action requise du pro
 
   const tabs = [
     { id: "missions", icon: Icon.list, l: tr.missions },
@@ -3855,15 +3856,10 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                           {Icon.calendar(T.gold, 12)}
                           <span style={{ color: T.gold, fontSize: 11, fontWeight: 600 }}>{new Date(b.rdvDate).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB")} {new Date(b.rdvDate).toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
-                        {b.acompte > 0 && !b.acompteRecu && (
-                          <div style={{ background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.2)", borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
-                            {Icon.euro(T.warn, 11)}
-                            <span style={{ color: T.warn, fontSize: 11, fontWeight: 600 }}>{tr.acompteNotif} {fmt(b.acompte)}</span>
-                          </div>
-                        )}
-                        {b.acompte > 0 && b.acompteRecu && (
-                          <div style={{ background: "rgba(30,158,107,.07)", borderRadius: 8, padding: "5px 10px" }}>
-                            <span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.acompteReceived}</span>
+                        {b.acompte > 0 && (
+                          <div style={{ background: "rgba(30,158,107,.07)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
+                            {Icon.shield(T.success, 11)}
+                            <span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>Acompte {fmt(b.acompte)} — versé à LOCKR ✓</span>
                           </div>
                         )}
                       </div>
@@ -3878,11 +3874,6 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                             </button>
                             <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
                           </div>
-                          {b.acompte > 0 && !b.acompteRecu && (
-                            <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, acompteRecu: true } : x))} style={{ width: "100%", background: "rgba(217,119,6,.08)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                              {Icon.check(T.warn, 13)} {tr.markAcompte} ({fmt(b.acompte)})
-                            </button>
-                          )}
                         </div>
                       ) : (
                         <button onClick={() => { setActiveMission(b); setTab("active"); }} style={{ width: "100%", background: "rgba(28,28,28,.04)", border: "1px solid rgba(28,28,28,.12)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
