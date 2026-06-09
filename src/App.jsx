@@ -2531,35 +2531,73 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
 /* ─── EARNINGS CHART ─── */
 function EarningsChart({ bookings, artisanId, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const MONTH_LABELS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
   const done = bookings.filter(b => b.artisanId === artisanId && b.statut === "terminée");
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    return { year: d.getFullYear(), month: d.getMonth(), label: ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"][d.getMonth()] };
+    return { year: d.getFullYear(), month: d.getMonth(), label: MONTH_LABELS[d.getMonth()] };
   });
   const data = months.map(m => {
-    const total = done.filter(b => { const d = new Date(b.createdAt); return d.getFullYear() === m.year && d.getMonth() === m.month; }).reduce((s, b) => s + (b.montantFinal || 0) * 0.40, 0);
-    return { ...m, value: total };
+    const bks = done.filter(b => { const d = new Date(b.createdAt); return d.getFullYear() === m.year && d.getMonth() === m.month; });
+    const total = bks.reduce((s, b) => s + (b.montantFinal || 0) * 0.40, 0);
+    return { ...m, value: total, count: bks.length, missions: bks };
   });
   const maxVal = Math.max(...data.map(d => d.value), 1);
-  const thisMonth = data[data.length - 1];
+  const lastMonthIdx = data.length - 1;
+  const [selIdx, setSelIdx] = useState(lastMonthIdx);
+  const sel = data[selIdx];
 
   return (
     <div style={{ padding: "14px" }}>
-      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{tr.earnings}</div>
-      <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 14, padding: "16px", marginBottom: 20 }}>
-        <div style={{ color: T.success, fontWeight: 800, fontSize: 28 }}>{fmt(thisMonth.value)}</div>
-        <div style={{ color: T.textLo, fontSize: 12, marginTop: 4 }}>{tr.thisMonth}</div>
-      </div>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 140, marginBottom: 8 }}>
-        {data.map((d, i) => (
-          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, height: "100%", justifyContent: "flex-end" }}>
-            <div style={{ width: "100%", height: `${Math.max((d.value / maxVal) * 100, 4)}%`, background: i === data.length - 1 ? "linear-gradient(180deg,#3ecf8e,#2aaf77)" : "linear-gradient(180deg,rgba(201,160,48,.6),rgba(201,160,48,.3))", borderRadius: "6px 6px 0 0" }} />
+      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 12 }}>{tr.earnings}</div>
+      {/* Selected month KPI */}
+      <div style={{ background: selIdx === lastMonthIdx ? "rgba(62,207,142,.06)" : "rgba(201,160,48,.06)", border: `1px solid ${selIdx === lastMonthIdx ? "rgba(62,207,142,.2)" : "rgba(201,160,48,.2)"}`, borderRadius: 14, padding: "16px", marginBottom: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ color: selIdx === lastMonthIdx ? T.success : T.accent, fontWeight: 900, fontSize: 28 }}>{fmt(sel.value)}</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginTop: 4 }}>{sel.label} {sel.year}{selIdx === lastMonthIdx ? " — mois en cours" : ""}</div>
           </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: T.textMid, fontSize: 13, fontWeight: 700 }}>{sel.count} mission{sel.count > 1 ? "s" : ""}</div>
+            <div style={{ color: T.textLo, fontSize: 11, marginTop: 2 }}>40% du CA</div>
+          </div>
+        </div>
+        {/* Mission list for selected month */}
+        {sel.missions.length > 0 && (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+            {sel.missions.map(b => (
+              <div key={b.id} style={{ background: "rgba(255,255,255,.6)", borderRadius: 8, padding: "8px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ color: T.textHi, fontSize: 12, fontWeight: 600 }}>{b.clientNom}</div>
+                  <div style={{ color: T.textLo, fontSize: 10 }}>{new Date(b.createdAt).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB")}</div>
+                </div>
+                <div style={{ color: selIdx === lastMonthIdx ? T.success : T.accent, fontWeight: 800, fontSize: 13 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {sel.missions.length === 0 && (
+          <div style={{ color: T.textLo, fontSize: 12, marginTop: 8, textAlign: "center" }}>Aucune mission ce mois</div>
+        )}
+      </div>
+      {/* Bar chart — clickable */}
+      <div style={{ color: T.textMid, fontSize: 11, fontWeight: 600, marginBottom: 8 }}>Appuyez sur un mois pour voir le détail</div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120, marginBottom: 6 }}>
+        {data.map((d, i) => (
+          <button key={i} onClick={() => setSelIdx(i)}
+            style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, height: "100%", justifyContent: "flex-end", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ color: T.textLo, fontSize: 9, fontWeight: 600 }}>{d.value > 0 ? fmt(d.value) : ""}</div>
+            <div style={{ width: "100%", height: `${Math.max((d.value / maxVal) * 100, 4)}%`,
+              background: selIdx === i ? (i === lastMonthIdx ? "linear-gradient(180deg,#3ecf8e,#2aaf77)" : T.grad) : (i === lastMonthIdx ? "rgba(62,207,142,.3)" : "rgba(201,160,48,.25)"),
+              borderRadius: "6px 6px 0 0", border: selIdx === i ? `2px solid ${i === lastMonthIdx ? T.success : T.accent}` : "2px solid transparent", transition: "all .15s" }} />
+          </button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        {data.map((d, i) => <div key={i} style={{ flex: 1, textAlign: "center", color: i === data.length - 1 ? T.success : T.textLo, fontSize: 11 }}>{d.label}</div>)}
+      <div style={{ display: "flex", gap: 6 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ flex: 1, textAlign: "center", color: selIdx === i ? (i === lastMonthIdx ? T.success : T.accent) : T.textLo, fontSize: 11, fontWeight: selIdx === i ? 700 : 400 }}>{d.label}</div>
+        ))}
       </div>
     </div>
   );
@@ -3536,7 +3574,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
-  const [tab, setTab] = useState("missions");
+  const [tab, setTab] = useState("bons");
   const [activeMission, setActiveMission] = useState(null);
   const [progress, setProgress] = useState(0);
   const [dispo, setDispo] = useState(true);
@@ -3664,9 +3702,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const acomptesPending = []; // acomptes gérés par LOCKR — aucune action requise du pro
 
   const tabs = [
+    { id: "bons", icon: Icon.percent, l: tr.bonuses },
     { id: "missions", icon: Icon.list, l: tr.missions },
     { id: "active", icon: Icon.map, l: tr.inProgress },
-    { id: "bons", icon: Icon.percent, l: tr.bonuses },
     { id: "marketplace", icon: Icon.card, l: tr.marketplace },
     { id: "calendar", icon: Icon.calendar, l: tr.calendarTab },
     { id: "stats", icon: Icon.chart, l: tr.stats },
