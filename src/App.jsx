@@ -660,6 +660,35 @@ const PROBLEMES = [
   { id: "digicode",    metier: "serrurier",    label: "Badge / Digicode",         labelEn: "Badge / Digicode",        urgence: false, desc: "Installation ou remplacement",        descEn: "Installation or replacement" },
   { id: "coffre",      metier: "serrurier",    label: "Coffre-fort bloqué",       labelEn: "Blocked safe",            urgence: true,  desc: "Ouverture sans dommage",              descEn: "Opening without damage" },
   { id: "serrure_autre", metier: "serrurier",  label: "Autre serrurerie",         labelEn: "Other locksmith work",    urgence: false, desc: "Décrivez votre besoin",               descEn: "Describe your need" },
+  // ── Clé voiture (sous serrurier) ──
+  { id: "cle_voiture_duplicata", metier: "serrurier", label: "Duplicata clé voiture", labelEn: "Car key duplicate", urgence: false, desc: "Copie de clé auto toutes marques", descEn: "Car key copy all brands" },
+  { id: "cle_voiture_remplacement", metier: "serrurier", label: "Clé de remplacement", labelEn: "Replacement car key", urgence: true, desc: "Clé perdue ou cassée", descEn: "Lost or broken key" },
+  { id: "cle_voiture_telecommande", metier: "serrurier", label: "Programmation télécommande", labelEn: "Remote programming", urgence: false, desc: "Programmation télécommande véhicule", descEn: "Vehicle remote programming" },
+  { id: "cle_voiture_ouverture", metier: "serrurier", label: "Ouverture véhicule", labelEn: "Vehicle opening", urgence: true, desc: "Clé enfermée dans le véhicule", descEn: "Key locked inside vehicle" },
+  { id: "cle_voiture_cassee", metier: "serrurier", label: "Clé cassée dans contact", labelEn: "Key broken in ignition", urgence: true, desc: "Extraction clé cassée dans contact", descEn: "Broken key extraction from ignition" },
+  // ── Rideaux métalliques ──
+  { id: "rideaux_install",   metier: "fermetures", label: "Installation rideau métallique",  labelEn: "Metal shutter installation", urgence: false, desc: "Installation neuve", descEn: "New installation" },
+  { id: "rideaux_rep",       metier: "fermetures", label: "Réparation rideau métallique",    labelEn: "Metal shutter repair",       urgence: false, desc: "Réparation toutes pannes", descEn: "All fault repair" },
+  { id: "rideaux_deblocage", metier: "fermetures", label: "Déblocage rideau métallique",     labelEn: "Metal shutter unlocking",    urgence: true,  desc: "Déblocage d'urgence", descEn: "Emergency unlocking" },
+  { id: "rideaux_motorisation", metier: "fermetures", label: "Motorisation rideau",          labelEn: "Shutter motorisation",       urgence: false, desc: "Ajout moteur électrique", descEn: "Electric motor addition" },
+  // ── Volets roulants ──
+  { id: "volets_install",    metier: "fermetures", label: "Installation volet roulant",      labelEn: "Rolling shutter installation", urgence: false, desc: "Pose volet roulant", descEn: "Rolling shutter installation" },
+  { id: "volets_rep",        metier: "fermetures", label: "Réparation volet roulant",        labelEn: "Rolling shutter repair",       urgence: false, desc: "Réparation mécanisme", descEn: "Mechanism repair" },
+  { id: "volets_deblocage",  metier: "fermetures", label: "Déblocage volet roulant",         labelEn: "Rolling shutter unlocking",    urgence: true,  desc: "Volet bloqué ou coincé", descEn: "Blocked or stuck shutter" },
+  { id: "volets_motorisation", metier: "fermetures", label: "Motorisation volet roulant",    labelEn: "Rolling shutter motorisation", urgence: false, desc: "Motorisation électrique", descEn: "Electric motorisation" },
+  { id: "volets_lame",       metier: "fermetures", label: "Remplacement lame volet",         labelEn: "Shutter slat replacement",     urgence: false, desc: "Remplacement lames cassées", descEn: "Broken slat replacement" },
+  // ── Porte de garage ──
+  { id: "garage_basculante", metier: "fermetures", label: "Porte garage basculante",         labelEn: "Tilting garage door",          urgence: false, desc: "Porte basculante manuelle/auto", descEn: "Manual/automatic tilting door" },
+  { id: "garage_sectionnelle", metier: "fermetures", label: "Porte garage sectionnelle",     labelEn: "Sectional garage door",        urgence: false, desc: "Porte sectionnelle panneaux", descEn: "Panel sectional door" },
+  { id: "garage_sequentielle", metier: "fermetures", label: "Porte garage séquentielle",     labelEn: "Sequential garage door",       urgence: false, desc: "Porte séquentielle latérale", descEn: "Lateral sequential door" },
+  { id: "garage_motorisation", metier: "fermetures", label: "Motorisation porte garage",     labelEn: "Garage door motorisation",     urgence: false, desc: "Ajout moteur ouverture auto", descEn: "Auto opening motor addition" },
+  { id: "garage_rep",        metier: "fermetures", label: "Réparation porte garage",         labelEn: "Garage door repair",           urgence: false, desc: "Réparation mécanisme ou moteur", descEn: "Mechanism or motor repair" },
+  // ── Portail ──
+  { id: "portail_battant",   metier: "fermetures", label: "Portail battant",                 labelEn: "Swing gate",                   urgence: false, desc: "Installation ou réparation portail battant", descEn: "Swing gate installation or repair" },
+  { id: "portail_coulissant",metier: "fermetures", label: "Portail coulissant",              labelEn: "Sliding gate",                 urgence: false, desc: "Installation ou réparation portail coulissant", descEn: "Sliding gate installation or repair" },
+  { id: "portail_motorisation", metier: "fermetures", label: "Motorisation portail",         labelEn: "Gate motorisation",            urgence: false, desc: "Ajout moteur électrique portail", descEn: "Electric motor for gate" },
+  { id: "portail_telecommande", metier: "fermetures", label: "Télécommande portail",         labelEn: "Gate remote control",          urgence: false, desc: "Remplacement ou programmation télécommande", descEn: "Remote replacement or programming" },
+  { id: "portail_rep",       metier: "fermetures", label: "Réparation portail",              labelEn: "Gate repair",                  urgence: false, desc: "Réparation toutes pannes portail", descEn: "All gate fault repair" },
   // ── Plombier ──
   { id: "fuite_eau",   metier: "plombier",     label: "Fuite d'eau urgente",      labelEn: "Urgent water leak",       urgence: true,  desc: "Détection et réparation rapide",      descEn: "Fast detection and repair" },
   { id: "debouchage",  metier: "plombier",     label: "Débouchage canalisation",  labelEn: "Drain unclogging",        urgence: true,  desc: "Évier, douche, WC, colonne",          descEn: "Sink, shower, toilet, pipe" },
@@ -798,6 +827,13 @@ const Icon = {
 const PROB_ICONS = {
   // Serrurier
   ouverture: Icon.door, serrure: Icon.key, blindage: Icon.shield, coffre: Icon.safe, digicode: Icon.code, serrure_autre: Icon.tool,
+  // Clé voiture
+  cle_voiture_duplicata: Icon.key, cle_voiture_remplacement: Icon.key, cle_voiture_telecommande: Icon.key, cle_voiture_ouverture: Icon.door, cle_voiture_cassee: Icon.key,
+  // Fermetures
+  rideaux_install: Icon.home, rideaux_rep: Icon.tool, rideaux_deblocage: Icon.tool, rideaux_motorisation: Icon.bolt,
+  volets_install: Icon.home, volets_rep: Icon.tool, volets_deblocage: Icon.tool, volets_motorisation: Icon.bolt, volets_lame: Icon.tool,
+  garage_basculante: Icon.home, garage_sectionnelle: Icon.home, garage_sequentielle: Icon.home, garage_motorisation: Icon.bolt, garage_rep: Icon.tool,
+  portail_battant: Icon.home, portail_coulissant: Icon.home, portail_motorisation: Icon.bolt, portail_telecommande: Icon.code, portail_rep: Icon.tool,
   // Plombier
   fuite_eau: Icon.droplet, debouchage: Icon.droplet, chauffe_eau: Icon.droplet, robinetterie: Icon.droplet, wc: Icon.droplet, salle_bain: Icon.droplet, plomb_autre: Icon.tool,
   // Électricien
@@ -819,6 +855,9 @@ const METIERS = [
   { id: "chauffagiste", label: "Chauffagiste", labelEn: "Heating engineer", color: "#ef4444", icon: Icon.flame,   desc: "Chaudière, PAC, radiateur",     descEn: "Boiler, heat pump, radiator",
     photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
     heroBg: "linear-gradient(135deg,#7f1d1d,#dc2626)" },
+  { id: "fermetures",   label: "Fermetures",   labelEn: "Shutters & Gates", color: "#6d28d9", icon: Icon.home,    desc: "Rideaux, volets, portail, garage", descEn: "Shutters, blinds, gates, garage",
+    photo: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&q=80",
+    heroBg: "linear-gradient(135deg,#4c1d95,#6d28d9)" },
 ];
 
 const CSS = `
@@ -2041,6 +2080,10 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
               {tr.freeAccount} {Icon.arrow(T.accent, 14)}
             </button>
           </div>
+          {/* Partenaires link */}
+          <div style={{ textAlign: "center", marginTop: 12 }}>
+            <button onClick={() => {}} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif" }}>Partenaires LOCKR — Pro ? Rejoignez-nous</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2414,7 +2457,32 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
   const [rdvModal, setRdvModal] = useState(null);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [notif, setNotif] = useState(null);
+  // Bon status per bon
+  const [bonStatuses, setBonStatuses] = useState({});
+  const [bonTimers, setBonTimers] = useState({});
+  const [bonRdvInputs, setBonRdvInputs] = useState({});
+  const timerRefs = useRef({});
   const myRegion = account.ville || "Paris";
+
+  // 5-minute call timer per bon (Feature 13)
+  const startCallTimer = (bonId, bookingId) => {
+    setBonTimers(p => ({ ...p, [bonId]: 300 }));
+    if (timerRefs.current[bonId]) clearInterval(timerRefs.current[bonId]);
+    timerRefs.current[bonId] = setInterval(() => {
+      setBonTimers(prev => {
+        const t = (prev[bonId] || 0) - 1;
+        if (t <= 0) {
+          clearInterval(timerRefs.current[bonId]);
+          // Auto-cancel: reset booking back to en_attente
+          setBookings(bks => bks.map(b => b.id === bookingId ? { ...b, statut: "en_attente" } : b));
+          setBonStatuses(s => ({ ...s, [bonId]: "expired" }));
+          return { ...prev, [bonId]: 0 };
+        }
+        return { ...prev, [bonId]: t };
+      });
+    }, 1000);
+  };
+  useEffect(() => () => Object.values(timerRefs.current).forEach(clearInterval), []);
   // Feature 9: sort by pro score
   const proScore = bookings.filter(b => b.artisanId === account.artisanId && b.statut === "terminée").length;
   const bonsRegion = bons.filter(b => b.region === myRegion).slice().sort((a, b) => {
@@ -2492,7 +2560,53 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
                 <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(techEarn)}</span>
               </div>
             </div>
-            <button onClick={() => prendre(bon)} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>{tr.acceptBonus} {Icon.arrow("#fff", 13)}</button>
+            {(() => {
+              const bStatus = bonStatuses[bon.id];
+              const timer = bonTimers[bon.id];
+              const acceptedBooking = bookings.find(bk => bk.bonId === bon.id && bk.artisanId === account.artisanId);
+              if (!bStatus || bStatus === "available") {
+                return <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "accepted" }))} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>Accepter le bon {Icon.arrow("#fff", 13)}</button>;
+              }
+              if (bStatus === "accepted") {
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <a href="tel:0100000000" style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none", fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} Appeler client</a>
+                      <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "contacted" }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.chat(T.accent, 13)} Chat LOCKR</button>
+                    </div>
+                    {timer !== undefined && timer > 0 && (
+                      <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: T.danger, fontSize: 12, fontWeight: 600 }}>⏱ {Math.floor(timer/60)}:{String(timer%60).padStart(2,"0")} pour appeler</span>
+                        <button onClick={() => { clearInterval(timerRefs.current[bon.id]); setBonTimers(p => ({ ...p, [bon.id]: undefined })); setBonStatuses(p => ({ ...p, [bon.id]: "called" })); }} style={{ background: T.success, border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>J'ai appelé</button>
+                      </div>
+                    )}
+                    <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ width: "100%", background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.25)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>📅 Planifier le RDV</button>
+                  </div>
+                );
+              }
+              if (bStatus === "contacted") {
+                const rdvInput = bonRdvInputs[bon.id] || {};
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Planifier le RDV</div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>RDV immédiat</button>
+                      <button onClick={() => setBonRdvInputs(p => ({ ...p, [bon.id]: { showPicker: true } }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Planifier</button>
+                    </div>
+                    {rdvInput.showPicker && (
+                      <div>
+                        <input type="datetime-local" className="lk-input" value={rdvInput.date || ""} onChange={e => setBonRdvInputs(p => ({ ...p, [bon.id]: { ...p[bon.id], date: e.target.value } }))} style={{ marginBottom: 8 }} />
+                        <button onClick={() => { if (rdvInput.date) { prendre({ ...bon, scheduledDate: rdvInput.date }); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); } }} className="lk-btn" style={{ fontSize: 12, padding: "10px" }}>Confirmer le RDV</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              if (bStatus === "expired") {
+                return <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "10px", color: T.danger, fontWeight: 600, fontSize: 12, textAlign: "center" }}>Délai expiré — bon remis en attente</div>;
+              }
+              return <div style={{ background: "rgba(62,207,142,.08)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 600, fontSize: 12, textAlign: "center" }}>✓ RDV planifié</div>;
+            })()}
           </div>
         );
       })}
@@ -2579,6 +2693,17 @@ function EarningsChart({ bookings, artisanId, lang = "fr" }) {
         )}
         {sel.missions.length === 0 && (
           <div style={{ color: T.textLo, fontSize: 12, marginTop: 8, textAlign: "center" }}>Aucune mission ce mois</div>
+        )}
+        {selIdx !== lastMonthIdx && sel.missions.length > 0 && (
+          <button onClick={() => {
+            const lines = [`FACTURE LOCKR — ${sel.label} ${sel.year}`, `Artisan ID: ${artisanId}`, `Date: ${new Date().toLocaleDateString("fr-FR")}`, `---`, ...sel.missions.map(b => `${b.clientNom} | ${b.probleme} | ${fmtDate(b.createdAt)} | Total: ${b.montantFinal||0}€ | Votre part: ${fmt((b.montantFinal||0)*0.40)}`), `---`, `Sous-total: ${fmt(sel.value)}`, `Commission LOCKR (60%): ${fmt(sel.missions.reduce((s,b)=>s+(b.montantFinal||0)*0.60,0))}`, `TOTAL NET PERÇU: ${fmt(sel.value)}`].join("\n");
+            const blob = new Blob([lines], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `facture_lockr_${sel.label}_${sel.year}.txt`; a.click();
+            URL.revokeObjectURL(url);
+          }} style={{ marginTop: 12, width: "100%", background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+            {Icon.file("#fff", 13)} Télécharger la facture — {sel.label} {sel.year}
+          </button>
         )}
       </div>
       {/* Bar chart — clickable */}
@@ -3093,12 +3218,23 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
   const [filterOwn, setFilterOwn] = useState(false);
   const [search, setSearch] = useState("");
   const [newModal, setNewModal] = useState(false);
-  const [form, setForm] = useState({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier" });
+  const [form, setForm] = useState({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier", marque: "", modele: "" });
   const [posted, setPosted] = useState(false);
   const [detailId, setDetailId] = useState(null);
   const [buyStep, setBuyStep] = useState(0); // 0=none 1=address 2=payment 3=success
   const [buyForm, setBuyForm] = useState({ nom: "", adresse: "", ville: "", zip: "", tel: "", cardNum: "", expiry: "", cvv: "" });
   const [buyError, setBuyError] = useState("");
+  const [proposePrice, setProposePrice] = useState("");
+  const [proposeSent, setProposeSent] = useState(false);
+  const [showPropose, setShowPropose] = useState(false);
+  // Nouvelle annonce — photos obligatoires (min 3)
+  const [newPhotos, setNewPhotos] = useState([]);
+  const newPhotoRef = useRef(null);
+  const [photoError, setPhotoError] = useState("");
+  // Marque / Modèle
+  const [brandSearch, setBrandSearch] = useState("");
+  const BRANDS = ["Bosch","Makita","DeWalt","Milwaukee","Hilti","Stanley","Facom","Knipex","Legrand","Schneider","Grohe","Hansgrohe","Vaillant","Saunier Duval","Autres"];
+  const [showBrandDrop, setShowBrandDrop] = useState(false);
 
   const visible = listings.filter(l => {
     if (filterOwn && l.proId !== account.id) return false;
@@ -3110,12 +3246,23 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
 
   const post = () => {
     if (!form.titre || !form.prix) return;
-    const nl = { id: uid(), proId: account.id, proNom: account.nom, metier: form.metier, titre: form.titre, desc: form.desc, prix: Number(form.prix), categorie: form.categorie, etat: form.etat, photo: null, tel: account.tel || "", createdAt: ts() };
+    if (newPhotos.length < 3) { setPhotoError("3 photos minimum requises."); return; }
+    setPhotoError("");
+    const nl = { id: uid(), proId: account.id, proNom: account.nom, metier: form.metier, titre: form.titre, desc: form.desc, prix: Number(form.prix), categorie: form.categorie, etat: form.etat, marque: form.marque, modele: form.modele, photos: newPhotos, photo: newPhotos[0] || null, tel: account.tel || "", createdAt: ts() };
     setListings(p => [nl, ...p]);
-    setForm({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier" });
+    setForm({ titre: "", desc: "", prix: "", categorie: "Outils", etat: "Neuf", metier: account.metier || "serrurier", marque: "", modele: "" });
+    setNewPhotos([]);
     setPosted(true);
     setNewModal(false);
     setTimeout(() => setPosted(false), 3000);
+  };
+  const handleNewPhoto = (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(f => {
+      const r = new FileReader();
+      r.onload = ev => setNewPhotos(p => p.length < 6 ? [...p, ev.target.result] : p);
+      r.readAsDataURL(f);
+    });
   };
 
   const detail = detailId ? listings.find(l => l.id === detailId) : null;
@@ -3237,6 +3384,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
                   <div style={{ padding: "9px 10px 11px" }}>
                     <div style={{ color: T.textHi, fontWeight: 700, fontSize: 11, lineHeight: 1.3, marginBottom: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{l.titre}</div>
                     <div style={{ color: mc, fontWeight: 800, fontSize: 14, marginBottom: 3 }}>{fmt(l.prix)}</div>
+                    {(l.marque || l.modele) && <div style={{ color: T.textLo, fontSize: 9, marginBottom: 2 }}>{[l.marque, l.modele].filter(Boolean).join(" · ")}</div>}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ color: T.textLo, fontSize: 9 }}>{l.proNom}</div>
                       <div style={{ background: `${mc}12`, borderRadius: 7, padding: "1px 5px", fontSize: 8, color: mc, fontWeight: 600 }}>{l.categorie}</div>
@@ -3287,13 +3435,50 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
               </div>
             </div>
             <label className="lk-label">{tr.listingCategory}</label>
-            <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
               {MARKET_CATS.map(c => (
                 <button key={c} onClick={() => setForm(p => ({ ...p, categorie: c }))} style={{ background: form.categorie === c ? T.grad : T.card, color: form.categorie === c ? "#fff" : T.textMid, border: `1px solid ${form.categorie === c ? T.accent : T.border}`, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{c}</button>
               ))}
             </div>
+            {/* Marque */}
+            <label className="lk-label">Marque</label>
+            <div style={{ position: "relative", marginBottom: 12 }}>
+              <input className="lk-input" value={form.marque || brandSearch} onChange={e => { setBrandSearch(e.target.value); setForm(p => ({ ...p, marque: e.target.value })); setShowBrandDrop(true); }} placeholder="Bosch, Makita, DeWalt…" onFocus={() => setShowBrandDrop(true)} />
+              {showBrandDrop && (
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid rgba(0,0,0,.1)", borderRadius: 10, zIndex: 999, maxHeight: 180, overflowY: "auto", boxShadow: "0 4px 16px rgba(0,0,0,.12)" }}>
+                  {BRANDS.filter(b => !brandSearch || b.toLowerCase().includes(brandSearch.toLowerCase())).map(b => (
+                    <button key={b} type="button" onClick={() => { setForm(p => ({ ...p, marque: b })); setBrandSearch(b); setShowBrandDrop(false); }} style={{ width: "100%", background: "none", border: "none", padding: "9px 14px", cursor: "pointer", textAlign: "left", fontSize: 13, color: T.textHi, fontFamily: "'Inter',sans-serif" }}>{b}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Modèle */}
+            <div style={{ marginBottom: 18 }}>
+              <label className="lk-label">Modèle</label>
+              <input className="lk-input" value={form.modele || ""} onChange={e => setForm(p => ({ ...p, modele: e.target.value }))} placeholder="Ex: GSB 18V-55, M18, DCD771…" />
+            </div>
+            {/* Photos obligatoires (min 3) */}
+            <div style={{ marginBottom: 18 }}>
+              <label className="lk-label">Photos * (minimum 3)</label>
+              <input ref={newPhotoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleNewPhoto} />
+              <button type="button" onClick={() => newPhotoRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif", marginBottom: 10 }}>
+                {Icon.cam(T.accent, 20)}
+                <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>Ajouter des photos ({newPhotos.length}/3 min)</span>
+              </button>
+              {newPhotos.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {newPhotos.map((p, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <img src={p} alt="" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(0,0,0,.1)" }} />
+                      <button type="button" onClick={() => setNewPhotos(prev => prev.filter((_, j) => j !== i))} style={{ position: "absolute", top: -6, right: -6, background: T.danger, border: "none", borderRadius: "50%", width: 18, height: 18, color: "#fff", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {photoError && <div style={{ color: T.danger, fontSize: 12, marginTop: 6, fontWeight: 600 }}>{photoError}</div>}
+            </div>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setNewModal(false)} className="lk-ghost" style={{ flex: 1 }}>{tr.cancel}</button>
+              <button onClick={() => { setNewModal(false); setNewPhotos([]); setPhotoError(""); }} className="lk-ghost" style={{ flex: 1 }}>{tr.cancel}</button>
               <button onClick={post} className="lk-btn" style={{ flex: 2 }}>{tr.postListing}</button>
             </div>
           </div>
@@ -3341,16 +3526,43 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
                 <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{detail.proNom}</div>
                 <div style={{ color: T.textLo, fontSize: 11 }}>{fmtDate(detail.createdAt)}</div>
               </div>
-              {detail.tel && <a href={`tel:${detail.tel}`} style={{ color: T.accent, fontSize: 12, fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>{Icon.phone(T.accent, 14)} Appeler</a>}
+              <span style={{ color: T.textLo, fontSize: 11, fontStyle: "italic" }}>Contact via chat LOCKR uniquement</span>
             </div>
             {/* Commission info */}
             <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
               {Icon.percent(T.accent, 13)}
               <span style={{ color: T.textMid, fontSize: 12 }}>15% de commission LOCKR inclus dans le prix affiché</span>
             </div>
+            {/* Proposer un prix */}
+            {detail.proId !== account.id && !detail.sold && (
+              <div style={{ marginBottom: 12 }}>
+                {!proposeSent ? (
+                  !showPropose ? (
+                    <button onClick={() => setShowPropose(true)} style={{ width: "100%", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Proposer un prix</button>
+                  ) : (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input className="lk-input" type="number" value={proposePrice} onChange={e => setProposePrice(e.target.value)} placeholder="Votre prix (€)" style={{ flex: 1 }} />
+                      <button onClick={() => { if (proposePrice) { setProposeSent(true); setShowPropose(false); } }} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "10px 16px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Envoyer</button>
+                      <button onClick={() => setShowPropose(false)} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 10, padding: "10px", cursor: "pointer", fontFamily: "'Inter',sans-serif", color: T.textMid, fontSize: 13 }}>✕</button>
+                    </div>
+                  )
+                ) : (
+                  <div style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.25)", borderRadius: 10, padding: "10px 14px", color: T.success, fontWeight: 600, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                    {Icon.check(T.success, 14)} Proposition envoyée au vendeur ({proposePrice} €)
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Marque / Modèle dans detail */}
+            {(detail.marque || detail.modele) && (
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                {detail.marque && <span style={{ background: "rgba(28,28,28,.06)", borderRadius: 20, padding: "3px 10px", fontSize: 11, color: T.textMid, fontWeight: 600 }}>🏷 {detail.marque}</span>}
+                {detail.modele && <span style={{ background: "rgba(28,28,28,.06)", borderRadius: 20, padding: "3px 10px", fontSize: 11, color: T.textMid, fontWeight: 600 }}>📋 {detail.modele}</span>}
+              </div>
+            )}
             {/* Actions */}
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setDetailId(null)} className="lk-ghost" style={{ flex: 1 }}>{tr.back}</button>
+              <button onClick={() => { setDetailId(null); setShowPropose(false); setProposeSent(false); setProposePrice(""); }} className="lk-ghost" style={{ flex: 1 }}>{tr.back}</button>
               {detail.proId !== account.id && !detail.sold && (
                 <button onClick={() => setBuyStep(1)} style={{ flex: 2, background: T.grad, border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   {Icon.card ? Icon.card("#fff", 16) : null} {tr.buyBtn}
@@ -3569,6 +3781,59 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
   );
 }
 
+/* ─── HISTORY CARD (pro) ─── */
+function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
+  const [totalInput, setTotalInput] = useState(String(b.montantFinal || b.montant || ""));
+  const [acompteInput, setAcompteInput] = useState(String(b.acompte || 0));
+  const [showForm, setShowForm] = useState(false);
+  const total = parseFloat(totalInput) || 0;
+  const acompte = parseFloat(acompteInput) || 0;
+  const reste = Math.max(0, total - acompte);
+  return (
+    <div className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+          <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 700, fontSize: 15 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
+          <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? tr.paid : tr.pending}</div>
+        </div>
+      </div>
+      {!isPaid && (
+        <>
+          <button onClick={() => setShowForm(s => !s)} style={{ width: "100%", background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 10, padding: "8px", color: T.accent, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 10, fontFamily: "'Inter',sans-serif" }}>
+            {showForm ? "Masquer" : "Saisir le montant final"} {Icon.euro(T.accent, 12)}
+          </button>
+          {showForm && (
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              <div>
+                <label className="lk-label">Montant total prestation (€)</label>
+                <input className="lk-input" type="number" value={totalInput} onChange={e => setTotalInput(e.target.value)} placeholder="Ex: 150" />
+              </div>
+              <div>
+                <label className="lk-label">Acompte déjà payé (€)</label>
+                <input className="lk-input" type="number" value={acompteInput} onChange={e => setAcompteInput(e.target.value)} placeholder="0" />
+              </div>
+              <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 10, padding: "10px 14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: T.textMid, fontSize: 13 }}>Montant restant dû</span>
+                  <span style={{ color: T.accent, fontWeight: 800, fontSize: 15 }}>{fmt(reste)}</span>
+                </div>
+              </div>
+              <button onClick={() => { setBookings(p => p.map(x => x.id === b.id ? { ...x, montantFinal: total, acompte: acompte, montantRestant: reste } : x)); setShowForm(false); }} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Valider la facture</button>
+            </div>
+          )}
+          <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statutPaiement: "payé", payeLe: ts() } : x))} style={{ width: "100%", background: "rgba(245,166,35,.08)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+            {Icon.check(T.warn, 12)} {tr.markAsPaid}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── PRO APP ─── */
 function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -3589,6 +3854,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   // Feature 5: audio recording
   const [recording, setRecording] = useState(false);
   const [audioData, setAudioData] = useState(null);
+  // Feature 6: devis photo
+  const [photoDevis, setPhotoDevis] = useState(null);
+  const photoDevisRef = useRef(null);
+  // Feature 8: material cost
+  const [matCost, setMatCost] = useState("");
+  const [matInvoicePhoto, setMatInvoicePhoto] = useState(null);
+  const matInvoiceRef = useRef(null);
   const [swipeTouchX, setSwipeTouchX] = useState(0);
   const mediaRecRef = useRef(null);
   const audioChunks = useRef([]);
@@ -3695,6 +3967,18 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     r.onload = ev => setPhotoApres(ev.target.result);
     r.readAsDataURL(f);
   };
+  const handlePhotoDevis = e => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => setPhotoDevis(ev.target.result);
+    r.readAsDataURL(f);
+  };
+  const handleMatInvoice = e => {
+    const f = e.target.files?.[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => setMatInvoicePhoto(ev.target.result);
+    r.readAsDataURL(f);
+  };
 
   const bk = activeMission ? (bookings.find(b => b.id === activeMission.id) || activeMission) : null;
   const prob = bk ? PROBLEMES.find(p => p.id === bk.probleme) : null;
@@ -3710,6 +3994,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     { id: "stats", icon: Icon.chart, l: tr.stats },
     { id: "history", icon: Icon.hist, l: tr.history },
     { id: "profil", icon: Icon.user, l: tr.proProfile },
+    { id: "partenaires", icon: Icon.shield, l: "Partenaires" },
   ];
 
   return (
@@ -3931,7 +4216,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               {!activeMission && active.length > 0 && (
                 <div className="lk-card" style={{ padding: "14px", marginBottom: 14 }}>
                   <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{tr.photoAvant}</div>
-                  <input ref={photoAvantRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePhotoAvant} />
+                  <input ref={photoAvantRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoAvant} />
                   {!photoAvant ? (
                     <button onClick={() => photoAvantRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 12, padding: "20px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, fontFamily: "'Inter',sans-serif" }}>
                       {Icon.cam(T.accent, 24)}
@@ -3987,7 +4272,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   {/* Feature 1: Photo après */}
                   <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
                     <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{tr.photoApres}</div>
-                    <input ref={photoApresRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={handlePhotoApres} />
+                    <input ref={photoApresRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoApres} />
                     {!photoApres ? (
                       <button onClick={() => photoApresRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif" }}>
                         {Icon.cam(T.textMid, 18)}
@@ -3998,6 +4283,44 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                         <img src={photoApres} alt="après" style={{ width: "100%", maxHeight: 130, objectFit: "cover" }} />
                         <div style={{ position: "absolute", bottom: 6, left: 6 }}>
                           <span style={{ background: "rgba(62,207,142,.9)", borderRadius: 8, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700 }}>{tr.photoAdded}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Feature 6: Photo devis/facture après */}
+                  <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Photo devis / facture après intervention</div>
+                    <input ref={photoDevisRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoDevis} />
+                    {!photoDevis ? (
+                      <button onClick={() => photoDevisRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif" }}>
+                        {Icon.file(T.textMid, 16)}
+                        <span style={{ color: T.textMid, fontWeight: 600, fontSize: 13 }}>Prendre ou sélectionner</span>
+                      </button>
+                    ) : (
+                      <div style={{ position: "relative", borderRadius: 10, overflow: "hidden" }}>
+                        <img src={photoDevis} alt="devis" style={{ width: "100%", maxHeight: 120, objectFit: "cover" }} />
+                        <div style={{ position: "absolute", bottom: 6, left: 6 }}><span style={{ background: "rgba(62,207,142,.9)", borderRadius: 8, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700 }}>Ajouté</span></div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Feature 8: Material costs */}
+                  <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
+                    <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Coût matériel</div>
+                    <input className="lk-input" type="number" value={matCost} onChange={e => setMatCost(e.target.value)} placeholder="Montant matériel (€)" style={{ marginBottom: 8 }} />
+                    <input ref={matInvoiceRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleMatInvoice} />
+                    {!matInvoicePhoto ? (
+                      <button onClick={() => matInvoiceRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.15)", borderRadius: 10, padding: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif", fontSize: 12, color: T.textMid, fontWeight: 600 }}>
+                        {Icon.cam(T.textLo, 15)} Facture matériel (photo)
+                      </button>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <img src={matInvoicePhoto} alt="facture mat" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8 }} />
+                        <div>
+                          <div style={{ color: T.success, fontWeight: 600, fontSize: 12 }}>{Icon.check(T.success, 12)} Facture ajoutée</div>
+                          {bk?.litige && !bk?.pingedAdmin && (
+                            <button onClick={() => setBookings(p => p.map(x => x.id === bk.id ? { ...x, pingedAdmin: true } : x))} style={{ background: T.danger, border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", marginTop: 4, fontFamily: "'Inter',sans-serif" }}>Signaler à l'admin</button>
+                          )}
+                          {bk?.pingedAdmin && <div style={{ color: T.success, fontSize: 11, marginTop: 4 }}>✓ Admin notifié</div>}
                         </div>
                       </div>
                     )}
@@ -4023,6 +4346,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               </div>
             </div>
           ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />)}
+          {tab === "partenaires" && <div style={{ padding: "14px" }}><PartenaireScreen lang={lang} /></div>}
           {tab === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
           {tab === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />}
           {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
@@ -4037,23 +4361,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 const isPaid = b.statutPaiement === "payé";
                 const pr = PROBLEMES.find(p => p.id === b.probleme);
                 return (
-                  <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
-                        <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 700, fontSize: 15 }}>{fmt((b.montantFinal || 0) * 0.40)}</div>
-                        <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? tr.paid : tr.pending}</div>
-                      </div>
-                    </div>
-                    {!isPaid && (
-                      <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statutPaiement: "payé", payeLe: ts() } : x))} style={{ width: "100%", background: "rgba(245,166,35,.08)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 10, padding: "9px", color: T.warn, fontWeight: 600, fontSize: 12, cursor: "pointer", marginTop: 10, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-                        {Icon.check(T.warn, 12)} {tr.markAsPaid}
-                      </button>
-                    )}
-                  </div>
+                  <HistoryCard key={b.id} b={b} isPaid={isPaid} pr={pr} tr={tr} setBookings={setBookings} lang={lang} />
                 );
               })}
             </div>
@@ -4081,6 +4389,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [payModal, setPayModal] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  // Feature 12: cancel if artisan slow
+  const [cancelSlowModal, setCancelSlowModal] = useState(null);
+  const [altArtisans, setAltArtisans] = useState([]);
   // Litige + profil
   const [litigeModal, setLitigeModal] = useState(null);
   const [litigeText, setLitigeText] = useState("");
@@ -4288,6 +4599,46 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
           </div>
         </div>
       )}
+      {/* Feature 12: Cancel slow artisan modal */}
+      {cancelSlowModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease", maxHeight: "80vh", overflowY: "auto" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 8 }}>L'artisan tarde ?</div>
+            {altArtisans.length === 0 ? (
+              <>
+                <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>Annuler et chercher un autre artisan ?</div>
+                <button onClick={() => {
+                  const curArtId = cancelSlowModal.artisanId;
+                  const arts = DEMO_ARTISANS.filter(a => a.dispo && a.id !== curArtId);
+                  setBookings(p => p.map(x => x.id === cancelSlowModal.id ? { ...x, statut: "annulée_client" } : x));
+                  setAltArtisans(arts.slice(0, 3));
+                }} className="lk-btn" style={{ marginBottom: 10 }}>Oui, trouver un autre artisan</button>
+                <button onClick={() => setCancelSlowModal(null)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+              </>
+            ) : (
+              <>
+                <div style={{ color: T.success, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Artisans disponibles :</div>
+                {altArtisans.map(a => (
+                  <div key={a.id} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{a.nom}</div>
+                      <div style={{ color: T.textLo, fontSize: 11 }}>{a.certif} · {a.distance} km</div>
+                    </div>
+                    <button onClick={() => {
+                      const nb = { id: uid(), clientId: cancelSlowModal.clientId, artisanId: a.id, clientNom: cancelSlowModal.clientNom, adresse: cancelSlowModal.adresse, probleme: cancelSlowModal.probleme, montant: cancelSlowModal.montant, statut: "assignée", createdAt: ts(), bonType: "platform" };
+                      setBookings(p => [...p, nb]);
+                      setAltArtisans([]);
+                      setCancelSlowModal(null);
+                    }} style={{ background: T.grad, border: "none", borderRadius: 10, padding: "8px 14px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Réserver</button>
+                  </div>
+                ))}
+                <button onClick={() => { setAltArtisans([]); setCancelSlowModal(null); }} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -4375,7 +4726,10 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                           <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
                         </div>
                         {b.statut === "assignée" && (
-                          <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée" } : x))} style={{ width: "100%", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.cancelBooking}</button>
+                          <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
+                            <button onClick={() => setCancelSlowModal(b)} style={{ width: "100%", background: "rgba(245,166,35,.06)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 8, padding: "7px", color: T.warn, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>L'artisan tarde ?</button>
+                            <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée" } : x))} style={{ width: "100%", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.cancelBooking}</button>
+                          </div>
                         )}
                         {b.statut === "terminée" && !hasLitige && (
                           <button onClick={() => { setLitigeModal(b); setLitigeText(""); setLitigeSubmitted(false); }} style={{ width: "100%", background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.15)", borderRadius: 8, padding: "7px", color: T.warn, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.openLitige}</button>
@@ -4412,7 +4766,10 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                         <span style={{ color: st.c, fontSize: 12, fontWeight: 600 }}>{st.l}</span>
                       </div>
                       {b.statut === "assignée" && (
-                        <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée" } : x))} style={{ width: "100%", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.cancelBooking}</button>
+                        <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
+                          <button onClick={() => setCancelSlowModal(b)} style={{ width: "100%", background: "rgba(245,166,35,.06)", border: "1px solid rgba(245,166,35,.2)", borderRadius: 8, padding: "7px", color: T.warn, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>L'artisan tarde ?</button>
+                          <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée" } : x))} style={{ width: "100%", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px", color: T.danger, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.cancelBooking}</button>
+                        </div>
                       )}
                       {b.statut === "terminée" && !hasLitige && (
                         <button onClick={() => { setLitigeModal(b); setLitigeText(""); setLitigeSubmitted(false); }} style={{ width: "100%", background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.15)", borderRadius: 8, padding: "7px", color: T.warn, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.openLitige}</button>
@@ -4723,6 +5080,81 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
 }
 
 /* ─── ADMIN APP ─── */
+/* ─── PARTENAIRE SCREEN ─── */
+function PartenaireScreen({ lang = "fr" }) {
+  return (
+    <div style={{ padding: "0 0 40px" }}>
+      {/* Hero */}
+      <div style={{ background: "linear-gradient(135deg,#1c1c1c,#2d2d2d)", borderRadius: 16, padding: "32px 24px", marginBottom: 24, textAlign: "center" }}>
+        <div style={{ width: 60, height: 60, background: "rgba(201,160,48,.2)", border: "2px solid rgba(201,160,48,.4)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+          {Icon.shield(T.accent, 26)}
+        </div>
+        <div style={{ color: "#fff", fontWeight: 900, fontSize: 22, marginBottom: 8 }}>Devenez Partenaire LOCKR</div>
+        <div style={{ color: "rgba(255,255,255,.7)", fontSize: 14, lineHeight: 1.6 }}>Rejoignez le réseau d'artisans certifiés LOCKR et développez votre activité</div>
+      </div>
+      {/* Avantages */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>Ce que vous obtenez</div>
+        {[
+          { icon: "🎯", title: "Leads qualifiés", desc: "Recevez des demandes clients ciblées dans votre zone géographique" },
+          { icon: "👁", title: "Visibilité maximale", desc: "Badge vérifié LOCKR visible par tous les clients" },
+          { icon: "✅", title: "Badge vérifié", desc: "Certification officielle LOCKR après vérification de votre dossier" },
+          { icon: "💰", title: "Gestion des paiements", desc: "Paiements sécurisés et reversements automatiques" },
+          { icon: "🛡", title: "Couverture assurance", desc: "Assistance en cas de litige avec un client LOCKR" },
+        ].map((a, i) => (
+          <div key={i} style={{ display: "flex", gap: 14, marginBottom: 12, padding: "12px 14px", background: T.card, border: `1px solid ${T.border}`, borderRadius: 12 }}>
+            <div style={{ fontSize: 22, flexShrink: 0 }}>{a.icon}</div>
+            <div>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{a.title}</div>
+              <div style={{ color: T.textMid, fontSize: 12, lineHeight: 1.5 }}>{a.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Obligations légales */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ color: T.textHi, fontWeight: 800, fontSize: 16, marginBottom: 14 }}>Obligations légales (droit français)</div>
+        <div style={{ background: "rgba(220,38,38,.04)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 14, padding: "16px" }}>
+          {[
+            { l: "RC Pro obligatoire", d: "Attestation d'assurance Responsabilité Civile Professionnelle exigée" },
+            { l: "Qualification professionnelle", d: "Qualibat, RGE, ou certification équivalente selon votre métier" },
+            { l: "Contrat de partenariat", d: "Conforme au Code de commerce français — signé avant toute mission" },
+            { l: "RGPD", d: "Traitement des données clients en conformité avec le règlement européen" },
+            { l: "Facturation TVA", d: "Facturation conforme aux règles TVA françaises (taux normal 20%)" },
+            { l: "Délai d'intervention", d: "Maximum 2h en urgence — contractuellement engageant" },
+          ].map((o, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, marginBottom: i < 5 ? 12 : 0, paddingBottom: i < 5 ? 12 : 0, borderBottom: i < 5 ? `1px solid rgba(220,38,38,.1)` : "none" }}>
+              {Icon.warning(T.danger, 14)}
+              <div>
+                <div style={{ color: T.danger, fontWeight: 700, fontSize: 12 }}>{o.l}</div>
+                <div style={{ color: T.textMid, fontSize: 11, lineHeight: 1.5 }}>{o.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Contrat résumé */}
+      <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 14, padding: "16px", marginBottom: 24 }}>
+        <div style={{ color: T.accent, fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Résumé du contrat de partenariat</div>
+        {[
+          "Commission LOCKR : 15% sur chaque intervention",
+          "Reversement artisan : 40% du montant HT de la prestation",
+          "Durée du contrat : 12 mois renouvelables par tacite reconduction",
+          "Résiliation : préavis de 30 jours par lettre recommandée",
+          "Exclusivité : non — vous restez libre de travailler hors LOCKR",
+        ].map((c, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "flex-start" }}>
+            {Icon.check(T.accent, 12)}
+            <span style={{ color: T.textMid, fontSize: 12, lineHeight: 1.5 }}>{c}</span>
+          </div>
+        ))}
+      </div>
+      {/* CTA */}
+      <button className="lk-btn" style={{ fontSize: 15, padding: "16px" }}>Devenir Partenaire LOCKR {Icon.arrow("#fff", 14)}</button>
+    </div>
+  );
+}
+
 function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], onLogout, lang = "fr", setLang, bannedList = [], setBannedList }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
@@ -4775,7 +5207,16 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     { id: "validations", l: `${tr.validations} (${accounts.filter(a => a.role === "pro" && a.dossierStatus === "pending").length})` },
     { id: "clients", l: tr.allClients },
     { id: "marketplace", l: `${tr.adminMarketplace} (${sales.length})` },
+    { id: "facturation", l: "Facturation" },
+    { id: "comptabilite", l: "Comptabilité" },
+    { id: "partenaires", l: "Partenaires" },
   ];
+  // Feature 15: Facturation state
+  const [devisItems, setDevisItems] = useState([]);
+  const [newDevis, setNewDevis] = useState({ client: "", service: "", ht: "", type: "devis" });
+  // Feature 15: Comptabilite
+  const unpaidCommissions = bookings.filter(b => b.statut === "terminée" && b.statutPaiement !== "payé");
+  const proPendingPay = accounts.filter(a => a.role === "pro").map(p => ({ ...p, owed: bookings.filter(b => b.artisanId === p.artisanId && b.statut === "terminée" && !b.proPaid).reduce((s, b) => s + (b.montantFinal || 0) * 0.40, 0) })).filter(p => p.owed > 0);
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
@@ -5221,7 +5662,121 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             </>
           );
         })()}
-      </div>
+        {tab === "facturation" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Facturation</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+              <div>
+                <label className="lk-label">Client</label>
+                <input className="lk-input" value={newDevis.client} onChange={e => setNewDevis(p => ({ ...p, client: e.target.value }))} placeholder="Nom du client" />
+              </div>
+              <div>
+                <label className="lk-label">Description prestation</label>
+                <input className="lk-input" value={newDevis.service} onChange={e => setNewDevis(p => ({ ...p, service: e.target.value }))} placeholder="Ex: Ouverture porte, Paris 1" />
+              </div>
+              <div>
+                <label className="lk-label">Montant HT (€)</label>
+                <input className="lk-input" type="number" value={newDevis.ht} onChange={e => setNewDevis(p => ({ ...p, ht: e.target.value }))} placeholder="150" />
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
+                {["devis", "facture"].map(t => (
+                  <button key={t} onClick={() => setNewDevis(p => ({ ...p, type: t }))} style={{ flex: 1, background: newDevis.type === t ? T.grad : T.card, color: newDevis.type === t ? "#fff" : T.textMid, border: `1px solid ${newDevis.type === t ? T.accent : T.border}`, borderRadius: 10, padding: "10px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif", textTransform: "capitalize" }}>{t}</button>
+                ))}
+              </div>
+            </div>
+            {(() => {
+              const ht = parseFloat(newDevis.ht) || 0;
+              const tva = ht * 0.20;
+              const ttc = ht + tva;
+              return (
+                <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ color: T.textMid, fontSize: 13 }}>HT</span>
+                    <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{fmt(ht)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ color: T.textMid, fontSize: 13 }}>TVA (20%)</span>
+                    <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{fmt(tva)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
+                    <span style={{ color: T.textHi, fontWeight: 800, fontSize: 14 }}>Total TTC</span>
+                    <span style={{ color: T.accent, fontWeight: 900, fontSize: 16 }}>{fmt(ttc)}</span>
+                  </div>
+                </div>
+              );
+            })()}
+            <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
+              <button onClick={() => {
+                if (!newDevis.client || !newDevis.ht) return;
+                const ht = parseFloat(newDevis.ht) || 0;
+                const item = { id: uid(), ...newDevis, ht, tva: ht * 0.20, ttc: ht * 1.20, statut: "brouillon", createdAt: ts() };
+                setDevisItems(p => [item, ...p]);
+                setNewDevis({ client: "", service: "", ht: "", type: "devis" });
+              }} className="lk-btn" style={{ flex: 2 }}>Créer {newDevis.type}</button>
+            </div>
+            {devisItems.map(d => (
+              <div key={d.id} className="lk-card" style={{ padding: "12px 14px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{d.type === "devis" ? "Devis" : "Facture"} — {d.client}</div>
+                    <div style={{ color: T.textLo, fontSize: 11 }}>{d.service} · {fmtDate(d.createdAt)}</div>
+                    <span style={{ background: d.statut === "payé" ? "rgba(62,207,142,.1)" : "rgba(217,119,6,.08)", border: `1px solid ${d.statut === "payé" ? "rgba(62,207,142,.25)" : "rgba(217,119,6,.2)"}`, color: d.statut === "payé" ? T.success : T.warn, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, display: "inline-block", marginTop: 4 }}>{d.statut}</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ color: T.accent, fontWeight: 800, fontSize: 15 }}>{fmt(d.ttc)}</div>
+                    <div style={{ color: T.textLo, fontSize: 10 }}>TTC</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button onClick={() => {
+                    const lines = [`${d.type.toUpperCase()} LOCKR\nClient: ${d.client}\nPrestation: ${d.service}\nDate: ${fmtDate(d.createdAt)}\n---\nMontant HT: ${fmt(d.ht)}\nTVA 20%: ${fmt(d.tva)}\nTotal TTC: ${fmt(d.ttc)}\nStatut: ${d.statut}`].join("");
+                    const blob = new Blob([lines], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${d.type}_${d.client}_${d.id}.txt`; a.click(); URL.revokeObjectURL(url);
+                  }} style={{ background: T.grad, border: "none", borderRadius: 8, padding: "7px 12px", color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Télécharger</button>
+                  {d.statut !== "payé" && <button onClick={() => setDevisItems(p => p.map(x => x.id === d.id ? { ...x, statut: "payé" } : x))} style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 8, padding: "7px 12px", color: T.success, fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Marquer payé</button>}
+                  <button onClick={() => setDevisItems(p => p.filter(x => x.id !== d.id))} style={{ background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.15)", borderRadius: 8, padding: "7px 12px", color: T.danger, fontWeight: 600, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Supprimer</button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+        {tab === "comptabilite" && (
+          <>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 16 }}>Comptabilité</div>
+            {/* On vous doit (commissions non perçues) */}
+            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}>
+              <div style={{ color: T.accent, fontWeight: 800, fontSize: 15, marginBottom: 4 }}>On vous doit (commissions dues à LOCKR)</div>
+              <div style={{ color: T.textMid, fontSize: 12, marginBottom: 12 }}>Commissions sur missions non encore encaissées</div>
+              {unpaidCommissions.length === 0 ? <div style={{ color: T.textLo, fontSize: 13 }}>Tout est à jour ✓</div> : unpaidCommissions.map(b => (
+                <div key={b.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, padding: "8px 10px", background: "rgba(255,255,255,.6)", borderRadius: 8 }}>
+                  <span style={{ color: T.textHi, fontSize: 12 }}>{b.clientNom} · {fmtDate(b.createdAt)}</span>
+                  <span style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmt((b.montantFinal || 0) * 0.60)}</span>
+                </div>
+              ))}
+              <div style={{ borderTop: `1px solid rgba(201,160,48,.2)`, paddingTop: 10, marginTop: 8, display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: T.textMid, fontWeight: 700, fontSize: 13 }}>Total dû à LOCKR</span>
+                <span style={{ color: T.accent, fontWeight: 900, fontSize: 16 }}>{fmt(unpaidCommissions.reduce((s, b) => s + (b.montantFinal || 0) * 0.60, 0))}</span>
+              </div>
+            </div>
+            {/* On nous doit (paiements pros en attente) */}
+            <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 14, padding: "14px 16px" }}>
+              <div style={{ color: T.success, fontWeight: 800, fontSize: 15, marginBottom: 4 }}>On nous doit (paiements pros en attente)</div>
+              <div style={{ color: T.textMid, fontSize: 12, marginBottom: 12 }}>Parts artisans non encore versées</div>
+              {proPendingPay.length === 0 ? <div style={{ color: T.textLo, fontSize: 13 }}>Aucun paiement en attente ✓</div> : proPendingPay.map(p => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, padding: "8px 10px", background: "rgba(255,255,255,.6)", borderRadius: 8 }}>
+                  <span style={{ color: T.textHi, fontSize: 12 }}>{p.nom}</span>
+                  <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(p.owed)}</span>
+                </div>
+              ))}
+              <div style={{ borderTop: `1px solid rgba(62,207,142,.2)`, paddingTop: 10, marginTop: 8, display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: T.textMid, fontWeight: 700, fontSize: 13 }}>Total à verser aux pros</span>
+                <span style={{ color: T.success, fontWeight: 900, fontSize: 16 }}>{fmt(proPendingPay.reduce((s, p) => s + p.owed, 0))}</span>
+              </div>
+            </div>
+          </>
+        )}
+        {tab === "partenaires" && <PartenaireScreen />}
+        </div>
       {rejectTarget && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", animation: "slideUp .3s ease" }}>
