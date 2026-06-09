@@ -856,7 +856,7 @@ const METIERS = [
     photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
     heroBg: "linear-gradient(135deg,#7f1d1d,#dc2626)" },
   { id: "fermetures",   label: "Fermetures",   labelEn: "Shutters & Gates", color: "#6d28d9", icon: Icon.home,    desc: "Rideaux, volets, portail, garage", descEn: "Shutters, blinds, gates, garage",
-    photo: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&q=80",
+    photo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80",
     heroBg: "linear-gradient(135deg,#4c1d95,#6d28d9)" },
 ];
 
@@ -3207,6 +3207,7 @@ const MARKET_METIERS = [
   { id: "plombier",     label: "Plomberie",     color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
   { id: "electricien",  label: "Électricité",   color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
   { id: "chauffagiste", label: "Chauffage",     color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
+  { id: "fermetures",  label: "Fermetures",   color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=70" },
 ];
 
 function ProMarketplace({ account, listings, setListings, sales, setSales, lang }) {
