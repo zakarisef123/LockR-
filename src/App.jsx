@@ -282,6 +282,17 @@ const TRANS = {
     docValidLabel: "Validé", docPendingLabel: "En attente", docMissingLabel: "Non fourni",
     // Stats partner extra
     statsMonthlyRevenue: "CA mensuel", statsLockrComm: "Commissions LOCKR",
+    // Partner bons
+    partnerBonsTab: "Bons publiés", postBonAll: "Publier pour tous les artisans",
+    noPartnerBons: "Aucun bon publié pour l'instant", bonPostedAllCraftsmen: "Visible par tous les artisans LOCKR",
+    bonOpenPlatform: "Ouvert à tous les artisans",
+    // EarningsChart
+    currentMonth: "mois en cours", clickMonthDetail: "Appuyez sur un mois pour voir le détail",
+    noMissionThisMonth: "Aucune mission ce mois", downloadInvoiceMonth: "Télécharger la facture",
+    missionsCount: "mission(s)", earningsShare: "40% du CA",
+    // Mission statuses
+    statusTerminee: "Terminée", statusEnAttente: "En attente", statusAcceptee: "Acceptée",
+    statusPayee: "Payée", rdvScheduledShort: "✓ RDV planifié", delayExpired: "Délai expiré — bon remis en attente",
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -541,6 +552,17 @@ const TRANS = {
     docValidLabel: "Validated", docPendingLabel: "Pending", docMissingLabel: "Not provided",
     // Stats partner extra
     statsMonthlyRevenue: "Monthly revenue", statsLockrComm: "LOCKR commissions",
+    // Partner bons
+    partnerBonsTab: "Published Bonuses", postBonAll: "Post for all craftsmen",
+    noPartnerBons: "No bonuses posted yet", bonPostedAllCraftsmen: "Visible to all LOCKR craftsmen",
+    bonOpenPlatform: "Open to all craftsmen",
+    // EarningsChart
+    currentMonth: "current month", clickMonthDetail: "Tap a month to see details",
+    noMissionThisMonth: "No missions this month", downloadInvoiceMonth: "Download invoice",
+    missionsCount: "mission(s)", earningsShare: "40% of revenue",
+    // Mission statuses
+    statusTerminee: "Completed", statusEnAttente: "Pending", statusAcceptee: "Accepted",
+    statusPayee: "Paid", rdvScheduledShort: "✓ Appointment scheduled", delayExpired: "Time's up — bonus reassigned",
   }
 };
 
@@ -1333,6 +1355,16 @@ function PayLogo({ id, size = 44 }) {
 }
 
 /* ─── PLATFORM CALL MODAL ─── */
+const tStatut = (s, tr) => {
+  const map = {
+    "terminée": tr.statusTerminee, "en_cours": tr.statusInProgress, "en_attente": tr.statusEnAttente,
+    "acceptée": tr.statusAcceptee, "payée": tr.statusPayee, "assignée": tr.statusAssigned,
+    "actif": tr.available, "inactif": tr.unavailable, "en_mission": tr.statusInProgress,
+    "validé": tr.docValidLabel, "non_fourni": tr.docMissingLabel,
+  };
+  return map[s] || s;
+};
+
 function PlatformCallModal({ name, onClose, onConnected, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [phase, setPhase] = useState("calling"); // calling → connected → ended
@@ -2700,22 +2732,22 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
               const timer = bonTimers[bon.id];
               const acceptedBooking = bookings.find(bk => bk.bonId === bon.id && bk.artisanId === account.artisanId);
               if (!bStatus || bStatus === "available") {
-                return <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "accepted" }))} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>Accepter le bon {Icon.arrow("#fff", 13)}</button>;
+                return <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "accepted" }))} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>{tr.acceptBon} {Icon.arrow("#fff", 13)}</button>;
               }
               if (bStatus === "accepted") {
                 return (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => setPlatformCall({ name: b.clientNom || "Client" })} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} Appeler client</button>
-                      <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "contacted" }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.chat(T.accent, 13)} Chat LOCKR</button>
+                      <button onClick={() => setPlatformCall({ name: bon.clientNom || "Client" })} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} {tr.callClient}</button>
+                      <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "contacted" }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.chat(T.accent, 13)} {tr.chatClient}</button>
                     </div>
                     {timer !== undefined && timer > 0 && (
                       <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ color: T.danger, fontSize: 12, fontWeight: 600 }}>⏱ {Math.floor(timer/60)}:{String(timer%60).padStart(2,"0")} pour appeler</span>
-                        <button onClick={() => { clearInterval(timerRefs.current[bon.id]); setBonTimers(p => ({ ...p, [bon.id]: undefined })); setBonStatuses(p => ({ ...p, [bon.id]: "called" })); }} style={{ background: T.success, border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>J'ai appelé</button>
+                        <span style={{ color: T.danger, fontSize: 12, fontWeight: 600 }}>⏱ {Math.floor(timer/60)}:{String(timer%60).padStart(2,"0")} {tr.callTimer}</span>
+                        <button onClick={() => { clearInterval(timerRefs.current[bon.id]); setBonTimers(p => ({ ...p, [bon.id]: undefined })); setBonStatuses(p => ({ ...p, [bon.id]: "called" })); }} style={{ background: T.success, border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.calledClient}</button>
                       </div>
                     )}
-                    <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ width: "100%", background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.25)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>📅 Planifier le RDV</button>
+                    <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ width: "100%", background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.25)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>📅 {tr.planRdv}</button>
                   </div>
                 );
               }
@@ -2723,24 +2755,24 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
                 const rdvInput = bonRdvInputs[bon.id] || {};
                 return (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Planifier le RDV</div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{tr.planRdv}</div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>RDV immédiat</button>
-                      <button onClick={() => setBonRdvInputs(p => ({ ...p, [bon.id]: { showPicker: true } }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Planifier</button>
+                      <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.immediateRdv}</button>
+                      <button onClick={() => setBonRdvInputs(p => ({ ...p, [bon.id]: { showPicker: true } }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.scheduleRdvBtn}</button>
                     </div>
                     {rdvInput.showPicker && (
                       <div>
                         <input type="datetime-local" className="lk-input" value={rdvInput.date || ""} onChange={e => setBonRdvInputs(p => ({ ...p, [bon.id]: { ...p[bon.id], date: e.target.value } }))} style={{ marginBottom: 8 }} />
-                        <button onClick={() => { if (rdvInput.date) { prendre({ ...bon, scheduledDate: rdvInput.date }); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); } }} className="lk-btn" style={{ fontSize: 12, padding: "10px" }}>Confirmer le RDV</button>
+                        <button onClick={() => { if (rdvInput.date) { prendre({ ...bon, scheduledDate: rdvInput.date }); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); } }} className="lk-btn" style={{ fontSize: 12, padding: "10px" }}>{tr.confirmRdv}</button>
                       </div>
                     )}
                   </div>
                 );
               }
               if (bStatus === "expired") {
-                return <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "10px", color: T.danger, fontWeight: 600, fontSize: 12, textAlign: "center" }}>Délai expiré — bon remis en attente</div>;
+                return <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "10px", color: T.danger, fontWeight: 600, fontSize: 12, textAlign: "center" }}>{tr.delayExpired}</div>;
               }
-              return <div style={{ background: "rgba(62,207,142,.08)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 600, fontSize: 12, textAlign: "center" }}>✓ RDV planifié</div>;
+              return <div style={{ background: "rgba(62,207,142,.08)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 600, fontSize: 12, textAlign: "center" }}>{tr.rdvScheduledShort}</div>;
             })()}
           </div>
         );
@@ -2806,11 +2838,11 @@ function EarningsChart({ bookings, artisanId, lang = "fr" }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ color: selIdx === lastMonthIdx ? T.success : T.accent, fontWeight: 900, fontSize: 28 }}>{fmt(sel.value)}</div>
-            <div style={{ color: T.textLo, fontSize: 12, marginTop: 4 }}>{sel.label} {sel.year}{selIdx === lastMonthIdx ? " — mois en cours" : ""}</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginTop: 4 }}>{sel.label} {sel.year}{selIdx === lastMonthIdx ? ` — ${tr.currentMonth}` : ""}</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ color: T.textMid, fontSize: 13, fontWeight: 700 }}>{sel.count} mission{sel.count > 1 ? "s" : ""}</div>
-            <div style={{ color: T.textLo, fontSize: 11, marginTop: 2 }}>40% du CA</div>
+            <div style={{ color: T.textMid, fontSize: 13, fontWeight: 700 }}>{sel.count} {tr.missionsCount}</div>
+            <div style={{ color: T.textLo, fontSize: 11, marginTop: 2 }}>{tr.earningsShare}</div>
           </div>
         </div>
         {/* Mission list for selected month */}
@@ -2828,7 +2860,7 @@ function EarningsChart({ bookings, artisanId, lang = "fr" }) {
           </div>
         )}
         {sel.missions.length === 0 && (
-          <div style={{ color: T.textLo, fontSize: 12, marginTop: 8, textAlign: "center" }}>Aucune mission ce mois</div>
+          <div style={{ color: T.textLo, fontSize: 12, marginTop: 8, textAlign: "center" }}>{tr.noMissionThisMonth}</div>
         )}
         {selIdx !== lastMonthIdx && sel.missions.length > 0 && (
           <button onClick={() => {
@@ -2838,12 +2870,12 @@ function EarningsChart({ bookings, artisanId, lang = "fr" }) {
             const a = document.createElement("a"); a.href = url; a.download = `facture_lockr_${sel.label}_${sel.year}.txt`; a.click();
             URL.revokeObjectURL(url);
           }} style={{ marginTop: 12, width: "100%", background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
-            {Icon.file("#fff", 13)} Télécharger la facture — {sel.label} {sel.year}
+            {Icon.file("#fff", 13)} {tr.downloadInvoiceMonth} — {sel.label} {sel.year}
           </button>
         )}
       </div>
       {/* Bar chart — clickable */}
-      <div style={{ color: T.textMid, fontSize: 11, fontWeight: 600, marginBottom: 8 }}>Appuyez sur un mois pour voir le détail</div>
+      <div style={{ color: T.textMid, fontSize: 11, fontWeight: 600, marginBottom: 8 }}>{tr.clickMonthDetail}</div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120, marginBottom: 6 }}>
         {data.map((d, i) => (
           <button key={i} onClick={() => setSelIdx(i)}
@@ -6013,7 +6045,7 @@ const INIT_PARTNER_TECHS = [
 ];
 
 /* ─── PARTENAIRE APP ─── */
-function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, lang = "fr", setLang }) {
+function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, onLogout, lang = "fr", setLang }) {
   const w = useWindowSize();
   const isDesktop = w >= BP;
   const tr = TRANS[lang] || TRANS.fr;
@@ -6035,6 +6067,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, 
     { id: "contrat", label: "Contrat sous-traitance LOCKR", statut: "validé", expiry: null, file: "Contrat_LOCKR_Signe.pdf" },
   ]);
   const [profileEdit, setProfileEdit] = useState({ ...account });
+  const [bonModal, setBonModal] = useState(false);
+  const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
 
   const myMissions = missions.filter(m => m.partenaireId === account.id);
   const doneMissions = myMissions.filter(m => m.statut === "terminée");
@@ -6046,6 +6080,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, 
   const tabs = [
     { id: "dashboard", icon: Icon.home, l: tr.partnerDashboard },
     { id: "missions", icon: Icon.list, l: tr.missions },
+    { id: "bons", icon: Icon.percent, l: tr.partnerBonsTab },
     { id: "techniciens", icon: Icon.user, l: tr.partnerTechs },
     { id: "facturation", icon: Icon.euro, l: tr.partnerFacturation },
     { id: "contrat", icon: Icon.file, l: tr.partnerContrat },
@@ -6201,7 +6236,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, 
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontWeight: 800, color: T.accent, fontSize: 15 }}>{m.montant} €</div>
-              <div style={{ fontSize: 11, color: m.statut === "terminée" ? T.success : m.statut === "en_cours" ? T.accent : T.warn, fontWeight: 600, marginTop: 4 }}>{m.statut}</div>
+              <div style={{ fontSize: 11, color: m.statut === "terminée" ? T.success : m.statut === "en_cours" ? T.accent : T.warn, fontWeight: 600, marginTop: 4 }}>{tStatut(m.statut, tr)}</div>
             </div>
           </div>
         </div>
@@ -6231,7 +6266,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, 
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontWeight: 800, color: T.accent, fontSize: 16 }}>{m.montant} €</div>
-                <div className={m.statut === "terminée" ? "lk-badge-ok" : "lk-badge-off"} style={{ fontSize: 10, marginTop: 4 }}>{m.statut}</div>
+                <div className={m.statut === "terminée" ? "lk-badge-ok" : "lk-badge-off"} style={{ fontSize: 10, marginTop: 4 }}>{tStatut(m.statut, tr)}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12, padding: "10px", background: "rgba(0,0,0,.02)", borderRadius: 8 }}>
@@ -6278,7 +6313,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, 
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: t.statut === "actif" ? T.success : t.statut === "en_mission" ? T.accent : T.danger }}>{t.statut}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: t.statut === "actif" ? T.success : t.statut === "en_mission" ? T.accent : T.danger }}>{tStatut(t.statut, tr)}</div>
               <div style={{ color: T.textLo, fontSize: 11, marginTop: 4 }}>{t.missions} missions</div>
             </div>
           </div>
@@ -6567,9 +6602,90 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, 
     </div>
   );
 
+  const myRegion = account.ville || "Paris";
+  const myBons = (bons || []).filter(b => b.postedBy === account.id);
+  const posterBon = () => {
+    const b = { id: uid(), ...newBon, montantEstime: parseFloat(newBon.montantEstime) || 100, postedBy: account.id, postedByNom: account.nom, region: myRegion, lat: 48.86, lng: 2.34, createdAt: ts(), openPlatform: true };
+    setBons(p => [...p, b]);
+    setBonModal(false);
+    setNewBon({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
+  };
+  const renderBons = () => (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.partnerBonsTab}</div>
+          <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.bonPostedAllCraftsmen}</div>
+        </div>
+        <button onClick={() => setBonModal(true)} className="lk-btn" style={{ width: "auto", padding: "9px 16px", fontSize: 13 }}>{Icon.plus("#fff", 14)} {tr.postBonAll}</button>
+      </div>
+      {myBons.length === 0 && (
+        <div style={{ textAlign: "center", padding: "48px 20px" }}>
+          {Icon.percent(T.textLo, 36)}
+          <div style={{ color: T.textLo, fontSize: 14, marginTop: 12 }}>{tr.noPartnerBons}</div>
+          <div style={{ color: T.textLo, fontSize: 12, marginTop: 6 }}>{tr.bonPostedAllCraftsmen}</div>
+        </div>
+      )}
+      {myBons.map(bon => {
+        const IC = PROB_ICONS[bon.probleme] || Icon.tool;
+        return (
+          <div key={bon.id} className="lk-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{bon.titre}</div>
+                  <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginBottom: 4 }}>URGENT</div>}
+                <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{bon.montantEstime} €</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 20, padding: "3px 10px", fontSize: 11, color: T.success, fontWeight: 600 }}>{tr.bonOpenPlatform}</span>
+              <span style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 20, padding: "3px 10px", fontSize: 11, color: T.accent, fontWeight: 600 }}>{bon.techPct}% {tr.technicianShare}</span>
+            </div>
+            <button onClick={() => setBons(p => p.filter(b => b.id !== bon.id))} className="lk-ghost" style={{ fontSize: 11, padding: "5px 10px", marginTop: 10, color: T.danger, borderColor: T.danger }}>{tr.deleteBonus}</button>
+          </div>
+        );
+      })}
+      {bonModal && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 36px", maxHeight: "85vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ fontWeight: 700, fontSize: 17, color: T.textHi, marginBottom: 6 }}>{tr.postBonAll}</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginBottom: 18 }}>{tr.bonPostedAllCraftsmen}</div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.titleLabel}</label><input className="lk-input" value={newBon.titre} onChange={e => setNewBon(p => ({ ...p, titre: e.target.value }))} placeholder="Ex: Porte claquée urgence" /></div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.clientAddress}</label><input className="lk-input" value={newBon.adresse} onChange={e => setNewBon(p => ({ ...p, adresse: e.target.value }))} placeholder="15 rue de la Paix, Paris" /></div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.interventionTypeLabel}</label>
+              <select className="lk-input" value={newBon.probleme} onChange={e => setNewBon(p => ({ ...p, probleme: e.target.value }))} style={{ cursor: "pointer" }}>
+                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
+            <div style={{ marginBottom: 20 }}>
+              <label className="lk-label">{tr.technicianShare} : {newBon.techPct}%</label>
+              <input type="range" min={20} max={70} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value) }))} style={{ width: "100%", accentColor: T.accent }} />
+            </div>
+            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
+              <input type="checkbox" id="bon-urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
+              <label htmlFor="bon-urgence" style={{ color: T.textMid, fontSize: 13, cursor: "pointer" }}>{tr.urgentIntervention}</label>
+            </div>
+            <button onClick={posterBon} className="lk-btn" style={{ marginBottom: 10 }}>{tr.publishBonus}</button>
+            <button onClick={() => setBonModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>, document.body
+      )}
+    </div>
+  );
+
   const renderContent = () => {
     if (tab === "dashboard") return renderDashboard();
     if (tab === "missions") return renderMissions();
+    if (tab === "bons") return renderBons();
     if (tab === "techniciens") return renderTechniciens();
     if (tab === "facturation") return renderFacturation();
     if (tab === "contrat") return renderContrat();
@@ -6670,7 +6786,7 @@ export default function App() {
     if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
     if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} />;
     if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />;
-    if (account.role === "partenaire") return <PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "partenaire") return <PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />;
   }
   if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
   if (screen === "register-client") return <RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
