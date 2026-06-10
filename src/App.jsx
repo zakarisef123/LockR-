@@ -954,7 +954,7 @@ const METIERS = [
     photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
     heroBg: "linear-gradient(135deg,#7f1d1d,#dc2626)" },
   { id: "fermetures",   label: "Fermetures",   labelEn: "Shutters & Gates", color: "#6d28d9", icon: Icon.home,    desc: "Rideaux, volets, portail, garage", descEn: "Shutters, blinds, gates, garage",
-    photo: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=800&q=80",
+    photo: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&q=80",
     heroBg: "linear-gradient(135deg,#4c1d95,#6d28d9)" },
 ];
 
@@ -3378,7 +3378,7 @@ const MARKET_METIERS = [
   { id: "plombier",     label: "Plomberie",     labelEn: "Plumbing",      color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
   { id: "electricien",  label: "Électricité",   labelEn: "Electrical",    color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
   { id: "chauffagiste", label: "Chauffage",     labelEn: "Heating",       color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
-  { id: "fermetures",   label: "Fermetures",    labelEn: "Closures",      color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=600&q=70" },
+  { id: "fermetures",   label: "Fermetures",    labelEn: "Closures",      color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=600&q=70" },
 ];
 const mLabel = (m, lang) => (lang === "en" && m?.labelEn) ? m.labelEn : (m?.label || "");
 
