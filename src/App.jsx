@@ -245,6 +245,43 @@ const TRANS = {
     selectMetier: "Choisir un métier",
     metierSerrurier: "Serrurier", metierPlombier: "Plombier", metierElectricien: "Électricien", metierChauffagiste: "Chauffagiste",
     allMetiers: "Tous les métiers",
+    // Partner / Partenaire
+    partnerTab: "Entreprise", partnerBanner: "Espace Partenaire Certifié", partnerLogin: "Espace Partenaire",
+    partnerCertified: "Partenaire Certifié ✓", partnerDashboard: "Tableau de bord",
+    partnerTechs: "Techniciens", partnerFacturation: "Facturation", partnerContrat: "Contrat",
+    partnerConformite: "Conformité", partnerDocuments: "Documents", partnerStats: "Statistiques", partnerProfil: "Profil",
+    kpiMoisMissions: "Missions du mois", kpiCaMois: "CA du mois", kpiCommission: "Commission LOCKR",
+    kpiTechs: "Techniciens actifs", kpiNote: "Note moyenne", kpiTaux: "Taux d'acceptation",
+    lastMissions: "Dernières missions", conformiteAlerts: "Alertes conformité",
+    documentMissing: "Document manquant", pendingValidationDoc: "En attente de validation",
+    techAssigned: "Technicien assigné", assignTech: "— Assigner un technicien —", acceptMission: "Accepter",
+    addTech: "Ajouter", addTechTitle: "Ajouter un technicien", deactivate: "Désactiver", activate: "Activer",
+    commissionReport: "Relevé de commissions LOCKR", moisCa: "CA du mois (60%)", netReverse: "Net reversé",
+    invoicesEmitted: "Factures émises", noInvoice: "Aucune facture pour l'instant", downloadBtn: "Télécharger",
+    contractTitle: "Contrat de partenariat", signatureDate: "Date de signature", contractActive: "Actif",
+    downloadContract: "Télécharger le contrat signé", legalCompliance: "Conformité légale",
+    complianceScore: "Score de conformité", legalObligations: "Obligations légales",
+    requiredDocs: "Documents requis", docExpiry: "Expiration", uploadReplace: "📤 Uploader / Remplacer",
+    statsMissionsMonth: "Missions par mois", statsTopTechs: "Top techniciens",
+    statsIntervBreakdown: "Répartition interventions", statsAvgRating: "Note moyenne clients",
+    statsBasedOn: "Basé sur", statsDoneMissions: "missions terminées",
+    companyProfile: "Profil entreprise", legalName: "Raison sociale", rcsNum: "N° RCS",
+    socialCapital: "Capital social", tvaNum: "N° TVA intracommunautaire", rcProInsurance: "Assurance RC Pro",
+    sectors: "Secteurs d'activité", decoShort: "Déco.", moreTab: "Plus",
+    missionAmount: "Montant", netPartenaire: "Net partenaire", contractSigned: "Date de signature :",
+    // Platform call
+    callInProgress: "Appel LOCKR en cours…", callConnected: "Connecté", callSecure: "Appel sécurisé via plateforme LOCKR",
+    callHangup: "Raccrocher",
+    // Bons new flow
+    acceptBon: "Accepter le bon", callClient: "Appeler client", chatClient: "Chat LOCKR",
+    planRdv: "Planifier le RDV", immediateRdv: "RDV immédiat", scheduleRdvBtn: "Planifier",
+    callTimer: "min pour appeler le client", calledClient: "J'ai appelé le client",
+    bonExpired: "Temps écoulé — bon réassigné",
+    // Docs statuts
+    docValid: "validé", docPending: "en_attente", docMissing: "non_fourni",
+    docValidLabel: "Validé", docPendingLabel: "En attente", docMissingLabel: "Non fourni",
+    // Stats partner extra
+    statsMonthlyRevenue: "CA mensuel", statsLockrComm: "Commissions LOCKR",
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -467,6 +504,43 @@ const TRANS = {
     cancelBooking: "Cancel", bookingCancelled: "Booking cancelled",
     myProfile: "My Profile", saveChanges: "Save",
     selectMetier: "Choose a trade", metierSerrurier: "Locksmith", metierPlombier: "Plumber", metierElectricien: "Electrician", metierChauffagiste: "Heating engineer", allMetiers: "All trades",
+    // Partner
+    partnerTab: "Enterprise", partnerBanner: "Certified Partner Space", partnerLogin: "Partner Space",
+    partnerCertified: "Certified Partner ✓", partnerDashboard: "Dashboard",
+    partnerTechs: "Technicians", partnerFacturation: "Billing", partnerContrat: "Contract",
+    partnerConformite: "Compliance", partnerDocuments: "Documents", partnerStats: "Statistics", partnerProfil: "Profile",
+    kpiMoisMissions: "Monthly missions", kpiCaMois: "Monthly revenue", kpiCommission: "LOCKR commission",
+    kpiTechs: "Active technicians", kpiNote: "Average rating", kpiTaux: "Acceptance rate",
+    lastMissions: "Recent missions", conformiteAlerts: "Compliance alerts",
+    documentMissing: "Missing document", pendingValidationDoc: "Pending validation",
+    techAssigned: "Assigned technician", assignTech: "— Assign a technician —", acceptMission: "Accept",
+    addTech: "Add", addTechTitle: "Add a technician", deactivate: "Deactivate", activate: "Activate",
+    commissionReport: "LOCKR commission report", moisCa: "Monthly revenue (60%)", netReverse: "Net paid out",
+    invoicesEmitted: "Invoices issued", noInvoice: "No invoices yet", downloadBtn: "Download",
+    contractTitle: "Partnership contract", signatureDate: "Signature date", contractActive: "Active",
+    downloadContract: "Download signed contract", legalCompliance: "Legal compliance",
+    complianceScore: "Compliance score", legalObligations: "Legal obligations",
+    requiredDocs: "Required documents", docExpiry: "Expiry", uploadReplace: "📤 Upload / Replace",
+    statsMissionsMonth: "Missions per month", statsTopTechs: "Top technicians",
+    statsIntervBreakdown: "Intervention breakdown", statsAvgRating: "Average client rating",
+    statsBasedOn: "Based on", statsDoneMissions: "completed missions",
+    companyProfile: "Company profile", legalName: "Company name", rcsNum: "RCS No.",
+    socialCapital: "Share capital", tvaNum: "EU VAT number", rcProInsurance: "Professional liability insurance",
+    sectors: "Business sectors", decoShort: "Sign out", moreTab: "More",
+    missionAmount: "Amount", netPartenaire: "Partner net", contractSigned: "Signature date:",
+    // Platform call
+    callInProgress: "LOCKR call in progress…", callConnected: "Connected", callSecure: "Secure call via LOCKR platform",
+    callHangup: "Hang up",
+    // Bons new flow
+    acceptBon: "Accept bonus", callClient: "Call client", chatClient: "LOCKR Chat",
+    planRdv: "Schedule appointment", immediateRdv: "Immediate appointment", scheduleRdvBtn: "Schedule",
+    callTimer: "min to call the client", calledClient: "I called the client",
+    bonExpired: "Time's up — bonus reassigned",
+    // Doc statuses
+    docValid: "validated", docPending: "pending", docMissing: "not_provided",
+    docValidLabel: "Validated", docPendingLabel: "Pending", docMissingLabel: "Not provided",
+    // Stats partner extra
+    statsMonthlyRevenue: "Monthly revenue", statsLockrComm: "LOCKR commissions",
   }
 };
 
@@ -730,6 +804,8 @@ const INIT_ACCOUNTS = [
   { id: "admin2", role: "admin", nom: "Soze", email: "soze@lockr.fr", pass: "soze2024", verified: true },
   { id: "admin3", role: "admin", nom: "Emma", email: "emma@lockr.fr", pass: "emma2024", verified: true },
   { id: "admin4", role: "admin", nom: "Zakari", email: "zakari@lockr.fr", pass: "zakari2024", verified: true },
+  { id: "part1", role: "partenaire", nom: "BâtiPro SARL", email: "contact@batipro.fr", pass: "1234", verified: true, siret: "12345678900012", rcs: "Paris B 123 456 789", capital: "50 000 €", assurance: "AXA Pro RC n°AX-2024-001", qualibat: "8711 — Serrurerie", tva: "FR12345678900", iban: "FR76 3000 6000 0112 3456 7890 189", secteurs: ["serrurier","plombier"], ville: "Paris", logo: null, statut: "actif", dateContrat: "2024-01-15" },
+  { id: "part2", role: "partenaire", nom: "Électro Services SAS", email: "info@electroservices.fr", pass: "1234", verified: true, siret: "98765432100021", rcs: "Lyon B 987 654 321", capital: "100 000 €", assurance: "Generali Pro n°GEN-2023-445", qualibat: "RGE — QualiElec", tva: "FR98765432100", iban: "FR76 1027 8060 0001 2345 6789 010", secteurs: ["electricien","chauffagiste"], ville: "Lyon", logo: null, statut: "actif", dateContrat: "2023-11-01" },
 ];
 
 const INIT_BOOKINGS = [
@@ -1257,7 +1333,8 @@ function PayLogo({ id, size = 44 }) {
 }
 
 /* ─── PLATFORM CALL MODAL ─── */
-function PlatformCallModal({ name, onClose, onConnected }) {
+function PlatformCallModal({ name, onClose, onConnected, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
   const [phase, setPhase] = useState("calling"); // calling → connected → ended
   const [secs, setSecs] = useState(0);
 
@@ -1282,9 +1359,9 @@ function PlatformCallModal({ name, onClose, onConnected }) {
           {Icon.phone("#c9a030", 28)}
         </div>
         <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, marginBottom: 4 }}>{name}</div>
-        {phase === "calling" && <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13 }}>Appel LOCKR en cours…</div>}
-        {phase === "connected" && <div style={{ color: "#3ecf8e", fontSize: 13, fontWeight: 600 }}>Connecté · {fmt2(secs)}</div>}
-        <div style={{ color: "rgba(255,255,255,.35)", fontSize: 11, marginTop: 6 }}>Appel sécurisé via plateforme LOCKR</div>
+        {phase === "calling" && <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13 }}>{tr.callInProgress}</div>}
+        {phase === "connected" && <div style={{ color: "#3ecf8e", fontSize: 13, fontWeight: 600 }}>{tr.callConnected} · {fmt2(secs)}</div>}
+        <div style={{ color: "rgba(255,255,255,.35)", fontSize: 11, marginTop: 6 }}>{tr.callSecure}</div>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 28 }}>
           {phase === "connected" && (
             <button onClick={() => { setPhase("ended"); setTimeout(onClose, 800); }}
@@ -1969,12 +2046,15 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
 
   const demos = tab === "client"
     ? [{ email: "client@demo.fr", label: "Martin D." }, { email: "sophie@demo.fr", label: "Sophie B." }]
-    : [{ email: "karim@demo.fr", label: "Karim B." }, { email: "youssef@demo.fr", label: "Youssef M." }];
+    : tab === "pro"
+    ? [{ email: "karim@demo.fr", label: "Karim B." }, { email: "youssef@demo.fr", label: "Youssef M." }]
+    : [{ email: "contact@batipro.fr", label: "BâtiPro" }, { email: "info@electroservices.fr", label: "Électro Svc" }];
 
   const login = () => {
     const adminAcc = accounts.find(a => a.email === email && a.pass === pass && a.role === "admin");
     if (adminAcc) return onLogin(adminAcc);
-    const acc = accounts.find(a => a.email === email && a.pass === pass && a.role === tab);
+    const role = tab === "entreprise" ? "partenaire" : tab;
+    const acc = accounts.find(a => a.email === email && a.pass === pass && a.role === role);
     if (!acc) return setErr(tr.wrongCredentials);
     if (!acc.verified) return setErr(tr.notVerified);
     onLogin(acc);
@@ -2092,13 +2172,19 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
         <div style={{ width: "100%", maxWidth: 390, margin: "0 auto", padding: isDesktop ? 0 : "24px 20px 32px", animation: "fadeUp .45s ease" }}>
           {isDesktop && <div style={{ fontSize: 24, fontWeight: 800, color: T.textHi, marginBottom: 28, letterSpacing: "-.5px" }}>{tr.loginTitle}</div>}
           <div style={{ display: "flex", background: "rgba(0,0,0,.04)", borderRadius: 11, padding: 4, marginBottom: 22 }}>
-            {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }].map(t => (
-              <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 8px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 12, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
+            {[{ id: "client", label: tr.individual }, { id: "pro", label: tr.craftsman }, { id: "entreprise", label: tr.partnerTab }].map(t => (
+              <button key={t.id} onClick={() => { setTab(t.id); setEmail(""); setPass(""); setErr(""); }} style={{ flex: 1, border: "none", borderRadius: 9, padding: "10px 6px", cursor: "pointer", background: tab === t.id ? T.grad : "transparent", color: tab === t.id ? "#fff" : T.textLo, fontWeight: 600, fontSize: 11, transition: "all .2s", fontFamily: "'Inter',sans-serif" }}>
                 {t.label}
               </button>
             ))}
           </div>
           <div className="lk-card" style={{ borderRadius: 16, padding: "24px 20px", marginBottom: 18 }}>
+            {tab === "entreprise" && (
+              <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                {Icon.shield(T.accent, 16)}
+                <span style={{ color: T.accent, fontSize: 12, fontWeight: 600 }}>{tr.partnerBanner} LOCKR</span>
+              </div>
+            )}
             <div style={{ marginBottom: 16 }}>
               <label className="lk-label">{tr.email}</label>
               <input className="lk-input" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} placeholder="email@exemple.fr" type="email" autoComplete="email" />
@@ -2109,7 +2195,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
             </div>
             {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 14, display: "flex", alignItems: "center", gap: 6 }}>{Icon.x(T.danger, 13)} {err}</div>}
             <button onClick={login} className="lk-btn" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-              {tab === "client" ? tr.findCraftsman : tr.myMissions} {Icon.arrow("#fff", 15)}
+              {tab === "client" ? tr.findCraftsman : tab === "entreprise" ? tr.partnerLogin : tr.myMissions} {Icon.arrow("#fff", 15)}
             </button>
           </div>
           <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
@@ -2687,7 +2773,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
           </div>
         </div>
       )}
-      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} />}
+      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} lang={lang} />}
     </div>
   );
 }
@@ -5124,7 +5210,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       )}
       {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} lang={lang} />}
       {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} lang={lang} />}
-      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} />}
+      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} lang={lang} />}
       {_modals}
     </div>
   );
@@ -5913,6 +5999,658 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   );
 }
 
+/* ─── PARTNER DEMO DATA ─── */
+const INIT_PARTNER_BOOKINGS = [
+  { id: "pb1", partenaireId: "part1", clientNom: "Jean Lefebvre", adresse: "34 rue du Faubourg, Paris 10", probleme: "serrure", typeIntervention: "Remplacement serrure 3 points", montant: 280, statut: "terminée", commission: 42, netPartenaire: 142.8, technicienId: "tech1", createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), note: 4.8 },
+  { id: "pb2", partenaireId: "part1", clientNom: "Marie Dubois", adresse: "8 avenue de la République, Paris 11", probleme: "blindage", typeIntervention: "Blindage porte palière", montant: 450, statut: "en_cours", commission: 67.5, netPartenaire: 229.5, technicienId: "tech2", createdAt: new Date(Date.now() - 86400000).toISOString(), note: null },
+  { id: "pb3", partenaireId: "part1", clientNom: "Pierre Martin", adresse: "22 bd Voltaire, Paris 11", probleme: "ouverture", typeIntervention: "Ouverture porte claquée", montant: 160, statut: "en_attente", commission: 24, netPartenaire: 81.6, technicienId: null, createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), note: null },
+];
+
+const INIT_PARTNER_TECHS = [
+  { id: "tech1", partenaireId: "part1", nom: "Dupuis", prenom: "Laurent", metier: "serrurier", statut: "actif", tel: "0611223344", email: "l.dupuis@batipro.fr", certifications: ["Qualibat 8711"], missions: 18 },
+  { id: "tech2", partenaireId: "part1", nom: "Kamoui", prenom: "Nabil", metier: "serrurier", statut: "en_mission", tel: "0622334455", email: "n.kamoui@batipro.fr", certifications: ["Qualibat 8711", "Mul-T-Lock Certifié"], missions: 24 },
+  { id: "tech3", partenaireId: "part1", nom: "Ferrara", prenom: "Giuseppe", metier: "plombier", statut: "actif", tel: "0633445566", email: "g.ferrara@batipro.fr", certifications: ["Qualibat 5212"], missions: 11 },
+];
+
+/* ─── PARTENAIRE APP ─── */
+function PartenaireApp({ account, setAccounts, bookings, setBookings, onLogout, lang = "fr", setLang }) {
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
+  const tr = TRANS[lang] || TRANS.fr;
+  const [tab, setTab] = useState("dashboard");
+  const [missions, setMissions] = useState(INIT_PARTNER_BOOKINGS);
+  const [techs, setTechs] = useState(INIT_PARTNER_TECHS);
+  const [addTechModal, setAddTechModal] = useState(false);
+  const [newTech, setNewTech] = useState({ nom: "", prenom: "", email: "", tel: "", metier: "serrurier", certifications: "" });
+  const [docs, setDocs] = useState([
+    { id: "rc_pro", label: "Assurance RC Pro", statut: "validé", expiry: "2025-12-31", file: "AXA_RC_Pro_2024.pdf" },
+    { id: "kbis", label: "Extrait Kbis", statut: "validé", expiry: "2024-11-15", file: "Kbis_BatiPro.pdf" },
+    { id: "urssaf", label: "Attestation Urssaf", statut: "en_attente", expiry: "2025-06-30", file: "Urssaf_2024.pdf" },
+    { id: "qualibat", label: "Qualification Qualibat", statut: "validé", expiry: "2026-01-01", file: "Qualibat_8711.pdf" },
+    { id: "vigilance", label: "Attestation de vigilance URSSAF", statut: "non_fourni", expiry: null, file: null },
+    { id: "iban", label: "Relevé IBAN", statut: "validé", expiry: null, file: "IBAN_BatiPro.pdf" },
+    { id: "cni", label: "Carte d'identité dirigeant", statut: "validé", expiry: "2028-05-20", file: "CNI_Directeur.pdf" },
+    { id: "rgpd", label: "Formation RGPD équipe", statut: "non_fourni", expiry: null, file: null },
+    { id: "cnil", label: "Déclaration CNIL", statut: "validé", expiry: null, file: "CNIL_Decl.pdf" },
+    { id: "contrat", label: "Contrat sous-traitance LOCKR", statut: "validé", expiry: null, file: "Contrat_LOCKR_Signe.pdf" },
+  ]);
+  const [profileEdit, setProfileEdit] = useState({ ...account });
+
+  const myMissions = missions.filter(m => m.partenaireId === account.id);
+  const doneMissions = myMissions.filter(m => m.statut === "terminée");
+  const activeTechs = techs.filter(t => t.partenaireId === account.id && t.statut !== "inactif");
+  const caMois = doneMissions.reduce((s, m) => s + m.montant * 0.6, 0);
+  const commissionMois = caMois * 0.15;
+  const conformeCount = docs.filter(d => d.statut === "validé").length;
+
+  const tabs = [
+    { id: "dashboard", icon: Icon.home, l: tr.partnerDashboard },
+    { id: "missions", icon: Icon.list, l: tr.missions },
+    { id: "techniciens", icon: Icon.user, l: tr.partnerTechs },
+    { id: "facturation", icon: Icon.euro, l: tr.partnerFacturation },
+    { id: "contrat", icon: Icon.file, l: tr.partnerContrat },
+    { id: "conformite", icon: Icon.shield, l: tr.partnerConformite },
+    { id: "documents", icon: Icon.image, l: tr.partnerDocuments },
+    { id: "statistiques", icon: Icon.chart, l: tr.partnerStats },
+    { id: "profil", icon: Icon.settings, l: tr.partnerProfil },
+  ];
+
+  const downloadInvoice = (mission) => {
+    const lines = [
+      "═══════════════════════════════════════════════════════",
+      "                    FACTURE LOCKR",
+      "═══════════════════════════════════════════════════════",
+      "",
+      `N° Facture    : FACT-${mission.id.toUpperCase()}-${new Date().getFullYear()}`,
+      `Date          : ${fmtDate(new Date().toISOString())}`,
+      "",
+      "ÉMETTEUR :",
+      `Raison sociale : ${account.nom}`,
+      `SIRET          : ${account.siret}`,
+      `N° RCS         : ${account.rcs}`,
+      `N° TVA intra.  : ${account.tva}`,
+      `Capital social : ${account.capital}`,
+      `Assurance RC   : ${account.assurance}`,
+      "",
+      "CLIENT :",
+      `Nom            : ${mission.clientNom}`,
+      `Adresse        : ${mission.adresse}`,
+      "",
+      "PRESTATION :",
+      `Description    : ${mission.typeIntervention}`,
+      `Montant HT     : ${(mission.montant / 1.2).toFixed(2)} €`,
+      `TVA 20%        : ${(mission.montant - mission.montant / 1.2).toFixed(2)} €`,
+      `Montant TTC    : ${mission.montant.toFixed(2)} €`,
+      `Commission LOCKR (15%) : ${mission.commission.toFixed(2)} €`,
+      `Net Partenaire : ${mission.netPartenaire.toFixed(2)} €`,
+      "",
+      "───────────────────────────────────────────────────────",
+      "CONDITIONS DE RÈGLEMENT",
+      "Délai de paiement : 30 jours date de facture",
+      "Pénalités de retard : 3× taux légal en vigueur",
+      "Escompte pour paiement anticipé : 0%",
+      "Indemnité forfaitaire de recouvrement : 40 €",
+      "",
+      "MENTIONS LÉGALES",
+      "En application de la loi n°92-1442 du 31/12/1992,",
+      "tout retard de paiement entraîne des pénalités.",
+      "Médiateur : MEDIMME - www.medimme.fr",
+      "═══════════════════════════════════════════════════════",
+    ].join("\n");
+    const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `facture-${mission.id}.txt`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const downloadContrat = () => {
+    const txt = [
+      "══════════════════════════════════════════════════════════════════",
+      "           CONTRAT DE PARTENARIAT COMMERCIAL — LOCKR",
+      "══════════════════════════════════════════════════════════════════",
+      "",
+      "ARTICLE 1 — PARTIES",
+      "• LOCKR SAS, plateforme de mise en relation d'artisans",
+      `• ${account.nom} — SIRET ${account.siret} — RCS ${account.rcs}`,
+      "",
+      "ARTICLE 2 — OBJET",
+      "Mise en relation, apport d'affaires qualifiés via la plateforme LOCKR.",
+      "",
+      "ARTICLE 3 — DURÉE",
+      `Date de signature : ${account.dateContrat}`,
+      "Durée : 1 an renouvelable tacitement. Préavis de résiliation : 3 mois.",
+      "",
+      "ARTICLE 4 — OBLIGATIONS DE LOCKR",
+      "• Apporter des leads qualifiés géolocalisés",
+      "• Gérer les paiements clients et reverser sous 30 jours",
+      "• Assurer support 7j/7 pour les partenaires",
+      "",
+      "ARTICLE 5 — OBLIGATIONS DU PARTENAIRE",
+      "• Maintenir une assurance RC Pro valide",
+      "• Répondre aux demandes urgentes dans les 5 minutes",
+      "• Respecter les devis validés avec le client",
+      "• Former les techniciens aux standards LOCKR",
+      "• Respecter le RGPD pour les données personnelles des clients",
+      "• Clause d'exclusivité partielle : ne pas démarcher",
+      "  directement les clients LOCKR en dehors de la plateforme",
+      "",
+      "ARTICLE 6 — RÉMUNÉRATION",
+      "85% du montant HT après déduction de la commission LOCKR (15%).",
+      "",
+      "ARTICLE 7 — MODALITÉS DE PAIEMENT",
+      "Virement bancaire sur l'IBAN déclaré sous 30 jours après paiement client.",
+      "",
+      "ARTICLE 8 — CLAUSE DE NON-CONCURRENCE",
+      "12 mois post-résiliation dans la zone d'intervention déclarée.",
+      "",
+      "ARTICLE 9 — DONNÉES PERSONNELLES (RGPD)",
+      "Le Partenaire est sous-traitant au sens de l'article 28 du RGPD.",
+      "Un DPA (Data Processing Agreement) est annexé au présent contrat.",
+      "",
+      "ARTICLE 10 — RÉSILIATION",
+      "Faute grave, non-respect des obligations de conformité,",
+      "ou préavis de 3 mois sans motif.",
+      "",
+      "ARTICLE 11 — LOI APPLICABLE",
+      "Droit français. Tribunal compétent : Paris.",
+      "",
+      "ARTICLE 12 — LUTTE ANTI-CORRUPTION (Loi Sapin II)",
+      "Les parties déclarent l'absence de tout conflit d'intérêts",
+      "et s'engagent à respecter la loi n°2016-1691 du 9 décembre 2016.",
+      "",
+      "══════════════════════════════════════════════════════════════════",
+      `Signé le ${account.dateContrat} — Lu et approuvé`,
+      "══════════════════════════════════════════════════════════════════",
+    ].join("\n");
+    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `contrat-lockr-${account.id}.txt`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const kpiCards = [
+    { label: tr.kpiMoisMissions, value: myMissions.length, color: T.accent },
+    { label: tr.kpiCaMois, value: `${Math.round(caMois)} €`, color: T.success },
+    { label: tr.kpiCommission, value: `${Math.round(commissionMois)} €`, color: T.warn },
+    { label: tr.kpiTechs, value: activeTechs.length, color: "#5b8def" },
+    { label: tr.kpiNote, value: "4.7 ★", color: T.accent },
+    { label: tr.kpiTaux, value: "85%", color: T.success },
+  ];
+
+  const renderDashboard = () => (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.partnerDashboard}</div>
+      <div className="lk-desktop-3col" style={{ marginBottom: 24 }}>
+        {kpiCards.map((k, i) => (
+          <div key={i} className="lk-card" style={{ padding: "18px 20px" }}>
+            <div style={{ color: k.color, fontWeight: 800, fontSize: 24 }}>{k.value}</div>
+            <div style={{ color: T.textMid, fontSize: 12, marginTop: 4 }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi, marginBottom: 12 }}>{tr.lastMissions}</div>
+      {myMissions.slice(-5).reverse().map(m => (
+        <div key={m.id} className="lk-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{m.clientNom}</div>
+              <div style={{ color: T.textMid, fontSize: 12 }}>{m.typeIntervention}</div>
+              <div style={{ color: T.textLo, fontSize: 11, marginTop: 4 }}>{m.adresse}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontWeight: 800, color: T.accent, fontSize: 15 }}>{m.montant} €</div>
+              <div style={{ fontSize: 11, color: m.statut === "terminée" ? T.success : m.statut === "en_cours" ? T.accent : T.warn, fontWeight: 600, marginTop: 4 }}>{m.statut}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi, marginBottom: 12, marginTop: 24 }}>{tr.conformiteAlerts}</div>
+      {docs.filter(d => d.statut === "non_fourni" || d.statut === "en_attente").map(d => (
+        <div key={d.id} style={{ background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+          {Icon.warning(T.warn, 16)}
+          <span style={{ color: T.warn, fontSize: 13, fontWeight: 600 }}>{d.label} — {d.statut === "non_fourni" ? tr.documentMissing : tr.pendingValidationDoc}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderMissions = () => (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.missions}</div>
+      {myMissions.map(m => {
+        const tech = techs.find(t => t.id === m.technicienId);
+        return (
+          <div key={m.id} className="lk-card" style={{ padding: "16px 18px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi }}>{m.clientNom}</div>
+                <div style={{ color: T.textMid, fontSize: 12 }}>{m.typeIntervention}</div>
+                <div style={{ color: T.textLo, fontSize: 11, marginTop: 2 }}>{m.adresse}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontWeight: 800, color: T.accent, fontSize: 16 }}>{m.montant} €</div>
+                <div className={m.statut === "terminée" ? "lk-badge-ok" : "lk-badge-off"} style={{ fontSize: 10, marginTop: 4 }}>{m.statut}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12, padding: "10px", background: "rgba(0,0,0,.02)", borderRadius: 8 }}>
+              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.missionAmount}</div><div style={{ fontWeight: 700, fontSize: 13 }}>{m.montant} €</div></div>
+              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.kpiCommission}</div><div style={{ fontWeight: 700, fontSize: 13, color: T.warn }}>{m.commission} €</div></div>
+              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.netPartenaire}</div><div style={{ fontWeight: 700, fontSize: 13, color: T.success }}>{m.netPartenaire} €</div></div>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <label className="lk-label">{tr.techAssigned}</label>
+              <select className="lk-input" value={m.technicienId || ""} onChange={e => setMissions(p => p.map(x => x.id === m.id ? { ...x, technicienId: e.target.value || null } : x))} style={{ cursor: "pointer" }}>
+                <option value="">{tr.assignTech}</option>
+                {techs.filter(t => t.partenaireId === account.id).map(t => (
+                  <option key={t.id} value={t.id}>{t.prenom} {t.nom} ({t.metier})</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {m.statut === "en_attente" && (
+                <button onClick={() => setMissions(p => p.map(x => x.id === m.id ? { ...x, statut: "acceptée" } : x))} className="lk-btn" style={{ flex: 1, padding: "8px 12px", fontSize: 12 }}>{tr.acceptMission}</button>
+              )}
+              {tech && <div style={{ flex: 1, background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: T.success, display: "flex", alignItems: "center", gap: 6 }}>{Icon.check(T.success, 12)} {tech.prenom} {tech.nom}</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderTechniciens = () => (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.partnerTechs}</div>
+        <button onClick={() => setAddTechModal(true)} className="lk-btn" style={{ width: "auto", padding: "9px 16px", fontSize: 13 }}>{Icon.plus("#fff", 14)} {tr.addTech}</button>
+      </div>
+      {techs.filter(t => t.partenaireId === account.id).map(t => (
+        <div key={t.id} className="lk-card" style={{ padding: "16px 18px", marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: T.grad, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16 }}>{t.prenom.charAt(0)}</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi }}>{t.prenom} {t.nom}</div>
+                <div style={{ color: T.textMid, fontSize: 12 }}>{t.metier} · {t.email}</div>
+                <div style={{ color: T.textLo, fontSize: 11 }}>{t.tel}</div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: t.statut === "actif" ? T.success : t.statut === "en_mission" ? T.accent : T.danger }}>{t.statut}</div>
+              <div style={{ color: T.textLo, fontSize: 11, marginTop: 4 }}>{t.missions} missions</div>
+            </div>
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {t.certifications.map((c, i) => (
+              <span key={i} style={{ background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "3px 10px", fontSize: 11, color: T.accent, fontWeight: 600 }}>{c}</span>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button onClick={() => setTechs(p => p.map(x => x.id === t.id ? { ...x, statut: x.statut === "actif" ? "inactif" : "actif" } : x))} className="lk-ghost" style={{ fontSize: 12, padding: "6px 12px" }}>{t.statut === "actif" ? tr.deactivate : tr.activate}</button>
+          </div>
+        </div>
+      ))}
+      {addTechModal && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 22px 36px", animation: "slideUp .3s ease", maxHeight: "80vh", overflowY: "auto" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ fontWeight: 700, fontSize: 17, color: T.textHi, marginBottom: 18 }}>{tr.addTechTitle}</div>
+            {[["prenom", tr.firstname],["nom", tr.lastname],["email", tr.email],["tel", tr.phone],["certifications","Certifications"]].map(([k, l]) => (
+              <div key={k} style={{ marginBottom: 14 }}>
+                <label className="lk-label">{l}</label>
+                <input className="lk-input" value={newTech[k]} onChange={e => setNewTech(p => ({ ...p, [k]: e.target.value }))} />
+              </div>
+            ))}
+            <div style={{ marginBottom: 18 }}>
+              <label className="lk-label">{tr.selectMetier}</label>
+              <select className="lk-input" value={newTech.metier} onChange={e => setNewTech(p => ({ ...p, metier: e.target.value }))} style={{ cursor: "pointer" }}>
+                {["serrurier","plombier","electricien","chauffagiste"].map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <button onClick={() => {
+              setTechs(p => [...p, { id: uid(), partenaireId: account.id, ...newTech, certifications: newTech.certifications.split(",").map(c => c.trim()).filter(Boolean), statut: "actif", missions: 0 }]);
+              setAddTechModal(false);
+              setNewTech({ nom: "", prenom: "", email: "", tel: "", metier: "serrurier", certifications: "" });
+            }} className="lk-btn" style={{ marginBottom: 10 }}>{tr.addTech}</button>
+            <button onClick={() => setAddTechModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>, document.body
+      )}
+    </div>
+  );
+
+  const renderFacturation = () => {
+    const invoices = doneMissions.map((m, i) => ({
+      ...m, numFacture: `FACT-${String(i + 1).padStart(4, "0")}`, dateFacture: fmtDate(m.createdAt),
+      ht: (m.montant / 1.2).toFixed(2), tva: (m.montant - m.montant / 1.2).toFixed(2),
+      ttc: m.montant.toFixed(2), statutFacture: "payée",
+    }));
+    return (
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.partnerFacturation}</div>
+        <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.commissionReport}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ color: T.textMid, fontSize: 13 }}>{tr.moisCa}</span>
+            <span style={{ fontWeight: 700 }}>{Math.round(caMois)} €</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ color: T.textMid, fontSize: 13 }}>{tr.kpiCommission} (15%)</span>
+            <span style={{ fontWeight: 700, color: T.warn }}>{Math.round(commissionMois)} €</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(0,0,0,.08)", paddingTop: 8 }}>
+            <span style={{ color: T.textHi, fontSize: 13, fontWeight: 700 }}>{tr.netReverse}</span>
+            <span style={{ fontWeight: 800, color: T.success }}>{Math.round(caMois - commissionMois)} €</span>
+          </div>
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi, marginBottom: 12 }}>{tr.invoicesEmitted}</div>
+        {invoices.length === 0 && <div style={{ color: T.textMid, textAlign: "center", padding: 20 }}>{tr.noInvoice}</div>}
+        {invoices.map(inv => (
+          <div key={inv.id} className="lk-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{inv.numFacture} — {inv.clientNom}</div>
+                <div style={{ color: T.textMid, fontSize: 12 }}>{inv.dateFacture}</div>
+                <div style={{ display: "flex", gap: 16, marginTop: 6 }}>
+                  <span style={{ color: T.textLo, fontSize: 11 }}>HT : {inv.ht} €</span>
+                  <span style={{ color: T.textLo, fontSize: 11 }}>TVA : {inv.tva} €</span>
+                  <span style={{ fontWeight: 700, fontSize: 12, color: T.textHi }}>TTC : {inv.ttc} €</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+                <span className="lk-badge-ok" style={{ fontSize: 10 }}>{inv.statutFacture}</span>
+                <button onClick={() => downloadInvoice(inv)} className="lk-ghost" style={{ fontSize: 11, padding: "5px 10px" }}>{tr.downloadBtn}</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderContrat = () => (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.contractTitle}</div>
+      <div className="lk-card" style={{ padding: "20px 22px", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi }}>{tr.contractTitle} — {account.nom}</div>
+            <div style={{ color: T.textMid, fontSize: 12 }}>{tr.contractSigned} {account.dateContrat}</div>
+          </div>
+          <span className="lk-badge-ok">{tr.contractActive}</span>
+        </div>
+        <button onClick={downloadContrat} className="lk-btn" style={{ padding: "10px 16px", fontSize: 13 }}>{tr.downloadContract}</button>
+      </div>
+      {[
+        ["Art. 1 — Parties", `LOCKR SAS (plateforme) et ${account.nom} (SIRET ${account.siret})`],
+        ["Art. 2 — Objet", "Mise en relation et apport d'affaires qualifiés via la plateforme LOCKR."],
+        ["Art. 3 — Durée", `1 an à compter du ${account.dateContrat}, renouvelable tacitement. Préavis : 3 mois.`],
+        ["Art. 4 — Obligations LOCKR", "Apport de leads qualifiés, gestion des paiements clients, support 7j/7."],
+        ["Art. 5 — Obligations Partenaire", "RC Pro à jour, réponse < 5 min, respect des devis, formation RGPD, clause d'exclusivité partielle."],
+        ["Art. 6 — Rémunération", "85% du montant HT après déduction de la commission LOCKR (15%)."],
+        ["Art. 7 — Paiements", "Virement bancaire sous 30 jours après paiement client sur IBAN déclaré."],
+        ["Art. 8 — Non-concurrence", "12 mois post-résiliation dans la zone d'intervention déclarée."],
+        ["Art. 9 — RGPD", "Partenaire = sous-traitant au sens de l'article 28 RGPD. DPA annexé."],
+        ["Art. 10 — Résiliation", "Faute grave, non-conformité, ou préavis de 3 mois."],
+        ["Art. 11 — Loi applicable", "Droit français. Juridiction compétente : Paris."],
+        ["Art. 12 — Loi Sapin II", "Conformité à la loi n°2016-1691 anti-corruption. Déclaration d'absence de conflit d'intérêts."],
+      ].map(([title, body]) => (
+        <div key={title} className="lk-card" style={{ padding: "14px 16px", marginBottom: 8 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: T.accent, marginBottom: 4 }}>{title}</div>
+          <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>{body}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderConformite = () => {
+    const score = `${conformeCount}/${docs.length}`;
+    return (
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 12 }}>{tr.legalCompliance}</div>
+        <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 20, background: conformeCount >= 8 ? "rgba(30,158,107,.04)" : "rgba(217,119,6,.04)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 700, fontSize: 15, color: T.textHi }}>{tr.complianceScore}</span>
+            <span style={{ fontWeight: 800, fontSize: 22, color: conformeCount >= 8 ? T.success : T.warn }}>{score}</span>
+          </div>
+          <div style={{ marginTop: 8, height: 6, background: "rgba(0,0,0,.06)", borderRadius: 3 }}>
+            <div style={{ height: "100%", width: `${(conformeCount / docs.length) * 100}%`, background: conformeCount >= 8 ? T.success : T.warn, borderRadius: 3, transition: "width .5s" }} />
+          </div>
+        </div>
+        {docs.map(d => (
+          <div key={d.id} className="lk-card" style={{ padding: "12px 16px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 16 }}>{d.statut === "validé" ? "✅" : d.statut === "en_attente" ? "⚠️" : "❌"}</span>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{d.label}</div>
+                {d.expiry && <div style={{ color: T.textLo, fontSize: 11 }}>{tr.docExpiry}: {d.expiry}</div>}
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, color: d.statut === "validé" ? T.success : d.statut === "en_attente" ? T.warn : T.danger }}>{d.statut}</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 20, fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.legalObligations}</div>
+        {["Affichage obligatoire TVA sur devis et factures","Délai de rétractation client si applicable","Médiateur de la consommation désigné","Garantie décennale pour travaux de bâtiment","Assurance dommages-ouvrage si applicable"].map((o, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
+            {Icon.check(T.success, 14)}
+            <span style={{ color: T.textMid, fontSize: 13 }}>{o}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderDocuments = () => (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.requiredDocs}</div>
+      {docs.map(d => (
+        <div key={d.id} className="lk-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{d.label}</div>
+              {d.file && <div style={{ color: T.success, fontSize: 11, marginTop: 2 }}>📎 {d.file}</div>}
+              {d.expiry && <div style={{ color: T.textLo, fontSize: 11 }}>{tr.docExpiry} : {d.expiry}</div>}
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 20, background: d.statut === "validé" ? "rgba(30,158,107,.08)" : d.statut === "en_attente" ? "rgba(217,119,6,.08)" : "rgba(220,38,38,.07)", color: d.statut === "validé" ? T.success : d.statut === "en_attente" ? T.warn : T.danger }}>{d.statut}</span>
+          </div>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", background: "rgba(0,0,0,.03)", border: "1px dashed rgba(0,0,0,.15)", borderRadius: 8, padding: "7px 12px", fontSize: 12, color: T.textMid }}>
+            {tr.uploadReplace}
+            <input type="file" style={{ display: "none" }} onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) setDocs(p => p.map(x => x.id === d.id ? { ...x, file: f.name, statut: "en_attente" } : x));
+            }} />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderStatistiques = () => {
+    const months = ["Jan","Fév","Mar","Avr","Mai","Juin","Jul","Aoû","Sep","Oct","Nov","Déc"];
+    const moisData = months.map((m, i) => ({ m, count: Math.floor(Math.random() * 8) + 1, ca: Math.floor(Math.random() * 2000) + 500 }));
+    const maxCount = Math.max(...moisData.map(d => d.count), 1);
+    return (
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.partnerStats}</div>
+        <div className="lk-card" style={{ padding: "18px 20px", marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 14 }}>{tr.statsMissionsMonth}</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 100 }}>
+            {moisData.map((d, i) => (
+              <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <div style={{ width: "100%", background: T.grad, borderRadius: "4px 4px 0 0", height: `${(d.count / maxCount) * 80}px`, transition: "height .4s" }} title={`${d.count} missions`} />
+                <div style={{ color: T.textLo, fontSize: 9 }}>{d.m}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="lk-desktop-2col">
+          <div className="lk-card" style={{ padding: "16px 18px" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.statsTopTechs}</div>
+            {techs.filter(t => t.partenaireId === account.id).sort((a, b) => b.missions - a.missions).map(t => (
+              <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ color: T.textMid, fontSize: 13 }}>{t.prenom} {t.nom}</span>
+                <span style={{ fontWeight: 700, color: T.accent }}>{t.missions} missions</span>
+              </div>
+            ))}
+          </div>
+          <div className="lk-card" style={{ padding: "16px 18px" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.statsIntervBreakdown}</div>
+            {[["Serrurerie","55%",T.accent],["Plomberie","30%","#0ea5e9"],["Autre","15%",T.textLo]].map(([l, p, c]) => (
+              <div key={l} style={{ marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ color: T.textMid, fontSize: 12 }}>{l}</span>
+                  <span style={{ fontWeight: 700, fontSize: 12, color: c }}>{p}</span>
+                </div>
+                <div style={{ height: 4, background: "rgba(0,0,0,.06)", borderRadius: 2 }}>
+                  <div style={{ height: "100%", width: p, background: c, borderRadius: 2 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="lk-card" style={{ padding: "16px 18px", marginTop: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.statsAvgRating}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ fontWeight: 900, fontSize: 36, color: T.accent }}>4.7</div>
+            <div>
+              <div style={{ color: "gold", fontSize: 20 }}>★★★★★</div>
+              <div style={{ color: T.textMid, fontSize: 12 }}>{tr.statsBasedOn} {doneMissions.length} {tr.statsDoneMissions}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderProfil = () => (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.companyProfile}</div>
+      <div className="lk-card" style={{ padding: "20px 22px", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 }}>
+          <div style={{ width: 52, height: 52, background: T.grad, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 20 }}>{account.nom.charAt(0)}</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi }}>{account.nom}</div>
+            <div style={{ color: T.accent, fontSize: 12, fontWeight: 600 }}>{tr.partnerCertified}</div>
+          </div>
+        </div>
+        {[
+          [tr.legalName, profileEdit.nom, "nom"],
+          ["SIRET", profileEdit.siret, "siret"],
+          [tr.rcsNum, profileEdit.rcs, "rcs"],
+          [tr.socialCapital, profileEdit.capital, "capital"],
+          [tr.tvaNum, profileEdit.tva, "tva"],
+          ["IBAN", profileEdit.iban, "iban"],
+          [tr.rcProInsurance, profileEdit.assurance, "assurance"],
+        ].map(([label, val, key]) => (
+          <div key={key} style={{ marginBottom: 14 }}>
+            <label className="lk-label">{label}</label>
+            <input className="lk-input" value={val || ""} onChange={e => setProfileEdit(p => ({ ...p, [key]: e.target.value }))} />
+          </div>
+        ))}
+        <div style={{ marginBottom: 14 }}>
+          <label className="lk-label">{tr.sectors}</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {["serrurier","plombier","electricien","chauffagiste"].map(s => (
+              <button key={s} onClick={() => {
+                const sects = profileEdit.secteurs || [];
+                setProfileEdit(p => ({ ...p, secteurs: sects.includes(s) ? sects.filter(x => x !== s) : [...sects, s] }));
+              }} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${(profileEdit.secteurs || []).includes(s) ? T.accent : "rgba(0,0,0,.12)"}`, background: (profileEdit.secteurs || []).includes(s) ? "rgba(201,160,48,.08)" : "transparent", color: (profileEdit.secteurs || []).includes(s) ? T.accent : T.textMid, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button onClick={() => setAccounts(p => p.map(a => a.id === account.id ? { ...a, ...profileEdit } : a))} className="lk-btn">{tr.saveProfile}</button>
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    if (tab === "dashboard") return renderDashboard();
+    if (tab === "missions") return renderMissions();
+    if (tab === "techniciens") return renderTechniciens();
+    if (tab === "facturation") return renderFacturation();
+    if (tab === "contrat") return renderContrat();
+    if (tab === "conformite") return renderConformite();
+    if (tab === "documents") return renderDocuments();
+    if (tab === "statistiques") return renderStatistiques();
+    if (tab === "profil") return renderProfil();
+    return null;
+  };
+
+  const mobileTabs = tabs.slice(0, 5);
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+      <style>{CSS}</style>
+
+      {/* SIDEBAR DESKTOP */}
+      {isDesktop && (
+        <div style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0, background: "#fff", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, background: T.grad, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 14)}</div>
+              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
+            </div>
+          </div>
+          <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 2 }}>{account.nom}</div>
+            <div style={{ color: T.accent, fontSize: 11, fontWeight: 600 }}>{tr.partnerCertified}</div>
+            <div style={{ color: T.textLo, fontSize: 10, marginTop: 2 }}>{account.ville}</div>
+          </div>
+          <div style={{ flex: 1, padding: "10px 10px" }}>
+            {tabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", borderRadius: 10, border: "none", background: tab === t.id ? "rgba(201,160,48,.08)" : "transparent", color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif", marginBottom: 2 }}>
+                {t.icon(tab === t.id ? T.accent : T.textMid, 16)}
+                {t.l}
+              </button>
+            ))}
+          </div>
+          <div style={{ padding: "14px 18px", borderTop: `1px solid ${T.border}` }}>
+            <button onClick={onLogout} className="lk-ghost" style={{ width: "100%", fontSize: 12 }}>{tr.logout}</button>
+          </div>
+        </div>
+      )}
+
+      {/* MAIN CONTENT */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {!isDesktop && (
+          <div style={{ background: "#fff", borderBottom: `1px solid ${T.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 26, height: 26, background: T.grad, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 12)}</div>
+              <span style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>LOCKR</span>
+            </div>
+            <div style={{ color: T.accent, fontSize: 11, fontWeight: 700 }}>{tr.partnerCertified}</div>
+            <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.decoShort}</button>
+          </div>
+        )}
+        <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "28px 32px" : "16px 14px 80px" }}>
+          <div style={{ maxWidth: 900, margin: "0 auto" }}>
+            {renderContent()}
+          </div>
+        </div>
+        {/* BOTTOM NAV MOBILE */}
+        {!isDesktop && (
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", zIndex: 100, paddingBottom: "env(safe-area-inset-bottom)" }}>
+            {mobileTabs.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 4px", border: "none", background: "none", cursor: "pointer", color: tab === t.id ? T.accent : T.textLo, fontFamily: "'Inter',sans-serif" }}>
+                {t.icon(tab === t.id ? T.accent : T.textLo, 18)}
+                <span style={{ fontSize: 9, fontWeight: tab === t.id ? 700 : 500 }}>{t.l}</span>
+              </button>
+            ))}
+            <button onClick={() => setTab("profil")} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 4px", border: "none", background: "none", cursor: "pointer", color: tab === "profil" ? T.accent : T.textLo, fontFamily: "'Inter',sans-serif" }}>
+              {Icon.settings(tab === "profil" ? T.accent : T.textLo, 18)}
+              <span style={{ fontSize: 9, fontWeight: tab === "profil" ? 700 : 500 }}>{tr.moreTab}</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── ROOT ─── */
 export default function App() {
   const [screen, setScreen] = useState("login");
@@ -5932,6 +6670,7 @@ export default function App() {
     if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
     if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} />;
     if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />;
+    if (account.role === "partenaire") return <PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} onLogout={logout} lang={lang} setLang={setLang} />;
   }
   if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
   if (screen === "register-client") return <RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
