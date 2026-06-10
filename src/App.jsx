@@ -856,7 +856,7 @@ const METIERS = [
     photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
     heroBg: "linear-gradient(135deg,#7f1d1d,#dc2626)" },
   { id: "fermetures",   label: "Fermetures",   labelEn: "Shutters & Gates", color: "#6d28d9", icon: Icon.home,    desc: "Rideaux, volets, portail, garage", descEn: "Shutters, blinds, gates, garage",
-    photo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80",
+    photo: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=800&q=80",
     heroBg: "linear-gradient(135deg,#4c1d95,#6d28d9)" },
 ];
 
@@ -1254,6 +1254,54 @@ function PayLogo({ id, size = 44 }) {
     </div>
   );
   return <div style={{ ...s, background: "#f1f5f9" }} />;
+}
+
+/* ─── PLATFORM CALL MODAL ─── */
+function PlatformCallModal({ name, onClose, onConnected }) {
+  const [phase, setPhase] = useState("calling"); // calling → connected → ended
+  const [secs, setSecs] = useState(0);
+
+  useEffect(() => {
+    if (phase === "calling") {
+      const t = setTimeout(() => setPhase("connected"), 3000);
+      return () => clearTimeout(t);
+    }
+    if (phase === "connected") {
+      if (onConnected) onConnected();
+      const t = setInterval(() => setSecs(s => s + 1), 1000);
+      return () => clearInterval(t);
+    }
+  }, [phase]);
+
+  const fmt2 = n => String(Math.floor(n / 60)).padStart(2,"0") + ":" + String(n % 60).padStart(2,"0");
+
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#1c1c1e", borderRadius: 24, width: "90%", maxWidth: 340, padding: "36px 24px 28px", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,.5)" }}>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(201,160,48,.15)", border: "2px solid rgba(201,160,48,.4)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", animation: phase === "calling" ? "pulse 1.2s infinite" : "none" }}>
+          {Icon.phone("#c9a030", 28)}
+        </div>
+        <div style={{ color: "#fff", fontWeight: 800, fontSize: 18, marginBottom: 4 }}>{name}</div>
+        {phase === "calling" && <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13 }}>Appel LOCKR en cours…</div>}
+        {phase === "connected" && <div style={{ color: "#3ecf8e", fontSize: 13, fontWeight: 600 }}>Connecté · {fmt2(secs)}</div>}
+        <div style={{ color: "rgba(255,255,255,.35)", fontSize: 11, marginTop: 6 }}>Appel sécurisé via plateforme LOCKR</div>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 28 }}>
+          {phase === "connected" && (
+            <button onClick={() => { setPhase("ended"); setTimeout(onClose, 800); }}
+              style={{ width: 56, height: 56, borderRadius: "50%", background: "#dc2626", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {Icon.phone("#fff", 22)}
+            </button>
+          )}
+          {phase === "calling" && (
+            <button onClick={onClose}
+              style={{ width: 56, height: 56, borderRadius: "50%", background: "#dc2626", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {Icon.x("#fff", 20)}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  , document.body);
 }
 
 function PayModal({ amount, onClose, onDone, lang = "fr" }) {
@@ -2459,6 +2507,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
   const [notif, setNotif] = useState(null);
   // Bon status per bon
   const [bonStatuses, setBonStatuses] = useState({});
+  const [platformCall, setPlatformCall] = useState(null); // { name }
   const [bonTimers, setBonTimers] = useState({});
   const [bonRdvInputs, setBonRdvInputs] = useState({});
   const timerRefs = useRef({});
@@ -2571,7 +2620,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
                 return (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <a href="tel:0100000000" style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none", fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} Appeler client</a>
+                      <button onClick={() => setPlatformCall({ name: b.clientNom || "Client" })} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} Appeler client</button>
                       <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "contacted" }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.chat(T.accent, 13)} Chat LOCKR</button>
                     </div>
                     {timer !== undefined && timer > 0 && (
@@ -2638,6 +2687,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
           </div>
         </div>
       )}
+      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} />}
     </div>
   );
 }
@@ -3207,7 +3257,7 @@ const MARKET_METIERS = [
   { id: "plombier",     label: "Plomberie",     color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
   { id: "electricien",  label: "Électricité",   color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
   { id: "chauffagiste", label: "Chauffage",     color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
-  { id: "fermetures",  label: "Fermetures",   color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=70" },
+  { id: "fermetures",  label: "Fermetures",   color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=600&q=70" },
 ];
 
 function ProMarketplace({ account, listings, setListings, sales, setSales, lang }) {
@@ -4327,7 +4377,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <a href="tel:0600000000" className="lk-ghost" style={{ flex: 1, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</a>
+                    <button onClick={() => setPlatformCall({ name: activeBk?.artisan || "Artisan" })} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</button>
                     <button onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
                       {Icon.check("#fff", 15)} {tr.closeAndInvoice}
                     </button>
@@ -4393,6 +4443,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   // Feature 12: cancel if artisan slow
   const [cancelSlowModal, setCancelSlowModal] = useState(null);
   const [altArtisans, setAltArtisans] = useState([]);
+  const [platformCall, setPlatformCall] = useState(null);
   // Litige + profil
   const [litigeModal, setLitigeModal] = useState(null);
   const [litigeText, setLitigeText] = useState("");
@@ -4995,7 +5046,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                   <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
+                  <button onClick={() => setPlatformCall({ name: art.nom })} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</button>
                   <button onClick={() => setShowChat(true)} style={{ flex: 1, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 12, padding: "12px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
                     {Icon.chat(T.gold, 15)} Chat
                   </button>
@@ -5056,7 +5107,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                   <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {art.tel && <a href={`tel:${art.tel}`} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</a>}
+                  <button onClick={() => setPlatformCall({ name: art.nom })} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{Icon.phone(T.success, 15)}</button>
                   <button onClick={() => setShowChat(true)} style={{ flex: 1, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 12, padding: "12px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
                     {Icon.chat(T.gold, 15)} Chat
                   </button>
@@ -5073,6 +5124,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       )}
       {payModal && <PayModal amount={bk?.montantFinal || bk?.montant} onClose={() => setPayModal(false)} onDone={() => { setPayModal(false); setScreen("home"); }} lang={lang} />}
       {showChat && bk && <ChatIntervention bookingId={bk.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={art?.nom || "Artisan"} onClose={() => setShowChat(false)} lang={lang} />}
+      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} />}
       {_modals}
     </div>
   );
