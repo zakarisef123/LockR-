@@ -1355,6 +1355,9 @@ function PayLogo({ id, size = 44 }) {
 }
 
 /* ─── PLATFORM CALL MODAL ─── */
+const pLabel = (p, lang) => (lang === "en" && p?.labelEn) ? p.labelEn : (p?.label || "");
+const pDesc  = (p, lang) => (lang === "en" && p?.descEn)  ? p.descEn  : (p?.desc  || "");
+
 const tStatut = (s, tr) => {
   const map = {
     "terminée": tr.statusTerminee, "en_cours": tr.statusInProgress, "en_attente": tr.statusEnAttente,
@@ -2274,7 +2277,7 @@ function DevisModal({ artisan, probleme, montant, onAccept, onCancel, lang = "fr
         <div style={{ background: "rgba(0,0,0,.02)", border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px", marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ color: T.textLo, fontSize: 13 }}>{tr.devisService}</span>
-            <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{prob?.label || probleme}</span>
+            <span style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pLabel(prob, lang) || probleme}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ color: T.textLo, fontSize: 13 }}>{tr.devisArtisan}</span>
@@ -2319,7 +2322,7 @@ function SatisfactionModal({ booking, onSubmit, onClose, lang = "fr" }) {
         <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.satisfactionTitle}</div>
-          <div style={{ color: T.textLo, fontSize: 13 }}>{prob?.label}</div>
+          <div style={{ color: T.textLo, fontSize: 13 }}>{pLabel(prob, lang)}</div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 20 }}>
           {[1, 2, 3, 4, 5].map(s => (
@@ -2375,7 +2378,7 @@ function MonthlyReportModal({ bookings, artisanId, lang = "fr", onClose }) {
               return (
                 <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${T.border}` }}>
                   <div>
-                    <div style={{ color: T.textHi, fontSize: 13, fontWeight: 600 }}>{pr?.label || b.probleme}</div>
+                    <div style={{ color: T.textHi, fontSize: 13, fontWeight: 600 }}>{pLabel(pr, lang) || b.probleme}</div>
                     <div style={{ color: T.textLo, fontSize: 11 }}>{fmtDate(b.createdAt)} · {b.clientNom}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -2445,7 +2448,7 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
               <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.check(T.success, 20)}</div>
               <div>
                 <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16 }}>{tr.closeMission}</div>
-                <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{prob?.label} · {mission?.clientNom}</div>
+                <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{pLabel(prob, lang)} · {mission?.clientNom}</div>
               </div>
             </div>
             <div style={{ marginBottom: 20 }}>
@@ -2788,7 +2791,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
             <div style={{ marginBottom: 14 }}>
               <label className="lk-label">{tr.interventionTypeLabel}</label>
               <select className="lk-input" value={newBon.probleme} onChange={e => setNewBon(p => ({ ...p, probleme: e.target.value }))} style={{ cursor: "pointer" }}>
-                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{pLabel(p, lang)}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
@@ -3012,7 +3015,7 @@ function CalendarScreen({ bookings, artisanId, lang = "fr" }) {
                       </div>
                       {b.urgence && <div className="lk-tag-urgent">{tr.urgent}</div>}
                     </div>
-                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pr?.label || b.probleme}</div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pLabel(pr, lang) || b.probleme}</div>
                     <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{b.clientNom} · {b.adresse}</div>
                   </div>
                   <div style={{ color: T.accent, fontWeight: 800, fontSize: 16 }}>{fmt(b.montant)}</div>
@@ -3370,13 +3373,14 @@ function ProProfileTab({ account, setAccounts, bookings, lang = "fr" }) {
 const MARKET_CATS = ["Outils", "Pièces", "Équipements", "Matériaux"];
 const MARKET_ETATS = ["Neuf", "Très bon état", "Occasion"];
 const MARKET_METIERS = [
-  { id: "all",          label: "Tous secteurs", color: "#6b7280", icon: Icon.tool },
-  { id: "serrurier",    label: "Serrurerie",    color: "#1e3a8a", icon: Icon.key,     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=70" },
-  { id: "plombier",     label: "Plomberie",     color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
-  { id: "electricien",  label: "Électricité",   color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
-  { id: "chauffagiste", label: "Chauffage",     color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
-  { id: "fermetures",  label: "Fermetures",   color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=600&q=70" },
+  { id: "all",          label: "Tous secteurs", labelEn: "All sectors",   color: "#6b7280", icon: Icon.tool },
+  { id: "serrurier",    label: "Serrurerie",    labelEn: "Locksmithing",  color: "#1e3a8a", icon: Icon.key,     photo: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=70" },
+  { id: "plombier",     label: "Plomberie",     labelEn: "Plumbing",      color: "#0ea5e9", icon: Icon.droplet, photo: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&q=70" },
+  { id: "electricien",  label: "Électricité",   labelEn: "Electrical",    color: "#f59e0b", icon: Icon.bolt,    photo: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&q=70" },
+  { id: "chauffagiste", label: "Chauffage",     labelEn: "Heating",       color: "#ef4444", icon: Icon.flame,   photo: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=70" },
+  { id: "fermetures",   label: "Fermetures",    labelEn: "Closures",      color: "#6d28d9", icon: Icon.home,    photo: "https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=600&q=70" },
 ];
+const mLabel = (m, lang) => (lang === "en" && m?.labelEn) ? m.labelEn : (m?.label || "");
 
 function ProMarketplace({ account, listings, setListings, sales, setSales, lang }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -3489,7 +3493,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
               <div style={{ position: "absolute", inset: 0, background: isSelected ? `${m.color}dd` : m.id === "all" ? "rgba(30,30,30,.75)" : "rgba(10,10,10,.55)" }} />
               <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
                 {m.icon("#fff", 18)}
-                <div style={{ color: "#fff", fontWeight: 700, fontSize: 10, textAlign: "center", lineHeight: 1.2 }}>{m.label}</div>
+                <div style={{ color: "#fff", fontWeight: 700, fontSize: 10, textAlign: "center", lineHeight: 1.2 }}>{mLabel(m, lang)}</div>
                 <div style={{ background: "rgba(255,255,255,.25)", borderRadius: 20, padding: "1px 6px", fontSize: 9, color: "#fff", fontWeight: 700 }}>{count}</div>
               </div>
             </button>
@@ -3506,7 +3510,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
           <div style={{ position: "relative", height: "100%", display: "flex", alignItems: "center", gap: 12, padding: "0 16px" }}>
             {curMetier.icon("#fff", 22)}
             <div>
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{curMetier.label}</div>
+              <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>{mLabel(curMetier, lang)}</div>
               <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11 }}>{visible.length} annonce{visible.length > 1 ? "s" : ""}</div>
             </div>
           </div>
@@ -3582,7 +3586,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
                   <div style={{ position: "absolute", inset: 0, background: form.metier === m.id ? `${m.color}cc` : "rgba(20,20,20,.45)" }} />
                   <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: "100%" }}>
                     {m.icon("#fff", 14)}
-                    <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{m.label}</span>
+                    <span style={{ color: "#fff", fontWeight: 700, fontSize: 11 }}>{mLabel(m, lang)}</span>
                   </div>
                 </button>
               ))}
@@ -3962,7 +3966,7 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
     <div className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <div>
-          <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+          <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pLabel(pr, lang)}</div>
           <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -4333,7 +4337,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 16)}</div>
                         <div>
-                          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pr?.label}</div>
+                          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pLabel(pr, lang)}</div>
                           <div style={{ color: T.textLo, fontSize: 12 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
                         </div>
                       </div>
@@ -4754,7 +4758,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             {!litigeSubmitted ? (
               <>
                 <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 4 }}>{tr.openLitige}</div>
-                <div style={{ color: T.textLo, fontSize: 13, marginBottom: 16 }}>{PROBLEMES.find(p => p.id === litigeModal.probleme)?.label} · {litigeModal.clientNom}</div>
+                <div style={{ color: T.textLo, fontSize: 13, marginBottom: 16 }}>{pLabel(PROBLEMES.find(p => p.id === litigeModal.probleme), lang)} · {litigeModal.clientNom}</div>
                 <label className="lk-label">{tr.litigeTitle}</label>
                 <textarea className="lk-input" value={litigeText} onChange={e => setLitigeText(e.target.value)} placeholder={tr.litigePlaceholder} rows={4} style={{ resize: "none", marginBottom: 16 }} />
                 <button onClick={() => { setLitiges(p => [...p, { id: uid(), bookingId: litigeModal.id, text: litigeText, createdAt: ts() }]); setLitigeSubmitted(true); setTimeout(() => { setLitigeModal(null); setLitigeSubmitted(false); }, 2500); }} disabled={!litigeText.trim()} className="lk-btn" style={{ marginBottom: 10 }}>{tr.litigeSubmit}</button>
@@ -4867,8 +4871,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                         {m.icon("#fff", 18)}
                       </div>
                       <div>
-                        <div style={{ color: "#fff", fontWeight: 800, fontSize: 14, letterSpacing: "-.3px" }}>{m.label}</div>
-                        <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, marginTop: 3 }}>{m.desc}</div>
+                        <div style={{ color: "#fff", fontWeight: 800, fontSize: 14, letterSpacing: "-.3px" }}>{pLabel(m, lang)}</div>
+                        <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, marginTop: 3 }}>{pDesc(m, lang)}</div>
                       </div>
                     </div>
                   </button>
@@ -4889,7 +4893,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                             <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
                             <div>
-                              <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                              <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pLabel(pr, lang)}</div>
                               <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
                             </div>
                           </div>
@@ -4929,7 +4933,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.tool(T.accent, 14)}</div>
                           <div>
-                            <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                            <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pLabel(pr, lang)}</div>
                             <div style={{ color: T.textLo, fontSize: 11 }}>{a?.nom} · {fmtDate(b.createdAt)}</div>
                           </div>
                         </div>
@@ -4979,7 +4983,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 <div style={{ position: "absolute", inset: 0, background: selMetier === m.id ? `${m.color}bb` : "rgba(10,10,10,.55)" }} />
                 <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
                   {m.icon("#fff", 22)}
-                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12 }}>{m.label}</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 12 }}>{pLabel(m, lang)}</div>
                   {selMetier === m.id && <div style={{ position: "absolute", top: 6, right: 6 }}>{Icon.check("#fff", 14)}</div>}
                 </div>
               </button>
@@ -4997,8 +5001,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 {m.icon("#fff", 26)}
               </div>
               <div>
-                <div style={{ color: "#fff", fontWeight: 900, fontSize: isDesktop ? 22 : 18, letterSpacing: "-.5px" }}>{m.label}</div>
-                <div style={{ color: "rgba(255,255,255,.8)", fontSize: 13, marginTop: 3 }}>{m.desc}</div>
+                <div style={{ color: "#fff", fontWeight: 900, fontSize: isDesktop ? 22 : 18, letterSpacing: "-.5px" }}>{pLabel(m, lang)}</div>
+                <div style={{ color: "rgba(255,255,255,.8)", fontSize: 13, marginTop: 3 }}>{pDesc(m, lang)}</div>
               </div>
             </div>
           </div>
@@ -5025,8 +5029,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{p.label}</div>
-                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{p.desc}</div>
+                    <div style={{ color: T.textHi, fontWeight: 600, fontSize: 14 }}>{pLabel(p, lang)}</div>
+                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{pDesc(p, lang)}</div>
                   </div>
                   {p.urgence && <span className="lk-tag-urgent">URGENT</span>}
                   {isSelected && Icon.check(metierColor, 16)}
@@ -5718,7 +5722,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                 <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                     <div>
-                      <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pr?.label}</div>
+                      <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pLabel(pr, lang)}</div>
                       <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -5790,7 +5794,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                       <div style={{ width: 28, height: 28, borderRadius: 8, background: `${m.color}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {(METIERS.find(mt => mt.id === m.id)?.icon || Icon.tool)(m.color, 13)}
                       </div>
-                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12 }}>{m.label}</div>
+                      <div style={{ color: T.textHi, fontWeight: 700, fontSize: 12 }}>{mLabel(m, lang)}</div>
                     </div>
                     <div style={{ color: m.color, fontWeight: 800, fontSize: 15 }}>{fmt(m.com)}</div>
                     <div style={{ color: T.textLo, fontSize: 10 }}>{m.count} vente{m.count > 1 ? "s" : ""} · {fmt(m.vol)} CA</div>
@@ -6009,7 +6013,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             <div style={{ marginBottom: 14 }}>
               <label className="lk-label">{tr.typeLabel}</label>
               <select className="lk-input" value={newBon.probleme} onChange={e => setNewBon(p => ({ ...p, probleme: e.target.value }))} style={{ cursor: "pointer" }}>
-                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{pLabel(p, lang)}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmountLabel}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
@@ -6662,7 +6666,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             <div style={{ marginBottom: 14 }}>
               <label className="lk-label">{tr.interventionTypeLabel}</label>
               <select className="lk-input" value={newBon.probleme} onChange={e => setNewBon(p => ({ ...p, probleme: e.target.value }))} style={{ cursor: "pointer" }}>
-                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                {PROBLEMES.map(p => <option key={p.id} value={p.id}>{pLabel(p, lang)}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
