@@ -209,7 +209,7 @@ const TRANS = {
     loginWhyTitle: "Pourquoi choisir LOCKR ?",
     loginStat1: "500+", loginStat1Label: "artisans certifiés",
     loginStat2: "12 000+", loginStat2Label: "missions réalisées",
-    loginStat3: "4.9★", loginStat3Label: "note moyenne",
+    loginStat3: "98%", loginStat3Label: "clients satisfaits",
     wrongCredentials: "Email ou mot de passe incorrect", notVerified: "Compte non vérifié",
     loginTitle: "Connexion",
     // Marketplace
@@ -604,7 +604,7 @@ const TRANS = {
     loginWhyTitle: "Why choose LOCKR?",
     loginStat1: "500+", loginStat1Label: "certified craftsmen",
     loginStat2: "12 000+", loginStat2Label: "missions completed",
-    loginStat3: "4.9★", loginStat3Label: "average rating",
+    loginStat3: "98%", loginStat3Label: "satisfied clients",
     wrongCredentials: "Incorrect email or password", notVerified: "Account not verified",
     loginTitle: "Sign in",
     marketplace: "Marketplace", marketplaceDesc: "Buy and sell materials between pros",
