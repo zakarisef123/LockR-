@@ -53,6 +53,37 @@ const TRANS = {
     motorcycle: "Moto", bicycle: "Vélo", onFoot: "À pied",
     missions: "Missions", inProgress: "En cours", bonuses: "Bons", chat: "Chat",
     stats: "Stats", history: "Historique",
+    // Auto-entreprise & facturation électronique
+    autoTab: "Auto-Entreprise", factuTab: "Factu. Électronique",
+    aeTitle: "Gestion Auto-Entrepreneur", aeCaTitle: "Chiffre d'affaires",
+    aeCaMois: "CA ce mois", aeCaAn: "CA annuel", aeSeuilMois: "Seuil mensuel", aeSeuilAn: "Seuil annuel",
+    aeCotisations: "Cotisations URSSAF", aeCotisRate: "Taux de cotisations (22%)",
+    aeCotisCalc: "Cotisations estimées", aeCotisAlert: "Pensez à déclarer avant le",
+    aeSeuilAlert: "Attention : seuil TVA approché ! (34 400 €)", aeSeuilOk: "Sous le seuil TVA",
+    aeCharges: "Charges sociales estimées", aeDeclaration: "Déclaration URSSAF",
+    aeDeclare: "Déclarer ce mois", aeDeclareTitle: "Déclarer le CA du mois",
+    aeCaSaisie: "CA à déclarer (€)", aeConfirmDecl: "Confirmer la déclaration", aeDeclDone: "Déclaration enregistrée",
+    aeFrais: "Frais professionnels", aeAddFrais: "Ajouter un frais",
+    aeFraisLabel: "Libellé", aeFraisMontant: "Montant (€)", aeFraisDate: "Date", aeFraisCat: "Catégorie",
+    aeFraisCats: "Carburant,Outillage,Formation,Fournitures,Déplacement,Téléphone,Assurance,Autre",
+    aeRecap: "Récapitulatif fiscal", aeNetEstime: "Revenu net estimé",
+    aeTvaFranchise: "Franchise en base de TVA", aeRegimeMicro: "Régime micro-entrepreneur",
+    aeFormation: "CFP (contribution formation)", aeFormationRate: "0,30% du CA",
+    aeCFE: "CFE (cotisation foncière des entreprises)", aeRappelCFE: "Exigible en décembre",
+    aeMemo: "Mémo fiscal", aeMemoPlaceholder: "Notes, rappels, échéances…",
+    // Facturation électronique
+    feTitle: "Facturation Électronique — Réforme 2026", feIntro: "La loi de finances 2024 impose la facturation électronique obligatoire entre professionnels (B2B) en France. Calendrier progressif à partir de septembre 2026.",
+    feCalendar: "Calendrier d'application", feCalendarItems: "Sept. 2026 — Réception obligatoire (toutes entreprises)|Jan. 2027 — Emission obligatoire PME/ETI|Jan. 2027 — Emission obligatoire TPE/micro-entrepreneurs",
+    fePDP: "Plateforme de Dématérialisation Partenaire (PDP)", fePDPDesc: "Vous devez choisir une PDP agréée par la DGFiP ou utiliser le portail public Chorus Pro pour émettre et recevoir vos factures électroniques.",
+    fePDPList: "Chorus Pro (portail public gratuit)|Pennylane|Sellsy|Sage|Cegid|QuickBooks|Indy (auto-entrepreneurs)|Tiime|Axonaut",
+    feMentions: "Mentions obligatoires sur facture électronique", feMentionsList: "Numéro SIREN/SIRET|Numéro de TVA intracommunautaire (si applicable)|Numéro de facture (séquence chronologique)|Date d'émission|Date de prestation|Désignation précise de la prestation|Montant HT, TVA, TTC|Délai de paiement et pénalités de retard|Mention TVA non applicable (franchise) si applicable|Coordonnées complètes émetteur et destinataire",
+    feFormats: "Formats acceptés", feFormatsList: "Factur-X (PDF enrichi XML)|UBL 2.1|CII (Cross Industry Invoice)",
+    feStatus: "Votre statut", feStatusAE: "Micro-entrepreneur : émission obligatoire en janvier 2027 — réception dès septembre 2026",
+    feChecklist: "Checklist mise en conformité", feCheckItems: "Choisir une PDP ou ouvrir un compte Chorus Pro|Mettre à jour votre logiciel de facturation|Vérifier les mentions obligatoires sur vos modèles|Activer la réception électronique avant sept. 2026|Informer vos clients professionnels|Archiver vos factures électroniques 10 ans",
+    feArchive: "Archivage légal", feArchiveDesc: "Les factures électroniques doivent être conservées 10 ans dans un format garantissant leur intégrité (non modifiable). Utilisez un SAE (Système d'Archivage Électronique) agréé.",
+    feLcti: "Loi LCTI & mentions légales", feLctiDesc: "Depuis 2020, le médiateur de la consommation doit être mentionné sur vos factures et devis. Sanction : amende jusqu'à 15 000 €.",
+    feReady: "Je suis prêt pour la réforme 2026", feNotReady: "Mise en conformité à faire",
+    feMyChorPro: "Mon numéro Chorus Pro / PDP", feChorusPlaceholder: "Entrez votre référence PDP…",
     noMissionPending: "Aucune mission en attente", noMissionActive: "Aucune mission active",
     start: "Démarrer", refuse: "Refuser", viewMission: "Voir la mission en cours",
     earnings: "Mes revenus", thisMonth: "Ce mois",
@@ -319,6 +350,56 @@ const TRANS = {
     // Mission statuses
     statusTerminee: "Terminée", statusEnAttente: "En attente", statusAcceptee: "Acceptée",
     statusPayee: "Payée", rdvScheduledShort: "✓ RDV planifié", delayExpired: "Délai expiré — bon remis en attente",
+    // Cookie consent
+    cookieTitle: "Votre vie privée nous importe",
+    cookieText: "Nous utilisons des cookies essentiels pour le fonctionnement de l'application, et des cookies analytiques pour améliorer votre expérience. Conformément au RGPD et à la directive ePrivacy, votre consentement est requis pour les cookies non essentiels.",
+    cookieAcceptAll: "Tout accepter", cookieRejectAll: "Refuser les non-essentiels", cookieCustomize: "Personnaliser",
+    cookieEssential: "Cookies essentiels", cookieEssentialDesc: "Authentification, session, sécurité. Toujours actifs.",
+    cookieAnalytics: "Cookies analytiques", cookieAnalyticsDesc: "Amélioration de l'expérience utilisateur. Anonymisés.",
+    cookieMarketing: "Cookies marketing", cookieMarketingDesc: "Personnalisation des offres. Désactivés par défaut.",
+    cookieSavePrefs: "Enregistrer mes préférences",
+    cookieLearnMore: "Politique de confidentialité",
+    // Mentions légales / CGU
+    mentionsLegales: "Mentions légales", cgu: "CGU", cgv: "CGV", privacyPolicy: "Politique de confidentialité",
+    legalFooter: "Mentions légales · CGU · Politique de confidentialité · Médiateur",
+    mentionsTitle: "Mentions légales — LOCKR",
+    mentionsEditor: "Éditeur : LOCKR SAS — Capital social : 10 000 € — SIRET : 000 000 000 00000 — RCS Paris",
+    mentionsHost: "Hébergement : Vercel Inc. — 340 Pine Street, San Francisco, CA — USA",
+    mentionsDPO: "DPO (Délégué à la Protection des Données) : dpo@lockr.fr",
+    mentionsMediateur: "Médiateur de la consommation : CM2C — 14 rue Saint-Jean 75017 Paris — mediateur@cm2c.net",
+    mentionsCnil: "Responsable de traitement : LOCKR SAS — Déclaration CNIL conforme au RGPD (UE 2016/679)",
+    cguAccept: "J'accepte les CGU et la politique de confidentialité",
+    cguRequired: "Vous devez accepter les CGU pour continuer",
+    cguLink: "Lire les CGU",
+    // RGPD rights
+    rgpdTitle: "Vos droits RGPD", rgpdRightsTitle: "Droits sur vos données personnelles",
+    rgpdAccess: "Droit d'accès — demander une copie de vos données",
+    rgpdRectif: "Droit de rectification — corriger vos données inexactes",
+    rgpdErase: "Droit à l'effacement — supprimer votre compte et vos données",
+    rgpdPorta: "Droit à la portabilité — exporter vos données (JSON/CSV)",
+    rgpdOppose: "Droit d'opposition — s'opposer au traitement à des fins marketing",
+    rgpdLimit: "Droit à la limitation — restreindre l'utilisation de vos données",
+    rgpdContact: "Contacter le DPO : dpo@lockr.fr — Délai de réponse : 30 jours",
+    rgpdCnil: "Réclamation CNIL : cnil.fr/plaintes",
+    rgpdRequest: "Faire une demande RGPD",
+    rgpdRequestSent: "Demande envoyée — réponse sous 30 jours",
+    rgpdExport: "Exporter mes données", rgpdDelete: "Supprimer mon compte",
+    rgpdDeleteConfirm: "Êtes-vous sûr ? Cette action est irréversible.",
+    // Admin digital conformité
+    adminDigitalTab: "Conformité Digitale",
+    digitalConformiteTitle: "Conformité Numérique & Lois Digitales",
+    digitalConformiteScore: "Score de conformité globale",
+    digitalLaws: [
+      { id: "rgpd", label: "RGPD / Règlement UE 2016/679", color: "#2563eb", desc: "Protection des données personnelles. Consentement, DPO, registre de traitement, notification de failles sous 72h.", items: ["Registre des traitements tenu à jour","DPO désigné (ou justification d'exemption)","Consentement cookies conforme (opt-in)","Politique de confidentialité accessible","Notification CNIL failles < 72h","Durées de conservation définies","Sous-traitants DPA signés"] },
+      { id: "lcen", label: "LCEN — Loi pour la Confiance dans l'Économie Numérique (2004)", color: "#7c3aed", desc: "Mentions légales obligatoires sur tout site/app commercial, responsabilité hébergeur.", items: ["Mentions légales publiées (éditeur, hébergeur)","CGU/CGV accessibles avant achat","Droit de rétractation 14j mentionné","Médiateur de la consommation indiqué","Archivage contrats électroniques 10 ans","Accusé de réception commandes électroniques"] },
+      { id: "dsa", label: "DSA — Digital Services Act (UE 2022/2065)", color: "#059669", desc: "Obligations pour les places de marché en ligne : signalement contenus illicites, transparence algorithmique.", items: ["Mécanisme de signalement d'annonces illicites","Transparence sur les recommandations algorithmiques","Point de contact unique désigné","Rapport de transparence annuel (si > 45M utilisateurs)","Politique de modération publiée","Lutte contre les faux avis en ligne"] },
+      { id: "nis2", label: "NIS2 — Directive Cybersécurité (UE 2022/2555)", color: "#dc2626", desc: "Cybersécurité renforcée pour les opérateurs de services essentiels et numériques.", items: ["Politique de sécurité des SI documentée","Gestion des incidents cyber (détection + réponse)","Tests de pénétration réguliers","MFA activé pour tous les accès admin","Chiffrement des données en transit (TLS 1.3)","Chiffrement des données au repos","Sauvegardes régulières testées","Formation cybersécurité des équipes"] },
+      { id: "sren", label: "Loi SREN — Sécurité et Régulation de l'Espace Numérique (2024)", color: "#d97706", desc: "Loi française transposant DSA + nouvelles obligations cyber, filtrage, identité numérique.", items: ["Blocage contenus illicites (CSAM, terrorisme)","Identité numérique France Connect+ compatible","Filtre parental accessible","Information utilisateurs sur les risques en ligne","Coopération avec l'ANSSI si incident majeur"] },
+      { id: "rgaa", label: "RGAA v4 — Accessibilité Numérique (Décret 2019-768)", color: "#0891b2", desc: "Conformité accessibilité pour les services publics et entreprises >250M€ CA. Bonnes pratiques recommandées pour tous.", items: ["Déclaration d'accessibilité publiée","Contrastes couleurs conformes (AA minimum)","Navigation clavier complète","Alternatives textes images","Sous-titres vidéos","Formulaires accessibles (labels, erreurs)"] },
+      { id: "eprivacy", label: "Directive ePrivacy — Cookies (transposée CNIL 2020)", color: "#16a34a", desc: "Consentement opt-in obligatoire pour tout cookie non essentiel. Durée max 13 mois.", items: ["Bandeau cookies conforme (opt-in)","Refus aussi simple qu'accepter","Cookies session < 13 mois","Pas de cookie wall (accès conditionné)","Liste cookies publiée","Analytics anonymisés ou consentis"] },
+      { id: "tvafraude", label: "Loi Anti-fraude TVA (2018) — Logiciels de caisse", color: "#be185d", desc: "Logiciels de caisse certifiés NF525 ou équivalent. Inaltérabilité des données de transaction.", items: ["Logiciel de caisse certifié NF525","Données de transactions inaltérables","Piste d'audit complète des paiements","Attestation éditeur logiciel","Archivage transactions 6 ans"] },
+      { id: "pcidss", label: "PCI-DSS v4 — Sécurité des Paiements par Carte", color: "#9333ea", desc: "Standard de sécurité pour le traitement des données de carte bancaire.", items: ["Prestataire PSP certifié PCI-DSS","Aucune donnée carte stockée en clair","HTTPS sur toutes les pages de paiement","3DS2 (authentification forte SCA/DSP2) activé","Tests de vulnérabilité réguliers","Journaux d'accès conservés 1 an"] },
+    ],
   },
   en: {
     appTagline: "The craftsman arrives. You stay calm.",
@@ -352,6 +433,35 @@ const TRANS = {
     motorcycle: "Motorcycle", bicycle: "Bicycle", onFoot: "On foot",
     missions: "Missions", inProgress: "In progress", bonuses: "Bonuses", chat: "Chat",
     stats: "Stats", history: "History",
+    autoTab: "Self-Employment", factuTab: "E-Invoicing",
+    aeTitle: "Self-Employment Management", aeCaTitle: "Revenue",
+    aeCaMois: "Revenue this month", aeCaAn: "Annual revenue", aeSeuilMois: "Monthly threshold", aeSeuilAn: "Annual threshold",
+    aeCotisations: "Social contributions", aeCotisRate: "Contribution rate (22%)",
+    aeCotisCalc: "Estimated contributions", aeCotisAlert: "Remember to file before",
+    aeSeuilAlert: "Warning: VAT threshold approaching! (€34,400)", aeSeuilOk: "Below VAT threshold",
+    aeCharges: "Estimated social charges", aeDeclaration: "URSSAF declaration",
+    aeDeclare: "File this month", aeDeclareTitle: "File monthly revenue",
+    aeCaSaisie: "Revenue to declare (€)", aeConfirmDecl: "Confirm filing", aeDeclDone: "Filing recorded",
+    aeFrais: "Business expenses", aeAddFrais: "Add expense",
+    aeFraisLabel: "Description", aeFraisMontant: "Amount (€)", aeFraisDate: "Date", aeFraisCat: "Category",
+    aeFraisCats: "Fuel,Tools,Training,Supplies,Travel,Phone,Insurance,Other",
+    aeRecap: "Tax summary", aeNetEstime: "Estimated net income",
+    aeTvaFranchise: "VAT exemption (franchise en base)", aeRegimeMicro: "Micro-entrepreneur scheme",
+    aeFormation: "VTC (vocational training contribution)", aeFormationRate: "0.30% of revenue",
+    aeCFE: "CFE (local business tax)", aeRappelCFE: "Due in December",
+    aeMemo: "Tax memo", aeMemoPlaceholder: "Notes, reminders, deadlines…",
+    feTitle: "Electronic Invoicing — 2026 Reform", feIntro: "The 2024 finance law makes electronic invoicing mandatory for B2B transactions in France. Progressive rollout from September 2026.",
+    feCalendar: "Implementation calendar", feCalendarItems: "Sept. 2026 — Mandatory reception (all companies)|Jan. 2027 — Mandatory issuance SMEs/mid-caps|Jan. 2027 — Mandatory issuance micro-entrepreneurs",
+    fePDP: "Partner Dematerialisation Platform (PDP)", fePDPDesc: "You must choose a DGFiP-approved PDP or use the public Chorus Pro portal to issue and receive electronic invoices.",
+    fePDPList: "Chorus Pro (free public portal)|Pennylane|Sellsy|Sage|Cegid|QuickBooks|Indy (self-employed)|Tiime|Axonaut",
+    feMentions: "Mandatory fields on electronic invoice", feMentionsList: "SIREN/SIRET number|Intra-community VAT number (if applicable)|Invoice number (chronological)|Issue date|Service date|Precise service description|Amount excl. VAT, VAT, incl. VAT|Payment terms and late penalties|VAT exemption notice (franchise) if applicable|Full contact details of issuer and recipient",
+    feFormats: "Accepted formats", feFormatsList: "Factur-X (XML-enriched PDF)|UBL 2.1|CII (Cross Industry Invoice)",
+    feStatus: "Your status", feStatusAE: "Micro-entrepreneur: mandatory issuance from January 2027 — reception required from September 2026",
+    feChecklist: "Compliance checklist", feCheckItems: "Choose a PDP or open a Chorus Pro account|Update your invoicing software|Check mandatory fields on your templates|Enable electronic reception before Sept. 2026|Notify your business clients|Archive electronic invoices for 10 years",
+    feArchive: "Legal archiving", feArchiveDesc: "Electronic invoices must be kept for 10 years in a tamper-proof format. Use an approved EAS (Electronic Archiving System).",
+    feLcti: "Consumer mediation & legal notices", feLctiDesc: "Since 2020, the consumer mediator must be mentioned on all invoices and quotes. Penalty: up to €15,000 fine.",
+    feReady: "I'm ready for the 2026 reform", feNotReady: "Compliance action needed",
+    feMyChorPro: "My Chorus Pro / PDP reference", feChorusPlaceholder: "Enter your PDP reference…",
     noMissionPending: "No pending mission", noMissionActive: "No active mission",
     start: "Start", refuse: "Decline", viewMission: "View ongoing mission",
     earnings: "My earnings", thisMonth: "This month",
@@ -615,6 +725,56 @@ const TRANS = {
     // Mission statuses
     statusTerminee: "Completed", statusEnAttente: "Pending", statusAcceptee: "Accepted",
     statusPayee: "Paid", rdvScheduledShort: "✓ Appointment scheduled", delayExpired: "Time's up — bonus reassigned",
+    // Cookie consent
+    cookieTitle: "Your privacy matters",
+    cookieText: "We use essential cookies for the app to function, and analytics cookies to improve your experience. Under GDPR and the ePrivacy directive, your consent is required for non-essential cookies.",
+    cookieAcceptAll: "Accept all", cookieRejectAll: "Reject non-essential", cookieCustomize: "Customize",
+    cookieEssential: "Essential cookies", cookieEssentialDesc: "Authentication, session, security. Always active.",
+    cookieAnalytics: "Analytics cookies", cookieAnalyticsDesc: "Improve user experience. Anonymised.",
+    cookieMarketing: "Marketing cookies", cookieMarketingDesc: "Personalised offers. Off by default.",
+    cookieSavePrefs: "Save my preferences",
+    cookieLearnMore: "Privacy policy",
+    // Legal / T&Cs
+    mentionsLegales: "Legal notices", cgu: "T&Cs", cgv: "T&Cs (Sales)", privacyPolicy: "Privacy policy",
+    legalFooter: "Legal notices · T&Cs · Privacy policy · Mediator",
+    mentionsTitle: "Legal Notices — LOCKR",
+    mentionsEditor: "Publisher: LOCKR SAS — Share capital: €10,000 — SIRET: 000 000 000 00000 — RCS Paris",
+    mentionsHost: "Hosting: Vercel Inc. — 340 Pine Street, San Francisco, CA — USA",
+    mentionsDPO: "DPO (Data Protection Officer): dpo@lockr.fr",
+    mentionsMediateur: "Consumer mediator: CM2C — 14 rue Saint-Jean 75017 Paris — mediateur@cm2c.net",
+    mentionsCnil: "Data controller: LOCKR SAS — GDPR compliant (EU 2016/679)",
+    cguAccept: "I accept the T&Cs and privacy policy",
+    cguRequired: "You must accept the T&Cs to continue",
+    cguLink: "Read T&Cs",
+    // GDPR rights
+    rgpdTitle: "Your GDPR rights", rgpdRightsTitle: "Your personal data rights",
+    rgpdAccess: "Right of access — request a copy of your data",
+    rgpdRectif: "Right to rectification — correct inaccurate data",
+    rgpdErase: "Right to erasure — delete your account and data",
+    rgpdPorta: "Right to portability — export your data (JSON/CSV)",
+    rgpdOppose: "Right to object — opt out of marketing processing",
+    rgpdLimit: "Right to restriction — limit use of your data",
+    rgpdContact: "Contact DPO: dpo@lockr.fr — Response time: 30 days",
+    rgpdCnil: "CNIL complaint: cnil.fr/plaintes",
+    rgpdRequest: "Submit a GDPR request",
+    rgpdRequestSent: "Request sent — response within 30 days",
+    rgpdExport: "Export my data", rgpdDelete: "Delete my account",
+    rgpdDeleteConfirm: "Are you sure? This action is irreversible.",
+    // Admin digital compliance
+    adminDigitalTab: "Digital Compliance",
+    digitalConformiteTitle: "Digital Compliance & Digital Laws",
+    digitalConformiteScore: "Overall compliance score",
+    digitalLaws: [
+      { id: "rgpd", label: "GDPR / EU Regulation 2016/679", color: "#2563eb", desc: "Personal data protection. Consent, DPO, processing register, breach notification within 72h.", items: ["Processing register up to date","DPO appointed (or exemption justified)","Cookie consent compliant (opt-in)","Privacy policy accessible","CNIL breach notification < 72h","Retention periods defined","DPA signed with sub-processors"] },
+      { id: "lcen", label: "LCEN — Digital Economy Trust Act (2004)", color: "#7c3aed", desc: "Mandatory legal notices on any commercial website/app, hosting liability.", items: ["Legal notices published (publisher, host)","T&Cs/Sales T&Cs accessible before purchase","14-day right of withdrawal mentioned","Consumer mediator listed","Electronic contracts archived 10 years","Order acknowledgement sent electronically"] },
+      { id: "dsa", label: "DSA — Digital Services Act (EU 2022/2065)", color: "#059669", desc: "Obligations for online marketplaces: illegal content reporting, algorithmic transparency.", items: ["Illegal listing reporting mechanism","Transparency on algorithmic recommendations","Single point of contact designated","Annual transparency report (if >45M users)","Moderation policy published","Fake review prevention"] },
+      { id: "nis2", label: "NIS2 — Cybersecurity Directive (EU 2022/2555)", color: "#dc2626", desc: "Enhanced cybersecurity for essential and digital service operators.", items: ["IT security policy documented","Cyber incident management (detection + response)","Regular penetration testing","MFA enabled for all admin access","Data in transit encrypted (TLS 1.3)","Data at rest encrypted","Regular tested backups","Cybersecurity training for teams"] },
+      { id: "sren", label: "SREN Act — Digital Security & Regulation (France 2024)", color: "#d97706", desc: "French law transposing DSA + new cyber obligations, filtering, digital identity.", items: ["Illegal content blocking (CSAM, terrorism)","France Connect+ digital identity compatible","Parental filter accessible","Users informed of online risks","Cooperation with ANSSI on major incidents"] },
+      { id: "rgaa", label: "RGAA v4 — Web Accessibility (Decree 2019-768)", color: "#0891b2", desc: "Accessibility compliance for public services and companies >€250M revenue. Best practice for all.", items: ["Accessibility statement published","Colour contrasts compliant (AA minimum)","Full keyboard navigation","Image alt text","Video subtitles","Accessible forms (labels, errors)"] },
+      { id: "eprivacy", label: "ePrivacy Directive — Cookies (CNIL 2020)", color: "#16a34a", desc: "Opt-in consent mandatory for all non-essential cookies. Max duration 13 months.", items: ["Cookie banner compliant (opt-in)","Reject as easy as accept","Session cookies < 13 months","No cookie wall (no conditional access)","Cookie list published","Analytics anonymised or consented"] },
+      { id: "tvafraude", label: "Anti-VAT Fraud Act (France 2018) — POS Software", color: "#be185d", desc: "Certified NF525 (or equivalent) POS software. Transaction data immutability.", items: ["NF525-certified POS software","Immutable transaction data","Complete payment audit trail","Software publisher certificate","Transactions archived 6 years"] },
+      { id: "pcidss", label: "PCI-DSS v4 — Payment Card Security", color: "#9333ea", desc: "Security standard for processing payment card data.", items: ["PCI-DSS certified PSP used","No card data stored in plain text","HTTPS on all payment pages","3DS2 (strong auth SCA/PSD2) enabled","Regular vulnerability testing","Access logs kept 1 year"] },
+    ],
   }
 };
 
@@ -1868,6 +2028,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
   const [errs, setErrs] = useState({});
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
+  const [cguOk, setCguOk] = useState(false);
 
   const clr = k => setErrs(p => { const e = { ...p }; delete e[k]; return e; });
 
@@ -1880,6 +2041,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
     if (!tel || tel.replace(/\D/g, "").length < 6) e.tel = tr.invalidPhone;
     if (pass.length < 6) e.pass = tr.minChars;
     if (pass !== confirm) e.confirm = tr.passMismatch;
+    if (!cguOk) e.cgu = tr.cguRequired;
     return e;
   };
 
@@ -1942,6 +2104,16 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
             <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder={tr.minChars} type="password" err={errs.pass} />
             <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder={tr.repeatPassword} type="password" err={errs.confirm} />
           </div>
+          {/* CGU */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input type="checkbox" checked={cguOk} onChange={e => { setCguOk(e.target.checked); clr("cgu"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+              <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>
+                {tr.cguAccept} — <span style={{ color: T.accent, textDecoration: "underline" }}>{tr.cguLink}</span>
+              </span>
+            </label>
+            {errs.cgu && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.cgu}</div>}
+          </div>
           <button onClick={submit} className="lk-btn">{tr.createMyAccount} {Icon.arrow("#fff", 14)}</button>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
@@ -1979,6 +2151,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
   const [errs, setErrs] = useState({});
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
+  const [cguOk, setCguOk] = useState(false);
   const idRef = useRef(null);
   const insRef = useRef(null);
   const kbisRef = useRef(null);
@@ -2003,6 +2176,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
     if (!siret.replace(/\s/g, "").match(/^\d{14}$/)) e.siret = tr.siretInvalid;
     if (!idCardFile) e.idCard = tr.idCardRequired;
     if (!insuranceFile) e.insurance = tr.insuranceRequired;
+    if (!cguOk) e.cgu = tr.cguRequired;
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -2187,6 +2361,13 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
               </div>
             </div>
 
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input type="checkbox" checked={cguOk} onChange={e => { setCguOk(e.target.checked); clr("cgu"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+                <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>{tr.cguAccept} — <span style={{ color: T.accent, textDecoration: "underline" }}>{tr.cguLink}</span></span>
+              </label>
+              {errs.cgu && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.cgu}</div>}
+            </div>
             <button onClick={submit} className="lk-btn">{tr.submitDossier} {Icon.check("#fff", 14)}</button>
           </div>
         )}
@@ -3498,6 +3679,20 @@ function ProProfileTab({ account, setAccounts, bookings, lang = "fr" }) {
       </div>
 
       <button onClick={save} className="lk-btn">{Icon.check("#fff", 15)} {tr.saveProfile}</button>
+
+      {/* RGPD Rights */}
+      <div className="lk-card" style={{ padding: "18px 20px", marginTop: 20, borderLeft: `4px solid #2563eb` }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 10 }}>🛡️ {tr.rgpdTitle}</div>
+        <div style={{ color: T.textLo, fontSize: 11, marginBottom: 12 }}>{tr.rgpdRightsTitle}</div>
+        {[tr.rgpdAccess, tr.rgpdRectif, tr.rgpdErase, tr.rgpdPorta, tr.rgpdOppose, tr.rgpdLimit].map((r, i) => (
+          <div key={i} style={{ fontSize: 12, color: T.textMid, marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid rgba(37,99,235,.25)` }}>{r}</div>
+        ))}
+        <div style={{ fontSize: 11, color: T.textLo, marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,.06)" }}>
+          <div>{tr.rgpdContact}</div>
+          <div>{tr.rgpdCnil}</div>
+        </div>
+        <button onClick={() => alert(tr.rgpdRequestSent)} className="lk-ghost" style={{ marginTop: 12, fontSize: 12 }}>{tr.rgpdRequest}</button>
+      </div>
     </div>
   );
 }
@@ -4141,6 +4336,280 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
 }
 
 /* ─── PRO APP ─── */
+/* ─── AUTO-ENTREPRENEUR TAB ─── */
+function AutoEntrepriseTab({ account, bookings, artisanId, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const done = bookings.filter(b => b.artisanId === artisanId && b.statut === "terminée");
+  const now = new Date();
+  const caMonth = done.filter(b => { const d = new Date(b.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((s, b) => s + (b.montantFinal || b.montant || 0), 0);
+  const caYear = done.filter(b => new Date(b.createdAt).getFullYear() === now.getFullYear()).reduce((s, b) => s + (b.montantFinal || b.montant || 0), 0);
+  const SEUIL_TVA = 34400;
+  const cotis = caMonth * 0.22;
+  const formation = caMonth * 0.003;
+  const net = caMonth - cotis - formation;
+  const nextDecl = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString("fr-FR");
+
+  const [frais, setFrais] = useState([
+    { id: "f1", label: "Carburant — juin", montant: 85, date: "2026-06-05", cat: "Carburant" },
+    { id: "f2", label: "Perceuse Bosch", montant: 210, date: "2026-06-08", cat: "Outillage" },
+  ]);
+  const [fraisForm, setFraisForm] = useState({ label: "", montant: "", date: new Date().toISOString().slice(0, 10), cat: "Outillage" });
+  const [showFraisForm, setShowFraisForm] = useState(false);
+  const [declarations, setDeclarations] = useState([
+    { id: "d1", mois: "Mai 2026", ca: 3200, cotis: 704, statut: "payée" },
+    { id: "d2", mois: "Avr 2026", ca: 2850, cotis: 627, statut: "payée" },
+  ]);
+  const [declModal, setDeclModal] = useState(false);
+  const [declCa, setDeclCa] = useState("");
+  const [memo, setMemo] = useState("");
+  const totalFrais = frais.reduce((s, f) => s + f.montant, 0);
+  const fraisCats = (lang === "en" ? tr.aeFraisCats : tr.aeFraisCats).split(",");
+  const nearSeuil = caYear > SEUIL_TVA * 0.8;
+
+  return (
+    <div style={{ padding: "14px 14px 80px" }}>
+      <div style={{ fontWeight: 800, fontSize: 18, color: T.textHi, marginBottom: 4 }}>{tr.aeTitle}</div>
+      <div style={{ fontSize: 12, color: T.textLo, marginBottom: 18 }}>{tr.aeRegimeMicro}</div>
+
+      {/* KPI CA */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+        {[
+          { label: tr.aeCaMois, val: `${Math.round(caMonth).toLocaleString("fr-FR")} €`, sub: `Seuil : ${SEUIL_TVA.toLocaleString("fr-FR")} €/an`, col: T.accent },
+          { label: tr.aeCaAn, val: `${Math.round(caYear).toLocaleString("fr-FR")} €`, sub: nearSeuil ? tr.aeSeuilAlert : tr.aeSeuilOk, col: nearSeuil ? T.warn : T.success },
+        ].map((k, i) => (
+          <div key={i} className="lk-card" style={{ padding: "14px 16px" }}>
+            <div style={{ fontWeight: 900, fontSize: 22, color: k.col }}>{k.val}</div>
+            <div style={{ fontSize: 11, color: T.textMid, marginTop: 2 }}>{k.label}</div>
+            <div style={{ fontSize: 10, color: nearSeuil && i === 1 ? T.warn : T.textLo, marginTop: 4, fontWeight: nearSeuil && i === 1 ? 700 : 400 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Cotisations */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.aeCotisations}</div>
+        {[
+          [tr.aeCotisRate, `${Math.round(cotis)} €`],
+          [tr.aeFormation + ` (${tr.aeFormationRate})`, `${Math.round(formation)} €`],
+          [tr.aeNetEstime, `${Math.round(net)} €`],
+        ].map(([l, v], i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", paddingBottom: i < 2 ? 8 : 0, borderBottom: i < 2 ? "1px solid rgba(0,0,0,.05)" : "none", marginBottom: i < 2 ? 8 : 0 }}>
+            <span style={{ fontSize: 13, color: T.textMid }}>{l}</span>
+            <span style={{ fontWeight: 700, fontSize: 13, color: i === 2 ? T.success : T.textHi }}>{v}</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 10, background: "rgba(201,160,48,.06)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: T.accent, fontWeight: 600 }}>
+          ⏰ {tr.aeCotisAlert} {nextDecl}
+        </div>
+      </div>
+
+      {/* Déclaration URSSAF */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{tr.aeDeclaration}</div>
+          <button onClick={() => setDeclModal(true)} className="lk-btn" style={{ width: "auto", padding: "7px 14px", fontSize: 12 }}>{tr.aeDeclare}</button>
+        </div>
+        {declarations.map(d => (
+          <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{d.mois}</div>
+              <div style={{ fontSize: 11, color: T.textLo }}>CA {d.ca.toLocaleString("fr-FR")} € · Cotis. {d.cotis.toLocaleString("fr-FR")} €</div>
+            </div>
+            <span className="lk-badge-ok" style={{ fontSize: 10 }}>{d.statut}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Frais professionnels */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{tr.aeFrais}</div>
+            <div style={{ fontSize: 11, color: T.textLo, marginTop: 2 }}>Total : {totalFrais.toLocaleString("fr-FR")} €</div>
+          </div>
+          <button onClick={() => setShowFraisForm(p => !p)} className="lk-ghost" style={{ fontSize: 12, padding: "6px 12px" }}>{Icon.plus(T.accent, 12)} {tr.aeAddFrais}</button>
+        </div>
+        {showFraisForm && (
+          <div style={{ background: "rgba(0,0,0,.02)", borderRadius: 10, padding: "12px", marginBottom: 12 }}>
+            <input className="lk-input" placeholder={tr.aeFraisLabel} value={fraisForm.label} onChange={e => setFraisForm(p => ({ ...p, label: e.target.value }))} style={{ marginBottom: 8 }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <input type="number" className="lk-input" placeholder={tr.aeFraisMontant} value={fraisForm.montant} onChange={e => setFraisForm(p => ({ ...p, montant: e.target.value }))} />
+              <input type="date" className="lk-input" value={fraisForm.date} onChange={e => setFraisForm(p => ({ ...p, date: e.target.value }))} />
+            </div>
+            <select className="lk-input" value={fraisForm.cat} onChange={e => setFraisForm(p => ({ ...p, cat: e.target.value }))} style={{ marginBottom: 8, cursor: "pointer" }}>
+              {fraisCats.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button onClick={() => {
+              if (!fraisForm.label || !fraisForm.montant) return;
+              setFrais(p => [...p, { id: uid(), ...fraisForm, montant: parseFloat(fraisForm.montant) }]);
+              setFraisForm({ label: "", montant: "", date: new Date().toISOString().slice(0, 10), cat: "Outillage" });
+              setShowFraisForm(false);
+            }} className="lk-btn" style={{ fontSize: 12 }}>Ajouter</button>
+          </div>
+        )}
+        {frais.map(f => (
+          <div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: "1px solid rgba(0,0,0,.04)" }}>
+            <div>
+              <div style={{ fontSize: 13, color: T.textHi }}>{f.label}</div>
+              <div style={{ fontSize: 11, color: T.textLo }}>{f.cat} · {f.date}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: T.danger }}>-{f.montant} €</span>
+              <button onClick={() => setFrais(p => p.filter(x => x.id !== f.id))} style={{ background: "none", border: "none", cursor: "pointer", color: T.textLo, fontSize: 14, fontFamily: "'Inter',sans-serif" }}>✕</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CFE & mémo */}
+      <div className="lk-desktop-2col" style={{ marginBottom: 14 }}>
+        <div className="lk-card" style={{ padding: "14px 16px" }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 6 }}>{tr.aeCFE}</div>
+          <div style={{ fontSize: 12, color: T.textMid }}>{tr.aeRappelCFE}</div>
+          <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>Exonération 1ère année d'activité.</div>
+        </div>
+        <div className="lk-card" style={{ padding: "14px 16px" }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 8 }}>{tr.aeTvaFranchise}</div>
+          <div style={{ fontSize: 12, color: T.textMid }}>Seuil : {SEUIL_TVA.toLocaleString("fr-FR")} €/an (services)</div>
+          <div style={{ fontSize: 11, color: nearSeuil ? T.warn : T.success, marginTop: 4, fontWeight: 600 }}>{nearSeuil ? "⚠️ " + tr.aeSeuilAlert : "✓ " + tr.aeSeuilOk}</div>
+        </div>
+      </div>
+      <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 8 }}>{tr.aeMemo}</div>
+        <textarea className="lk-input" rows={4} value={memo} onChange={e => setMemo(e.target.value)} placeholder={tr.aeMemoPlaceholder} style={{ resize: "vertical" }} />
+      </div>
+
+      {/* Modal déclaration */}
+      {declModal && createPortal(
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "20px 22px 36px", animation: "slideUp .3s ease" }}>
+            <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ fontWeight: 700, fontSize: 17, color: T.textHi, marginBottom: 18 }}>{tr.aeDeclareTitle}</div>
+            <label className="lk-label">{tr.aeCaSaisie}</label>
+            <input type="number" className="lk-input" value={declCa} onChange={e => setDeclCa(e.target.value)} placeholder="3 200" style={{ marginBottom: 20 }} />
+            <button onClick={() => {
+              if (!declCa) return;
+              const ca = parseFloat(declCa);
+              const mois = now.toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { month: "long", year: "numeric" });
+              setDeclarations(p => [{ id: uid(), mois: mois.charAt(0).toUpperCase() + mois.slice(1), ca, cotis: Math.round(ca * 0.22), statut: "en attente" }, ...p]);
+              setDeclModal(false); setDeclCa("");
+            }} className="lk-btn" style={{ marginBottom: 10 }}>{tr.aeConfirmDecl}</button>
+            <button onClick={() => setDeclModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+          </div>
+        </div>, document.body
+      )}
+    </div>
+  );
+}
+
+/* ─── FACTURATION ÉLECTRONIQUE TAB ─── */
+function FactuElecTab({ lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [ready, setReady] = useState(false);
+  const [checksDone, setChecksDone] = useState({});
+  const [pdpRef, setPdpRef] = useState("");
+  const calendarItems = tr.feCalendarItems.split("|");
+  const pdpList = tr.fePDPList.split("|");
+  const mentionsList = tr.feMentionsList.split("|");
+  const formatsList = tr.feFormatsList.split("|");
+  const checkItems = tr.feCheckItems.split("|");
+  const allChecked = checkItems.every((_, i) => checksDone[i]);
+
+  return (
+    <div style={{ padding: "14px 14px 80px" }}>
+      <div style={{ fontWeight: 800, fontSize: 18, color: T.textHi, marginBottom: 4 }}>{tr.feTitle}</div>
+      <div style={{ fontSize: 12, color: T.textLo, marginBottom: 18, lineHeight: 1.5 }}>{tr.feIntro}</div>
+
+      {/* Calendrier */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>📅 {tr.feCalendar}</div>
+        {calendarItems.map((item, i) => {
+          const [date, ...rest] = item.split(" — ");
+          const past = i === 0 && new Date() > new Date("2026-09-01");
+          return (
+            <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10, paddingBottom: 10, borderBottom: i < calendarItems.length - 1 ? "1px solid rgba(0,0,0,.05)" : "none" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: past ? "rgba(30,158,107,.1)" : "rgba(201,160,48,.1)", border: `1px solid ${past ? T.success : T.accent}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {past ? Icon.check(T.success, 14) : Icon.calendar(T.accent, 14)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: past ? T.success : T.accent }}>{date}</div>
+                <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.4, marginTop: 2 }}>{rest.join(" — ")}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Statut AE */}
+      <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14, background: "rgba(201,160,48,.04)", border: "1px solid rgba(201,160,48,.2)" }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: T.accent, marginBottom: 6 }}>⚡ {tr.feStatus}</div>
+        <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>{tr.feStatusAE}</div>
+      </div>
+
+      {/* Checklist */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>✅ {tr.feChecklist}</div>
+        {checkItems.map((item, i) => (
+          <div key={i} onClick={() => setChecksDone(p => ({ ...p, [i]: !p[i] }))} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${checksDone[i] ? T.success : "rgba(0,0,0,.15)"}`, background: checksDone[i] ? T.success : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+              {checksDone[i] && <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+            </div>
+            <span style={{ fontSize: 13, color: checksDone[i] ? T.textLo : T.textMid, textDecoration: checksDone[i] ? "line-through" : "none", lineHeight: 1.4 }}>{item}</span>
+          </div>
+        ))}
+        {allChecked && <div style={{ background: "rgba(30,158,107,.08)", borderRadius: 8, padding: "10px 12px", marginTop: 8, color: T.success, fontWeight: 700, fontSize: 13 }}>🎉 {tr.feReady}</div>}
+      </div>
+
+      {/* PDP */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 6 }}>🏦 {tr.fePDP}</div>
+        <div style={{ fontSize: 12, color: T.textMid, marginBottom: 12, lineHeight: 1.5 }}>{tr.fePDPDesc}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+          {pdpList.map((p, i) => (
+            <span key={i} style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 20, padding: "4px 12px", fontSize: 11, color: T.accent, fontWeight: 600 }}>{p}</span>
+          ))}
+        </div>
+        <label className="lk-label">{tr.feMyChorPro}</label>
+        <input className="lk-input" value={pdpRef} onChange={e => setPdpRef(e.target.value)} placeholder={tr.feChorusPlaceholder} />
+      </div>
+
+      {/* Mentions obligatoires */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>📋 {tr.feMentions}</div>
+        {mentionsList.map((m, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 7 }}>
+            {Icon.check(T.success, 12)}
+            <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.4 }}>{m}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Formats */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 10 }}>📄 {tr.feFormats}</div>
+        {formatsList.map((f, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+            {Icon.file(T.accent, 12)}
+            <span style={{ fontSize: 12, color: T.textMid }}>{f}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Archivage */}
+      <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 6 }}>🗄 {tr.feArchive}</div>
+        <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>{tr.feArchiveDesc}</div>
+      </div>
+
+      {/* LCTI */}
+      <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 6 }}>⚖️ {tr.feLcti}</div>
+        <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>{tr.feLctiDesc}</div>
+      </div>
+    </div>
+  );
+}
+
 function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
@@ -4387,6 +4856,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     { id: "history", icon: Icon.hist, l: tr.history },
     { id: "profil", icon: Icon.user, l: tr.proProfile },
     { id: "partenaires", icon: Icon.shield, l: "Partenaires" },
+    { id: "auto", icon: Icon.euro, l: tr.autoTab },
+    { id: "factu", icon: Icon.file, l: tr.factuTab },
   ];
 
   return (
@@ -4744,6 +5215,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             </div>
           ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />)}
           {tab === "partenaires" && <div style={{ padding: "14px" }}><PartenaireScreen lang={lang} /></div>}
+          {tab === "auto" && <AutoEntrepriseTab account={account} bookings={bookings} artisanId={account.artisanId} lang={lang} />}
+          {tab === "factu" && <FactuElecTab lang={lang} />}
           {tab === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
           {tab === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />}
           {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
@@ -4971,7 +5444,16 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
               <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{account.email}</div>
             </div>
             <button onClick={() => setProfileModal(false)} className="lk-btn" style={{ marginBottom: 10 }}>{tr.saveChanges}</button>
-            <button onClick={() => setProfileModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
+            {/* RGPD rights */}
+            <div style={{ borderTop: "1px solid rgba(0,0,0,.07)", paddingTop: 16, marginTop: 6 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 8 }}>🛡️ {tr.rgpdTitle}</div>
+              {[tr.rgpdAccess, tr.rgpdRectif, tr.rgpdErase, tr.rgpdPorta].map((r, i) => (
+                <div key={i} style={{ fontSize: 11, color: T.textMid, marginBottom: 4, paddingLeft: 8, borderLeft: `2px solid rgba(37,99,235,.25)` }}>{r}</div>
+              ))}
+              <div style={{ fontSize: 10, color: T.textLo, marginTop: 8 }}>{tr.rgpdContact}</div>
+              <button onClick={() => alert(tr.rgpdRequestSent)} className="lk-ghost" style={{ marginTop: 10, fontSize: 11, width: "100%" }}>{tr.rgpdRequest}</button>
+            </div>
+            <button onClick={() => setProfileModal(false)} className="lk-ghost" style={{ width: "100%", marginTop: 8 }}>{tr.cancel}</button>
           </div>
         </div>
       )}
@@ -5610,6 +6092,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     { id: "facturation", l: "Facturation" },
     { id: "comptabilite", l: "Comptabilité" },
     { id: "partenaires", l: "Partenaires" },
+    { id: "digital_conformite", l: tr.adminDigitalTab },
   ];
   // Feature 15: Facturation state
   const [devisItems, setDevisItems] = useState([]);
@@ -6229,6 +6712,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
           </>
         )}
         {tab === "partenaires" && <PartenaireScreen />}
+        {tab === "digital_conformite" && <AdminDigitalConformiteTab lang={lang} />}
         </div>
       {rejectTarget && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -6327,6 +6811,295 @@ const INIT_PARTNER_TECHS = [
 ];
 
 /* ─── PARTENAIRE APP ─── */
+/* ─── PARTENAIRE — CONFORMITÉ LOIS FRANÇAISES ─── */
+function PartenaireLoiTab({ lang = "fr", account }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const fr = lang !== "en";
+
+  const [checks, setChecks] = useState({});
+  const [dpa, setDpa] = useState("");
+  const [mediateur, setMediateur] = useState("");
+  const [opco, setOpco] = useState("");
+  const [pdpRef, setPdpRef] = useState("");
+
+  const toggle = (key) => setChecks(p => ({ ...p, [key]: !p[key] }));
+
+  const sections = [
+    {
+      icon: "🔒", title: fr ? "RGPD — Protection des données" : "GDPR — Data protection",
+      desc: fr ? "En tant qu'entreprise traitant des données personnelles de clients et salariés, vous êtes soumis au RGPD (Règlement UE 2016/679) et à la loi Informatique et Libertés." : "As a company processing personal data of clients and employees, you are subject to the GDPR (EU Regulation 2016/679) and the French Data Protection Act.",
+      items: fr ? [
+        "Nommer un DPO (Délégué à la Protection des Données) si > 250 salariés ou traitement à grande échelle",
+        "Tenir un registre des traitements (article 30 RGPD) — obligatoire pour toutes entreprises",
+        "Obtenir le consentement explicite des clients pour le traitement de leurs données",
+        "Mentionner la politique de confidentialité sur tous vos devis, contrats et site web",
+        "Mettre en place une procédure de notification de violation de données (72h à la CNIL)",
+        "Conclure un DPA (Data Processing Agreement) avec tous vos sous-traitants",
+        "Respecter le droit à l'effacement et à la portabilité des données",
+        "Former vos équipes au RGPD annuellement",
+      ] : [
+        "Appoint a DPO if > 250 employees or large-scale processing",
+        "Maintain a processing register (Article 30 GDPR) — mandatory for all companies",
+        "Obtain explicit consent from clients for data processing",
+        "Mention privacy policy on all quotes, contracts and website",
+        "Implement a data breach notification procedure (72h to CNIL)",
+        "Sign a DPA with all sub-processors",
+        "Respect the right to erasure and data portability",
+        "Train teams on GDPR annually",
+      ],
+      field: { label: fr ? "Référence CNIL / n° de déclaration DPA" : "CNIL reference / DPA declaration number", val: dpa, set: setDpa, placeholder: fr ? "ex: FR-DP-2024-XXXXX" : "e.g. FR-DP-2024-XXXXX" },
+      color: "#1e40af", bg: "rgba(30,64,175,.04)",
+    },
+    {
+      icon: "⚖️", title: fr ? "Loi Sapin II — Anticorruption" : "Sapin II Law — Anti-corruption",
+      desc: fr ? "Applicable aux entreprises de plus de 500 salariés ou 100 M€ de CA. Pour les PME, une conformité volontaire est recommandée." : "Applicable to companies with more than 500 employees or €100M revenue. For SMEs, voluntary compliance is recommended.",
+      items: fr ? [
+        "Adopter un code de conduite anticorruption et l'intégrer au règlement intérieur",
+        "Mettre en place un dispositif d'alerte interne (lanceurs d'alerte — loi Waserman 2022)",
+        "Cartographier les risques de corruption liés à votre activité",
+        "Former les cadres et personnes exposées aux risques",
+        "Effectuer des contrôles comptables et évaluer les tiers (fournisseurs, sous-traitants)",
+        "Désigner un référent anticorruption",
+      ] : [
+        "Adopt an anti-corruption code of conduct integrated into internal rules",
+        "Set up an internal whistleblowing system (Waserman Law 2022)",
+        "Map corruption risks related to your business",
+        "Train managers and at-risk employees",
+        "Conduct accounting controls and assess third parties",
+        "Designate an anti-corruption officer",
+      ],
+      color: "#6d28d9", bg: "rgba(109,40,217,.04)",
+    },
+    {
+      icon: "👷", title: fr ? "Droit du travail — Obligations employeur" : "Labour law — Employer obligations",
+      desc: fr ? "En tant qu'employeur, vous devez respecter le Code du travail, la convention collective applicable et les obligations sociales." : "As an employer, you must comply with the Labour Code, the applicable collective agreement and social obligations.",
+      items: fr ? [
+        "Établir un contrat de travail écrit pour chaque salarié (CDI, CDD, etc.)",
+        "Déclarer chaque embauche à l'URSSAF (DPAE — Déclaration Préalable à l'Embauche)",
+        "Tenir le registre du personnel (obligations légales entrées/sorties)",
+        "Afficher les mentions obligatoires en entreprise (convention collective, médecine du travail, DUERP)",
+        "Organiser la visite médicale d'embauche (service de santé au travail)",
+        "Établir et mettre à jour le DUERP (Document Unique d'Évaluation des Risques Professionnels)",
+        "Respecter les durées maximales de travail (10h/jour, 48h/semaine, 44h sur 12 semaines)",
+        "Payer les cotisations patronales et salariales dans les délais URSSAF",
+        "Souscrire à la mutuelle d'entreprise (obligatoire depuis 2016)",
+        "Respecter la convention collective applicable (Bâtiment, Artisanat…)",
+        "Mettre en place le CSE (Comité Social et Économique) si > 11 salariés",
+      ] : [
+        "Draw up a written employment contract for each employee",
+        "Declare each hire to URSSAF (DPAE — Pre-employment Declaration)",
+        "Maintain the employee register",
+        "Post mandatory notices (collective agreement, occupational health, DUERP)",
+        "Organise pre-employment medical check-up",
+        "Establish and update the DUERP (risk assessment document)",
+        "Comply with maximum working hours",
+        "Pay employer and employee contributions on time",
+        "Subscribe to company health insurance (mandatory since 2016)",
+        "Comply with applicable collective agreement",
+        "Set up the CSE (Works Council) if > 11 employees",
+      ],
+      field: { label: fr ? "Convention collective applicable" : "Applicable collective agreement", val: opco, set: setOpco, placeholder: fr ? "ex: Bâtiment — IDCC 1596" : "e.g. Building industry — IDCC 1596" },
+      color: "#0f766e", bg: "rgba(15,118,110,.04)",
+    },
+    {
+      icon: "📋", title: fr ? "Obligations légales d'affichage" : "Mandatory workplace postings",
+      desc: fr ? "Le Code du travail impose des affichages obligatoires dans tout établissement employant des salariés." : "The Labour Code requires mandatory postings in all establishments employing staff.",
+      items: fr ? [
+        "Afficher l'intitulé et la référence de la convention collective applicable",
+        "Afficher les coordonnées de l'inspection du travail",
+        "Afficher les consignes de sécurité et incendie (plan d'évacuation)",
+        "Afficher les horaires de travail collectifs",
+        "Afficher les coordonnées du médecin du travail",
+        "Afficher le texte complet de l'article L.3231-1 (SMIC)",
+        "Afficher le règlement intérieur (si > 50 salariés ou obligatoire)",
+        "Afficher les voies de recours contre le harcèlement moral et sexuel",
+        "Afficher les coordonnées du Défenseur des droits",
+      ] : [
+        "Post collective agreement title and reference",
+        "Post labour inspectorate contact details",
+        "Post safety and fire instructions (evacuation plan)",
+        "Post collective working hours",
+        "Post occupational health doctor contact",
+        "Post full text of Article L.3231-1 (minimum wage)",
+        "Post internal rules (if > 50 employees or required)",
+        "Post recourse against moral and sexual harassment",
+        "Post Defender of Rights contact details",
+      ],
+      color: "#b45309", bg: "rgba(180,83,9,.04)",
+    },
+    {
+      icon: "🏥", title: fr ? "Santé et sécurité au travail" : "Health and safety at work",
+      desc: fr ? "L'employeur est tenu à une obligation générale de sécurité (L.4121-1 Code du travail). Le non-respect engage la responsabilité civile et pénale." : "The employer has a general safety obligation. Non-compliance triggers civil and criminal liability.",
+      items: fr ? [
+        "Mettre à jour le DUERP chaque année et à chaque changement significatif",
+        "Adhérer à un service de santé au travail (SST) interentreprises",
+        "Fournir les EPI (Équipements de Protection Individuelle) adaptés",
+        "Former les salariés aux gestes de premiers secours (SST)",
+        "Réaliser les vérifications périodiques obligatoires (électricité, ascenseurs, véhicules)",
+        "Déclarer tout accident du travail à la CPAM dans les 48h",
+        "Souscrire à l'assurance AT/MP (accidents du travail / maladies professionnelles)",
+        "Tenir les registres de sécurité obligatoires",
+      ] : [
+        "Update the DUERP annually and at each significant change",
+        "Join an occupational health service",
+        "Provide appropriate PPE (Personal Protective Equipment)",
+        "Train employees in first aid (SST)",
+        "Carry out mandatory periodic inspections (electricity, lifts, vehicles)",
+        "Report any workplace accident to CPAM within 48h",
+        "Subscribe to AT/MP insurance",
+        "Keep mandatory safety registers",
+      ],
+      color: "#dc2626", bg: "rgba(220,38,38,.04)",
+    },
+    {
+      icon: "🎓", title: fr ? "Formation professionnelle — OPCO" : "Vocational training — OPCO",
+      desc: fr ? "Les entreprises doivent contribuer à la formation professionnelle et adhérer à un OPCO (Opérateur de Compétences) selon leur secteur d'activité." : "Companies must contribute to vocational training and join an OPCO (Skills Operator) for their sector.",
+      items: fr ? [
+        "Identifier votre OPCO selon votre convention collective (ex: CONSTRUCTYS pour le bâtiment)",
+        "Verser la contribution à la formation professionnelle (0,55% CA < 11 sal. / 1% ≥ 11 sal.)",
+        "Établir un plan de développement des compétences pour vos salariés",
+        "Informer vos salariés de leur CPF (Compte Personnel de Formation)",
+        "Utiliser l'entretien professionnel tous les 2 ans (obligatoire)",
+        "Verser la taxe d'apprentissage (0,68% de la masse salariale)",
+      ] : [
+        "Identify your OPCO based on your collective agreement",
+        "Pay vocational training contribution (0.55% turnover < 11 employees / 1% ≥ 11)",
+        "Establish a skills development plan for employees",
+        "Inform employees of their CPF (Personal Training Account)",
+        "Use the professional interview every 2 years (mandatory)",
+        "Pay the apprenticeship tax (0.68% of payroll)",
+      ],
+      field: { label: fr ? "Votre OPCO" : "Your OPCO", val: opco, set: setOpco, placeholder: fr ? "ex: CONSTRUCTYS, OPCO 2i…" : "e.g. CONSTRUCTYS, OPCO 2i…" },
+      color: "#0ea5e9", bg: "rgba(14,165,233,.04)",
+    },
+    {
+      icon: "🛡", title: fr ? "Assurances obligatoires" : "Mandatory insurance",
+      desc: fr ? "Plusieurs assurances sont obligatoires pour exercer une activité dans le BTP et les métiers de l'artisanat." : "Several insurances are mandatory for construction and craft trades.",
+      items: fr ? [
+        "Assurance Responsabilité Civile Professionnelle (RC Pro) — obligatoire",
+        "Garantie décennale (obligatoire pour les travaux de construction — art. L.241-1 Code des assurances)",
+        "Assurance dommages-ouvrage si vous êtes maître d'ouvrage",
+        "Mutuelle collective d'entreprise (obligatoire depuis la loi ANI 2016)",
+        "Assurance flotte véhicules professionnels",
+        "Assurance local professionnel / matériel",
+        "Prévoyance collective (fortement recommandée)",
+      ] : [
+        "Professional liability insurance (RC Pro) — mandatory",
+        "10-year builders' liability (mandatory for construction — Art. L.241-1)",
+        "Damage insurance if you are project owner",
+        "Collective company health insurance (mandatory since ANI Law 2016)",
+        "Professional vehicle fleet insurance",
+        "Professional premises / equipment insurance",
+        "Collective disability insurance (strongly recommended)",
+      ],
+      color: "#1e9e6b", bg: "rgba(30,158,107,.04)",
+    },
+    {
+      icon: "💰", title: fr ? "Loi anti-fraude TVA & obligations fiscales" : "Anti-VAT fraud law & tax obligations",
+      desc: fr ? "La loi anti-fraude TVA (2018) impose un logiciel de caisse certifié. D'autres obligations fiscales s'appliquent aux entreprises." : "The anti-VAT fraud law (2018) requires certified cash register software. Other tax obligations apply to companies.",
+      items: fr ? [
+        "Utiliser un logiciel de caisse ou comptabilité certifié NF 525 (loi anti-fraude 2018)",
+        "Déclarer et payer la TVA dans les délais légaux (mensuel ou trimestriel)",
+        "Tenir une comptabilité régulière et sincère (Plan Comptable Général)",
+        "Classer et conserver les pièces comptables 10 ans",
+        "Déclarer l'IS (Impôt sur les Sociétés) ou l'IR selon la forme juridique",
+        "Payer la CVAE si CA > 500 000 € (cotisation sur valeur ajoutée)",
+        "Déclarer la DSN (Déclaration Sociale Nominative) chaque mois",
+        "Respecter les délais de paiement fournisseurs (60 jours — LME 2008)",
+        "Mentionner le médiateur des entreprises sur vos conditions générales",
+      ] : [
+        "Use NF 525-certified cash register or accounting software (anti-fraud law 2018)",
+        "Declare and pay VAT within legal deadlines",
+        "Maintain regular and accurate accounts (General Chart of Accounts)",
+        "File and keep accounting records for 10 years",
+        "Declare corporate tax (IS or IR) based on legal structure",
+        "Pay CVAE if turnover > €500,000",
+        "Submit DSN (Nominative Social Declaration) monthly",
+        "Respect supplier payment deadlines (60 days — LME 2008)",
+        "Mention business mediator on general conditions",
+      ],
+      color: "#c9a030", bg: "rgba(201,160,48,.04)",
+    },
+    {
+      icon: "📣", title: fr ? "Médiation de la consommation (Loi Hamon 2014)" : "Consumer mediation (Hamon Law 2014)",
+      desc: fr ? "Toute entreprise vendant à des consommateurs doit proposer un médiateur de la consommation et l'indiquer sur ses documents commerciaux." : "Any company selling to consumers must offer a consumer mediator and indicate it on commercial documents.",
+      items: fr ? [
+        "Adhérer à un médiateur de la consommation référencé par la CECMC",
+        "Mentionner le médiateur sur toutes vos factures, devis et CGV",
+        "Mentionner le médiateur sur votre site web (lien vers la plateforme RLL)",
+        "Informer les clients de ce droit avant tout litige",
+        "Participer de bonne foi à toute procédure de médiation engagée",
+        "Amende en cas de non-désignation : jusqu'à 15 000 € (personne morale)",
+      ] : [
+        "Join a consumer mediator registered with CECMC",
+        "Mention the mediator on all invoices, quotes and T&Cs",
+        "Mention the mediator on your website (link to RLL platform)",
+        "Inform clients of this right before any dispute",
+        "Participate in good faith in any mediation process",
+        "Fine for non-designation: up to €15,000 (legal entity)",
+      ],
+      field: { label: fr ? "Nom de votre médiateur" : "Your mediator name", val: mediateur, set: setMediateur, placeholder: fr ? "ex: MEDIMME, CM2C, ANM…" : "e.g. MEDIMME, CM2C, ANM…" },
+      color: "#7c3aed", bg: "rgba(124,58,237,.04)",
+    },
+  ];
+
+  const totalItems = sections.reduce((s, sec) => s + sec.items.length, 0);
+  const checkedItems = Object.values(checks).filter(Boolean).length;
+  const pct = Math.round((checkedItems / totalItems) * 100);
+
+  return (
+    <div style={{ padding: "14px 14px 80px" }}>
+      <div style={{ fontWeight: 800, fontSize: 18, color: T.textHi, marginBottom: 4 }}>
+        {fr ? "Conformité — Lois françaises" : "Compliance — French law"}
+      </div>
+      <div style={{ fontSize: 12, color: T.textLo, marginBottom: 16 }}>
+        {fr ? `${account?.nom || "Votre entreprise"} — vérification complète des obligations légales` : `${account?.nom || "Your company"} — full legal obligations check`}
+      </div>
+
+      {/* Score global */}
+      <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{fr ? "Score de conformité" : "Compliance score"}</span>
+          <span style={{ fontWeight: 900, fontSize: 22, color: pct >= 80 ? T.success : pct >= 50 ? T.warn : T.danger }}>{pct}%</span>
+        </div>
+        <div style={{ height: 8, background: "rgba(0,0,0,.06)", borderRadius: 4 }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? T.success : pct >= 50 ? T.warn : T.danger, borderRadius: 4, transition: "width .5s" }} />
+        </div>
+        <div style={{ fontSize: 11, color: T.textLo, marginTop: 6 }}>{checkedItems} / {totalItems} {fr ? "obligations cochées" : "obligations checked"}</div>
+      </div>
+
+      {sections.map((sec, si) => {
+        const secChecked = sec.items.filter((_, i) => checks[`${si}_${i}`]).length;
+        return (
+          <div key={si} className="lk-card" style={{ padding: "16px 18px", marginBottom: 14, borderLeft: `4px solid ${sec.color}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 4 }}>{sec.icon} {sec.title}</div>
+                <div style={{ fontSize: 11, color: T.textLo, lineHeight: 1.5, marginBottom: 10 }}>{sec.desc}</div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: sec.color, whiteSpace: "nowrap", marginLeft: 12 }}>{secChecked}/{sec.items.length}</span>
+            </div>
+            {sec.items.map((item, ii) => (
+              <div key={ii} onClick={() => toggle(`${si}_${ii}`)} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 8, cursor: "pointer", padding: "4px 0" }}>
+                <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${checks[`${si}_${ii}`] ? sec.color : "rgba(0,0,0,.15)"}`, background: checks[`${si}_${ii}`] ? sec.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                  {checks[`${si}_${ii}`] && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span style={{ fontSize: 12, color: checks[`${si}_${ii}`] ? T.textLo : T.textMid, textDecoration: checks[`${si}_${ii}`] ? "line-through" : "none", lineHeight: 1.5 }}>{item}</span>
+              </div>
+            ))}
+            {sec.field && (
+              <div style={{ marginTop: 10 }}>
+                <label className="lk-label" style={{ fontSize: 11 }}>{sec.field.label}</label>
+                <input className="lk-input" value={sec.field.val} onChange={e => sec.field.set(e.target.value)} placeholder={sec.field.placeholder} style={{ fontSize: 12 }} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, onLogout, lang = "fr", setLang }) {
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -6382,6 +7155,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     { id: "documents", icon: Icon.image, l: tr.partnerDocuments },
     { id: "statistiques", icon: Icon.chart, l: tr.partnerStats },
     { id: "profil", icon: Icon.settings, l: tr.partnerProfil },
+    { id: "lois", icon: Icon.shield, l: lang === "en" ? "French Law" : "Lois FR" },
+    { id: "fe_part", icon: Icon.file, l: lang === "en" ? "E-Invoicing" : "Factu. Élec." },
   ];
 
   const downloadInvoice = (mission) => {
@@ -7225,6 +8000,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     if (tab === "documents") return renderDocuments();
     if (tab === "statistiques") return renderStatistiques();
     if (tab === "profil") return renderProfil();
+    if (tab === "lois") return <PartenaireLoiTab lang={lang} account={account} />;
+    if (tab === "fe_part") return <FactuElecTab lang={lang} />;
     return null;
   };
 
@@ -7309,6 +8086,168 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   );
 }
 
+/* ─── COOKIE CONSENT ─── */
+function CookieConsent({ lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const [visible, setVisible] = useState(() => !localStorage.getItem("lk_cookie_consent"));
+  const [customize, setCustomize] = useState(false);
+  const [analytics, setAnalytics] = useState(false);
+  const [marketing, setMarketing] = useState(false);
+
+  const save = (all) => {
+    localStorage.setItem("lk_cookie_consent", JSON.stringify({ essential: true, analytics: all || analytics, marketing: all || marketing, ts: Date.now() }));
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+  return createPortal(
+    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 9999, background: "rgba(0,0,0,.55)", backdropFilter: "blur(6px)", padding: "0 0 env(safe-area-inset-bottom)" }}>
+      <div style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "22px 20px 18px", maxWidth: 640, margin: "0 auto" }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: T.textHi, marginBottom: 8 }}>{tr.cookieTitle}</div>
+        <div style={{ fontSize: 12, color: T.textMid, marginBottom: 16, lineHeight: 1.5 }}>{tr.cookieText}</div>
+        {customize && (
+          <div style={{ marginBottom: 16 }}>
+            {[
+              { key: "essential", label: tr.cookieEssential, desc: tr.cookieEssentialDesc, locked: true, val: true },
+              { key: "analytics", label: tr.cookieAnalytics, desc: tr.cookieAnalyticsDesc, locked: false, val: analytics, set: setAnalytics },
+              { key: "marketing", label: tr.cookieMarketing, desc: tr.cookieMarketingDesc, locked: false, val: marketing, set: setMarketing },
+            ].map(c => (
+              <div key={c.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,.06)" }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{c.label}</div>
+                  <div style={{ fontSize: 11, color: T.textLo }}>{c.desc}</div>
+                </div>
+                <div onClick={() => !c.locked && c.set && c.set(v => !v)} style={{ width: 40, height: 22, borderRadius: 11, background: c.val ? T.success : "rgba(0,0,0,.15)", position: "relative", cursor: c.locked ? "default" : "pointer", flexShrink: 0, marginLeft: 12, transition: "background .2s" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: c.val ? 20 : 2, transition: "left .2s" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => save(true)} className="lk-btn" style={{ flex: "1 1 140px", fontSize: 12 }}>{tr.cookieAcceptAll}</button>
+          {customize
+            ? <button onClick={() => save(false)} className="lk-ghost" style={{ flex: "1 1 120px", fontSize: 12 }}>{tr.cookieSavePrefs}</button>
+            : <button onClick={() => setCustomize(true)} className="lk-ghost" style={{ flex: "1 1 120px", fontSize: 12 }}>{tr.cookieCustomize}</button>
+          }
+          <button onClick={() => save(false)} style={{ background: "none", border: "none", color: T.textLo, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", flex: "0 0 auto", alignSelf: "center" }}>{tr.cookieRejectAll}</button>
+        </div>
+        <div style={{ marginTop: 10, fontSize: 10, color: T.textLo, textAlign: "center" }}>
+          {tr.legalFooter}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ─── MENTIONS LÉGALES MODAL ─── */
+function MentionsLegalesModal({ lang = "fr", onClose }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 8000, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "24px 20px 32px", maxWidth: 600, width: "100%", maxHeight: "80vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 16 }}>{tr.mentionsTitle}</div>
+        {[
+          { icon: "🏢", text: tr.mentionsEditor },
+          { icon: "🖥️", text: tr.mentionsHost },
+          { icon: "🛡️", text: tr.mentionsDPO },
+          { icon: "⚖️", text: tr.mentionsMediateur },
+          { icon: "🔏", text: tr.mentionsCnil },
+        ].map((item, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,.06)" }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+            <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.6 }}>{item.text}</span>
+          </div>
+        ))}
+        <div style={{ marginTop: 20, padding: "14px", background: "rgba(201,160,48,.06)", borderRadius: 12, border: `1px solid rgba(201,160,48,.2)` }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 8 }}>{tr.rgpdTitle}</div>
+          {[tr.rgpdAccess, tr.rgpdRectif, tr.rgpdErase, tr.rgpdPorta, tr.rgpdOppose, tr.rgpdLimit].map((r, i) => (
+            <div key={i} style={{ fontSize: 12, color: T.textMid, marginBottom: 5, paddingLeft: 8, borderLeft: `2px solid ${T.accent}` }}>{r}</div>
+          ))}
+          <div style={{ fontSize: 11, color: T.textLo, marginTop: 10 }}>{tr.rgpdContact}</div>
+          <div style={{ fontSize: 11, color: T.textLo }}>{tr.rgpdCnil}</div>
+        </div>
+        <button onClick={onClose} className="lk-btn" style={{ marginTop: 20, width: "100%" }}>{(TRANS[lang] || TRANS.fr).close}</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ─── ADMIN DIGITAL CONFORMITE TAB ─── */
+function AdminDigitalConformiteTab({ lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const laws = tr.digitalLaws || [];
+  const [checks, setChecks] = useState(() => {
+    const saved = localStorage.getItem("lk_admin_digital_checks");
+    return saved ? JSON.parse(saved) : {};
+  });
+  const toggle = (lawId, idx) => {
+    setChecks(prev => {
+      const key = `${lawId}_${idx}`;
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("lk_admin_digital_checks", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const totalItems = laws.reduce((s, l) => s + l.items.length, 0);
+  const checkedCount = Object.values(checks).filter(Boolean).length;
+  const score = totalItems ? Math.round((checkedCount / totalItems) * 100) : 0;
+  const scoreColor = score >= 80 ? T.success : score >= 50 ? T.warn : T.danger;
+
+  return (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 4 }}>{tr.digitalConformiteTitle}</div>
+      <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20 }}>Suivi de conformité aux lois numériques françaises et européennes</div>
+
+      {/* Score global */}
+      <div className="lk-card" style={{ padding: "20px 22px", marginBottom: 20, background: score >= 80 ? "rgba(30,158,107,.04)" : score >= 50 ? "rgba(217,119,6,.04)" : "rgba(220,38,38,.04)", border: `1px solid ${scoreColor}30` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{tr.digitalConformiteScore}</span>
+          <span style={{ fontWeight: 900, fontSize: 28, color: scoreColor }}>{score}%</span>
+        </div>
+        <div style={{ height: 8, background: "rgba(0,0,0,.06)", borderRadius: 4 }}>
+          <div style={{ height: "100%", width: `${score}%`, background: scoreColor, borderRadius: 4, transition: "width .4s" }} />
+        </div>
+        <div style={{ fontSize: 11, color: T.textLo, marginTop: 6 }}>{checkedCount} / {totalItems} points couverts</div>
+      </div>
+
+      {/* Sections par loi */}
+      {laws.map(law => {
+        const lawChecked = law.items.filter((_, i) => checks[`${law.id}_${i}`]).length;
+        const lawScore = Math.round((lawChecked / law.items.length) * 100);
+        return (
+          <div key={law.id} className="lk-card" style={{ padding: "18px 20px", marginBottom: 14, borderLeft: `4px solid ${law.color}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+              <div style={{ flex: 1, paddingRight: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 3 }}>{law.label}</div>
+                <div style={{ fontSize: 11, color: T.textMid, lineHeight: 1.5 }}>{law.desc}</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: lawScore >= 80 ? T.success : lawScore >= 50 ? T.warn : T.danger }}>{lawScore}%</div>
+                <div style={{ fontSize: 10, color: T.textLo }}>{lawChecked}/{law.items.length}</div>
+              </div>
+            </div>
+            <div style={{ height: 4, background: "rgba(0,0,0,.06)", borderRadius: 2, marginBottom: 12 }}>
+              <div style={{ height: "100%", width: `${lawScore}%`, background: law.color, borderRadius: 2, transition: "width .3s" }} />
+            </div>
+            {law.items.map((item, i) => (
+              <div key={i} onClick={() => toggle(law.id, i)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: i < law.items.length - 1 ? "1px solid rgba(0,0,0,.04)" : "none", cursor: "pointer" }}>
+                <div style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${checks[`${law.id}_${i}`] ? law.color : "rgba(0,0,0,.18)"}`, background: checks[`${law.id}_${i}`] ? law.color : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .15s" }}>
+                  {checks[`${law.id}_${i}`] && <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <span style={{ fontSize: 12, color: checks[`${law.id}_${i}`] ? T.textMid : T.textHi, textDecoration: checks[`${law.id}_${i}`] ? "line-through" : "none", lineHeight: 1.4 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── ROOT ─── */
 export default function App() {
   const [screen, setScreen] = useState("login");
@@ -7324,18 +8263,31 @@ export default function App() {
   const [bannedList, setBannedList] = useState([]);
   const logout = () => { setAccount(null); setScreen("login"); };
 
+  const [mentionsOpen, setMentionsOpen] = useState(false);
+
+  const wrapper = (children) => (
+    <>
+      {children}
+      <CookieConsent lang={lang} />
+      {mentionsOpen && <MentionsLegalesModal lang={lang} onClose={() => setMentionsOpen(false)} />}
+      <div style={{ position: "fixed", bottom: 6, right: 10, zIndex: 100, fontSize: 10, color: "rgba(0,0,0,.25)", cursor: "pointer", fontFamily: "'Inter',sans-serif" }} onClick={() => setMentionsOpen(true)}>
+        {(TRANS[lang] || TRANS.fr).mentionsLegales}
+      </div>
+    </>
+  );
+
   if (account) {
-    if (account.role === "client") return <ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />;
-    if (account.role === "pro") return <ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} />;
-    if (account.role === "admin") return <AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />;
-    if (account.role === "partenaire") return <PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />;
+    if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />);
+    if (account.role === "pro") return wrapper(<ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} />);
+    if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />);
+    if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />);
   }
-  if (screen === "register-choice") return <RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />;
-  if (screen === "register-client") return <RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
-  if (screen === "register-pro") return <RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />;
-  return <LoginScreen onLogin={(acc) => {
+  if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
+  if (screen === "register-client") return wrapper(<RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
+  if (screen === "register-pro") return wrapper(<RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
+  return wrapper(<LoginScreen onLogin={(acc) => {
     const banned = bannedList.find(b => b.email === acc.email);
     if (banned) { alert((TRANS[lang] || TRANS.fr).accountBanned); return; }
     setAccount(acc);
-  }} onRegister={() => setScreen("register-choice")} accounts={accounts} lang={lang} setLang={setLang} />;
+  }} onRegister={() => setScreen("register-choice")} accounts={accounts} lang={lang} setLang={setLang} />);
 }
