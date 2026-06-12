@@ -2757,9 +2757,8 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
   const [rdvModal, setRdvModal] = useState(null);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [notif, setNotif] = useState(null);
-  // Bon status per bon
   const [bonStatuses, setBonStatuses] = useState({});
-  const [platformCall, setPlatformCall] = useState(null); // { name }
+  const [platformCall, setPlatformCall] = useState(null);
   const [bonTimers, setBonTimers] = useState({});
   const [bonRdvInputs, setBonRdvInputs] = useState({});
   const timerRefs = useRef({});
@@ -2834,80 +2833,81 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
       {bonsRegion.length === 0 && <div style={{ textAlign: "center", padding: "48px 20px" }}>{Icon.list(T.textLo, 36)}<div style={{ color: T.textLo, fontSize: 14, marginTop: 12 }}>{tr.noBonusRegion}</div></div>}
       {bonsRegion.map(bon => {
         const IC = PROB_ICONS[bon.probleme] || Icon.tool;
-        const isPlatform = bon.postedBy === "platform";
         const techEarn = bon.montantEstime * (bon.techPct / 100);
         const isRecommended = proScore >= 5 && bon.urgence;
+        const bStatus = bonStatuses[bon.id];
+
+        if (bStatus === "skipped") return null;
+
         return (
-          <div key={bon.id} className="lk-card" style={{ padding: "14px", marginBottom: 10, border: isRecommended ? `1.5px solid ${T.gold}` : undefined }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: bon.urgence || isRecommended ? 8 : 0, flexWrap: "wrap" }}>
-              {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block" }}>URGENT</div>}
-              {isRecommended && <div style={{ display: "inline-block", background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", color: T.gold, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, letterSpacing: ".3px" }}>{tr.recommendedForYou}</div>}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
-                <div>
-                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
-                  <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
+          <div key={bon.id} style={{ position: "relative", marginBottom: 10, borderRadius: 14 }}>
+            <div className="lk-card" style={{ padding: "14px", border: isRecommended ? `1.5px solid ${T.gold}` : undefined }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: bon.urgence || isRecommended ? 8 : 0, flexWrap: "wrap" }}>
+                {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block" }}>URGENT</div>}
+                {isRecommended && <div style={{ display: "inline-block", background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", color: T.gold, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, letterSpacing: ".3px" }}>{tr.recommendedForYou}</div>}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
+                  <div>
+                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
+                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmtFrom(bon.montantEstime, lang)}</div>
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmtFrom(bon.montantEstime, lang)}</div>
+              <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: T.textLo, fontSize: 12 }}>{tr.yourSharePct} ({bon.techPct}%)</span>
+                  <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(techEarn)}</span>
+                </div>
               </div>
-            </div>
-            <div style={{ background: "rgba(62,207,142,.06)", border: "1px solid rgba(62,207,142,.15)", borderRadius: 10, padding: "10px 12px", marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: T.textLo, fontSize: 12 }}>{tr.yourSharePct} ({bon.techPct}%)</span>
-                <span style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{fmt(techEarn)}</span>
-              </div>
-            </div>
-            {(() => {
-              const bStatus = bonStatuses[bon.id];
-              const timer = bonTimers[bon.id];
-              const acceptedBooking = bookings.find(bk => bk.bonId === bon.id && bk.artisanId === account.artisanId);
-              if (!bStatus || bStatus === "available") {
-                return <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "accepted" }))} className="lk-btn" style={{ fontSize: 13, padding: "11px 16px" }}>{tr.acceptBon} {Icon.arrow("#fff", 13)}</button>;
-              }
-              if (bStatus === "accepted") {
-                return (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => setPlatformCall({ name: bon.clientNom || "Client" })} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} {tr.callClient}</button>
-                      <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "contacted" }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.chat(T.accent, 13)} {tr.chatClient}</button>
+              {(!bStatus || bStatus === "available") && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "accepted" }))} className="lk-btn" style={{ flex: 1, fontSize: 13, padding: "11px 16px" }}>{tr.acceptBon} {Icon.arrow("#fff", 13)}</button>
+                  <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "skipped" }))} className="lk-ghost" style={{ padding: "11px 14px", fontSize: 13 }}>✕</button>
+                </div>
+              )}
+              {bStatus === "accepted" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.15)", borderRadius: 10, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: T.accent, marginBottom: 4 }}>
+                      {lang === "en" ? "📞 Contact the client first before scheduling" : "📞 Contactez le client avant de planifier"}
                     </div>
-                    {timer !== undefined && timer > 0 && (
-                      <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ color: T.danger, fontSize: 12, fontWeight: 600 }}>⏱ {Math.floor(timer/60)}:{String(timer%60).padStart(2,"0")} {tr.callTimer}</span>
-                        <button onClick={() => { clearInterval(timerRefs.current[bon.id]); setBonTimers(p => ({ ...p, [bon.id]: undefined })); setBonStatuses(p => ({ ...p, [bon.id]: "called" })); }} style={{ background: T.success, border: "none", borderRadius: 8, padding: "5px 10px", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.calledClient}</button>
-                      </div>
-                    )}
-                    <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ width: "100%", background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.25)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>📅 {tr.planRdv}</button>
+                    <div style={{ fontSize: 11, color: T.textLo }}>{lang === "en" ? "Call or chat — then choose the appointment." : "Appelez ou chattez — puis choisissez le créneau."}</div>
                   </div>
-                );
-              }
-              if (bStatus === "contacted") {
-                const rdvInput = bonRdvInputs[bon.id] || {};
-                return (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{tr.planRdv}</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.immediateRdv}</button>
-                      <button onClick={() => setBonRdvInputs(p => ({ ...p, [bon.id]: { showPicker: true } }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.scheduleRdvBtn}</button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setPlatformCall({ name: bon.clientNom || "Client" }); setBonStatuses(p => ({ ...p, [bon.id]: "contacted" })); }} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>{Icon.phone("#fff", 13)} {tr.callClient}</button>
+                    <button onClick={() => setBonStatuses(p => ({ ...p, [bon.id]: "contacted" }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>{Icon.chat(T.accent, 13)} Chat</button>
+                  </div>
+                </div>
+              )}
+              {bStatus === "contacted" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 10, padding: "8px 12px", fontSize: 12, color: T.success, fontWeight: 600 }}>
+                    {Icon.check(T.success, 12)} {lang === "en" ? "Client contacted — choose appointment type:" : "Client contacté — choisissez le type de RDV :"}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { prendre(bon); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); }} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "10px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>⚡ {tr.immediateRdv}</button>
+                    <button onClick={() => setBonRdvInputs(p => ({ ...p, [bon.id]: { showPicker: true } }))} style={{ flex: 1, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 10, padding: "10px", color: T.accent, fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>📅 {tr.scheduleRdvBtn}</button>
+                  </div>
+                  {(bonRdvInputs[bon.id] || {}).showPicker && (
+                    <div>
+                      <input type="datetime-local" className="lk-input" value={(bonRdvInputs[bon.id] || {}).date || ""} onChange={e => setBonRdvInputs(p => ({ ...p, [bon.id]: { ...p[bon.id], date: e.target.value } }))} style={{ marginBottom: 8 }} />
+                      <button onClick={() => { if ((bonRdvInputs[bon.id] || {}).date) { prendre({ ...bon, scheduledDate: bonRdvInputs[bon.id].date }); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); } }} className="lk-btn" style={{ fontSize: 12, padding: "10px" }}>{tr.confirmRdv}</button>
                     </div>
-                    {rdvInput.showPicker && (
-                      <div>
-                        <input type="datetime-local" className="lk-input" value={rdvInput.date || ""} onChange={e => setBonRdvInputs(p => ({ ...p, [bon.id]: { ...p[bon.id], date: e.target.value } }))} style={{ marginBottom: 8 }} />
-                        <button onClick={() => { if (rdvInput.date) { prendre({ ...bon, scheduledDate: rdvInput.date }); setBonStatuses(p => ({ ...p, [bon.id]: "rdv" })); } }} className="lk-btn" style={{ fontSize: 12, padding: "10px" }}>{tr.confirmRdv}</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              if (bStatus === "expired") {
-                return <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "10px", color: T.danger, fontWeight: 600, fontSize: 12, textAlign: "center" }}>{tr.delayExpired}</div>;
-              }
-              return <div style={{ background: "rgba(62,207,142,.08)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 600, fontSize: 12, textAlign: "center" }}>{tr.rdvScheduledShort}</div>;
-            })()}
+                  )}
+                </div>
+              )}
+              {bStatus === "expired" && (
+                <div style={{ background: "rgba(220,38,38,.08)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "10px", color: T.danger, fontWeight: 600, fontSize: 12, textAlign: "center" }}>{tr.delayExpired}</div>
+              )}
+              {bStatus === "rdv" && (
+                <div style={{ background: "rgba(62,207,142,.08)", borderRadius: 10, padding: "10px", color: T.success, fontWeight: 600, fontSize: 12, textAlign: "center" }}>{tr.rdvScheduledShort}</div>
+              )}
+            </div>
           </div>
         );
       })}
@@ -4495,8 +4495,25 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     <div style={{ marginTop: 10 }}>
                       {!isActive ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {/* Photo avant obligatoire avant de démarrer */}
+                          <div style={{ background: "rgba(201,160,48,.05)", border: "1px dashed rgba(201,160,48,.3)", borderRadius: 10, padding: "10px 12px" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: T.accent, marginBottom: 8 }}>
+                              📷 {lang === "en" ? "Photo before intervention (required)" : "Photo avant intervention (obligatoire)"}
+                            </div>
+                            {!photoAvant ? (
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: T.textMid }}>
+                                <input type="file" accept="image/*" capture="environment" ref={photoAvantRef} style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) setPhotoAvant(URL.createObjectURL(f)); }} />
+                                {Icon.image(T.textLo, 14)} {lang === "en" ? "Take / select photo" : "Prendre / choisir photo"}
+                              </label>
+                            ) : (
+                              <div style={{ position: "relative", display: "inline-block" }}>
+                                <img src={photoAvant} alt="avant" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, border: `2px solid ${T.success}` }} />
+                                <button onClick={() => setPhotoAvant(null)} style={{ position: "absolute", top: -6, right: -6, background: T.danger, color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>✕</button>
+                              </div>
+                            )}
+                          </div>
                           <div style={{ display: "flex", gap: 8 }}>
-                            <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
+                            <button disabled={!photoAvant} onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13, opacity: photoAvant ? 1 : .45 }}>{tr.start}</button>
                             <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                               {Icon.chat(T.gold, 13)} Chat
                             </button>
@@ -6212,6 +6229,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   ]);
   const [primes, setPrimes] = useState([{ id: "pr1", techId: "tech2", montant: 150, motif: "Mission urgente nuit", date: "05/06/2026" }]);
   const [primeForm, setPrimeForm] = useState({ techId: "", montant: "", motif: "" });
+  const [swipeTouchX, setSwipeTouchX] = useState(0);
 
   const myMissions = missions.filter(m => m.partenaireId === account.id);
   const doneMissions = myMissions.filter(m => m.statut === "terminée");
@@ -7126,7 +7144,17 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.decoShort}</button>
           </div>
         )}
-        <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "28px 32px" : "16px 14px 80px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "28px 32px" : "16px 14px 80px" }}
+          onTouchStart={e => !isDesktop && setSwipeTouchX(e.touches[0].clientX)}
+          onTouchEnd={e => {
+            if (isDesktop) return;
+            const dx = e.changedTouches[0].clientX - swipeTouchX;
+            if (Math.abs(dx) < 60) return;
+            const ids = tabs.map(t => t.id);
+            const cur = ids.indexOf(tab);
+            if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
+            if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
+          }}>
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
             {renderContent()}
           </div>
