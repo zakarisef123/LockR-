@@ -329,6 +329,7 @@ const TRANS = {
     rhBonusAmount: "Montant de la prime (€)", rhBonusReason: "Motif", rhNoLeave: "Aucune demande en attente",
     rhPayroll: "Masse salariale estimée", rhAlerts: "Alertes RH", rhDocExpiring: "Document expirant bientôt",
     rhDayOff: "Repos", rhMissionDay: "Mission", rhAvailable: "Disponible",
+    rhViewWeek: "Semaine", rhViewHour: "Horaire", rhHourTip: "Cliquez sur une cellule pour voir le détail horaire",
     subTab: "Abonnement", subTitle: "Abonnement Entreprise LOCKR",
     subSubtitle: "Accédez à tous les outils de gestion de votre entreprise",
     subMonthly: "Mensuel", subAnnual: "Annuel", subPerMonth: "/mois", subPerYear: "/an",
@@ -704,6 +705,7 @@ const TRANS = {
     rhBonusAmount: "Bonus amount (€)", rhBonusReason: "Reason", rhNoLeave: "No pending request",
     rhPayroll: "Estimated payroll", rhAlerts: "HR alerts", rhDocExpiring: "Document expiring soon",
     rhDayOff: "Day off", rhMissionDay: "Mission", rhAvailable: "Available",
+    rhViewWeek: "Week", rhViewHour: "Hourly", rhHourTip: "Tap a cell to see hourly view",
     subTab: "Subscription", subTitle: "LOCKR Enterprise Subscription",
     subSubtitle: "Access all your company management tools",
     subMonthly: "Monthly", subAnnual: "Annual", subPerMonth: "/month", subPerYear: "/year",
@@ -7100,7 +7102,7 @@ function PartenaireLoiTab({ lang = "fr", account }) {
   );
 }
 
-function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, onLogout, lang = "fr", setLang }) {
+function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, onLogout, lang = "fr", setLang, listings = [], setListings = () => {}, sales = [], setSales = () => {} }) {
   const w = useWindowSize();
   const isDesktop = w >= BP;
   const tr = TRANS[lang] || TRANS.fr;
@@ -7133,6 +7135,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const [primes, setPrimes] = useState([{ id: "pr1", techId: "tech2", montant: 150, motif: "Mission urgente nuit", date: "05/06/2026" }]);
   const [primeForm, setPrimeForm] = useState({ techId: "", montant: "", motif: "" });
   const [swipeTouchX, setSwipeTouchX] = useState(0);
+  const [planningView, setPlanningView] = useState("day"); // "day" | "hour"
+  const [planningDay, setPlanningDay] = useState(0); // 0=Lun … 6=Dim
 
   const myMissions = missions.filter(m => m.partenaireId === account.id);
   const doneMissions = myMissions.filter(m => m.statut === "terminée");
@@ -7157,6 +7161,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     { id: "profil", icon: Icon.settings, l: tr.partnerProfil },
     { id: "lois", icon: Icon.shield, l: lang === "en" ? "French Law" : "Lois FR" },
     { id: "fe_part", icon: Icon.file, l: lang === "en" ? "E-Invoicing" : "Factu. Élec." },
+    { id: "marketplace_part", icon: Icon.tool, l: lang === "en" ? "Marketplace" : "Marketplace" },
   ];
 
   const downloadInvoice = (mission) => {
@@ -7814,25 +7819,104 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.rhTitle}</div>
 
         {/* Planning hebdo */}
-        <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 16, overflowX: "auto" }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.rhPlanning}</div>
-          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 520 }}>
-            <thead><tr>
-              <th style={{ textAlign: "left", fontSize: 11, color: T.textLo, padding: "4px 6px" }}></th>
-              {days.map(d => <th key={d} style={{ fontSize: 11, color: T.textLo, padding: "4px 6px" }}>{d}</th>)}
-            </tr></thead>
-            <tbody>
-              {myTechs.map(t => (
-                <tr key={t.id}>
-                  <td style={{ fontSize: 12, fontWeight: 700, color: T.textHi, padding: "5px 6px", whiteSpace: "nowrap" }}>{t.prenom}</td>
-                  {days.map((_, d) => {
-                    const p = planFor(t, d);
-                    return <td key={d} style={{ padding: 3 }}><div style={{ background: p.bg, color: p.c, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "5px 4px", textAlign: "center" }}>{p.l}</div></td>;
-                  })}
-                </tr>
+        <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{tr.rhPlanning}</div>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[{ id: "day", l: lang === "en" ? "Week" : "Semaine" }, { id: "hour", l: lang === "en" ? "Hourly" : "Horaire" }].map(v => (
+                <button key={v.id} onClick={() => setPlanningView(v.id)} style={{ border: "none", borderRadius: 8, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", background: planningView === v.id ? T.accent : "rgba(0,0,0,.06)", color: planningView === v.id ? "#fff" : T.textMid }}>{v.l}</button>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {planningView === "day" && (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 520 }}>
+                <thead><tr>
+                  <th style={{ textAlign: "left", fontSize: 11, color: T.textLo, padding: "4px 6px" }}></th>
+                  {days.map(d => <th key={d} style={{ fontSize: 11, color: T.textLo, padding: "4px 6px" }}>{d}</th>)}
+                </tr></thead>
+                <tbody>
+                  {myTechs.map(t => (
+                    <tr key={t.id}>
+                      <td style={{ fontSize: 12, fontWeight: 700, color: T.textHi, padding: "5px 6px", whiteSpace: "nowrap" }}>{t.prenom}</td>
+                      {days.map((_, d) => {
+                        const p = planFor(t, d);
+                        return <td key={d} style={{ padding: 3 }} onClick={() => { setPlanningView("hour"); setPlanningDay(d); }}><div style={{ background: p.bg, color: p.c, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "5px 4px", textAlign: "center", cursor: "pointer" }}>{p.l}</div></td>;
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ fontSize: 10, color: T.textLo, marginTop: 8 }}>{lang === "en" ? "Tap a cell to see hourly view" : "Cliquez sur une cellule pour voir le détail horaire"}</div>
+            </div>
+          )}
+
+          {planningView === "hour" && (() => {
+            const HOURS = Array.from({ length: 11 }, (_, i) => i + 7); // 7h–17h
+            const slotFor = (t, h) => {
+              const seed = (t.id.charCodeAt(t.id.length - 1) + planningDay * 3 + h) % 7;
+              if (planningDay >= 5) return { bg: "rgba(0,0,0,.03)", label: "—", color: T.textLo };
+              if (h < 8) return { bg: "rgba(0,0,0,.03)", label: "—", color: T.textLo };
+              if (h >= 17) return { bg: "rgba(0,0,0,.03)", label: "—", color: T.textLo };
+              if (seed === 0) return { bg: "rgba(201,160,48,.12)", label: lang === "en" ? "Mission" : "Mission", color: T.accent };
+              if (seed === 1) return { bg: "rgba(201,160,48,.12)", label: lang === "en" ? "Mission" : "Mission", color: T.accent };
+              if (seed === 5) return { bg: "rgba(217,119,6,.08)", label: lang === "en" ? "Break" : "Pause", color: T.warn };
+              return { bg: "rgba(30,158,107,.07)", label: lang === "en" ? "Available" : "Dispo", color: T.success };
+            };
+            return (
+              <div>
+                {/* Day selector */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 12, overflowX: "auto" }}>
+                  {days.map((d, i) => (
+                    <button key={i} onClick={() => setPlanningDay(i)} style={{ flex: "0 0 auto", border: "none", borderRadius: 8, padding: "5px 11px", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", background: planningDay === i ? T.accent : "rgba(0,0,0,.06)", color: planningDay === i ? "#fff" : T.textMid }}>{d}</button>
+                  ))}
+                </div>
+                {/* Hourly grid */}
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ borderCollapse: "collapse", width: "100%", minWidth: Math.max(360, myTechs.length * 90 + 50) }}>
+                    <thead>
+                      <tr>
+                        <th style={{ fontSize: 10, color: T.textLo, padding: "3px 6px", textAlign: "left", width: 44 }}>Heure</th>
+                        {myTechs.map(t => (
+                          <th key={t.id} style={{ fontSize: 11, color: T.textHi, fontWeight: 700, padding: "3px 4px", textAlign: "center" }}>{t.prenom}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {HOURS.map(h => (
+                        <tr key={h}>
+                          <td style={{ fontSize: 10, color: T.textLo, padding: "2px 6px", fontWeight: 600, whiteSpace: "nowrap", borderRight: "1px solid rgba(0,0,0,.06)" }}>{String(h).padStart(2,"0")}h</td>
+                          {myTechs.map(t => {
+                            const s = slotFor(t, h);
+                            return (
+                              <td key={t.id} style={{ padding: 2 }}>
+                                <div style={{ background: s.bg, color: s.color, fontSize: 9, fontWeight: 700, borderRadius: 5, padding: "4px 3px", textAlign: "center", minWidth: 54, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.label}</div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {/* Legend */}
+                <div style={{ display: "flex", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+                  {[
+                    { bg: "rgba(201,160,48,.12)", color: T.accent, l: lang === "en" ? "Mission" : "Mission" },
+                    { bg: "rgba(30,158,107,.07)", color: T.success, l: lang === "en" ? "Available" : "Disponible" },
+                    { bg: "rgba(217,119,6,.08)", color: T.warn, l: lang === "en" ? "Break" : "Pause" },
+                    { bg: "rgba(0,0,0,.03)", color: T.textLo, l: "—" },
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 3, background: item.bg }} />
+                      <span style={{ fontSize: 10, color: item.color, fontWeight: 600 }}>{item.l}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Congés */}
@@ -8002,6 +8086,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     if (tab === "profil") return renderProfil();
     if (tab === "lois") return <PartenaireLoiTab lang={lang} account={account} />;
     if (tab === "fe_part") return <FactuElecTab lang={lang} />;
+    if (tab === "marketplace_part") return <ProMarketplace account={{ ...account, artisanId: account.id }} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />;
     return null;
   };
 
@@ -8280,7 +8365,7 @@ export default function App() {
     if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />);
     if (account.role === "pro") return wrapper(<ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} />);
     if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />);
-    if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} />);
+    if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
   }
   if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
   if (screen === "register-client") return wrapper(<RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
