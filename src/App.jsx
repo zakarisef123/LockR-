@@ -1,57 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-/* ─── PROTECTION CODE SOURCE ─── */
-(function protect() {
-  if (typeof window === "undefined") return;
-
-  // 1. Désactiver clic droit
-  document.addEventListener("contextmenu", e => e.preventDefault(), true);
-
-  // 2. Bloquer raccourcis clavier DevTools / view-source
-  document.addEventListener("keydown", e => {
-    // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
-    if (
-      e.key === "F12" ||
-      (e.ctrlKey && e.shiftKey && ["I","i","J","j","C","c"].includes(e.key)) ||
-      (e.ctrlKey && ["U","u"].includes(e.key)) ||
-      (e.metaKey && e.altKey && ["I","i","J","j","C","c"].includes(e.key))
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-  }, true);
-
-  // 3. Détection ouverture DevTools (méthode dimension + debugger timing)
-  let devtoolsOpen = false;
-  const threshold = 160;
-  const check = () => {
-    const widthDiff = window.outerWidth - window.innerWidth > threshold;
-    const heightDiff = window.outerHeight - window.innerHeight > threshold;
-    if ((widthDiff || heightDiff) && !devtoolsOpen) {
-      devtoolsOpen = true;
-      document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;font-family:sans-serif;flex-direction:column;gap:16px"><div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#c9a030,#8a6b1a);display:flex;align-items:center;justify-content:center;font-size:28px">🔒</div><div style="color:#fff;font-size:20px;font-weight:800">Accès refusé</div><div style="color:rgba(255,255,255,.5);font-size:13px;text-align:center;max-width:300px">Ce contenu est protégé.<br>© LOCKR SAS — Tous droits réservés.</div></div>`;
-    }
-    if (!widthDiff && !heightDiff) devtoolsOpen = false;
-  };
-  setInterval(check, 1000);
-
-  // 4. Bloquer sélection de texte sur le body en prod
-  if (process.env.NODE_ENV === "production") {
-    document.addEventListener("selectstart", e => {
-      if (e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") e.preventDefault();
-    }, true);
-  }
-
-  // 5. Bloquer copier/coller hors champs
-  document.addEventListener("copy", e => {
-    if (document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
-      e.preventDefault();
-    }
-  }, true);
-})();
-
 const uid = () => Math.random().toString(36).slice(2, 9);
 const fmt = n => `${Math.round(Number(n))} €`;
 const fmtFrom = (n, lang = "fr") => lang === "en" ? `From ${Math.round(Number(n))} €` : `À partir de ${Math.round(Number(n))} €`;
