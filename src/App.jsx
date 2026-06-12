@@ -4227,7 +4227,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     raf.current = requestAnimationFrame(run);
   };
   const finishMission = (montantFinal, factureImg, statutPaiement, acompte) => {
-    setBookings(p => p.map(x => x.id === activeMission.id ? { ...x, statut: "terminée", montantFinal, factureImg, statutPaiement, photoApres, audioData: audioData || x.audioData } : x));
+    setBookings(p => p.map(x => x.id === activeMission.id ? { ...x, statut: "terminée", montantFinal, factureImg, statutPaiement, photoAvant: photoAvant || x.photoAvant, photoApres, audioData: audioData || x.audioData } : x));
     cancelAnimationFrame(raf.current);
     setActiveMission(null); setProgress(0); setClotureModal(false);
     setPhotoAvant(null); setPhotoApres(null); setAudioData(null);
@@ -4495,25 +4495,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     <div style={{ marginTop: 10 }}>
                       {!isActive ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          {/* Photo avant obligatoire avant de démarrer */}
-                          <div style={{ background: "rgba(201,160,48,.05)", border: "1px dashed rgba(201,160,48,.3)", borderRadius: 10, padding: "10px 12px" }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: T.accent, marginBottom: 8 }}>
-                              📷 {lang === "en" ? "Photo before intervention (required)" : "Photo avant intervention (obligatoire)"}
-                            </div>
-                            {!photoAvant ? (
-                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", background: "#fff", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: T.textMid }}>
-                                <input type="file" accept="image/*" capture="environment" ref={photoAvantRef} style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) setPhotoAvant(URL.createObjectURL(f)); }} />
-                                {Icon.image(T.textLo, 14)} {lang === "en" ? "Take / select photo" : "Prendre / choisir photo"}
-                              </label>
-                            ) : (
-                              <div style={{ position: "relative", display: "inline-block" }}>
-                                <img src={photoAvant} alt="avant" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8, border: `2px solid ${T.success}` }} />
-                                <button onClick={() => setPhotoAvant(null)} style={{ position: "absolute", top: -6, right: -6, background: T.danger, color: "#fff", border: "none", borderRadius: "50%", width: 18, height: 18, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter',sans-serif" }}>✕</button>
-                              </div>
-                            )}
-                          </div>
                           <div style={{ display: "flex", gap: 8 }}>
-                            <button disabled={!photoAvant} onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13, opacity: photoAvant ? 1 : .45 }}>{tr.start}</button>
+                            <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
                             <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                               {Icon.chat(T.gold, 13)} Chat
                             </button>
@@ -4572,6 +4555,29 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
                     </div>
                   </div>
+                  {/* Photo avant intervention — obligatoire à l'arrivée sur place */}
+                  {progress >= 0.97 && (
+                    <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10, border: !photoAvant ? `1.5px solid ${T.accent}` : undefined }}>
+                      <div style={{ color: !photoAvant ? T.accent : T.textMid, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
+                        📷 {lang === "en" ? "Photo before intervention (required on arrival)" : "Photo avant intervention (obligatoire à l'arrivée)"}
+                      </div>
+                      <input ref={photoAvantRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) setPhotoAvant(URL.createObjectURL(f)); }} />
+                      {!photoAvant ? (
+                        <button onClick={() => photoAvantRef.current?.click()} style={{ width: "100%", background: "rgba(201,160,48,.05)", border: "1.5px dashed rgba(201,160,48,.35)", borderRadius: 10, padding: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif" }}>
+                          {Icon.cam(T.accent, 18)}
+                          <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{lang === "en" ? "Take photo before starting work" : "Prendre la photo avant de commencer"}</span>
+                        </button>
+                      ) : (
+                        <div style={{ position: "relative", borderRadius: 10, overflow: "hidden" }}>
+                          <img src={photoAvant} alt="avant" style={{ width: "100%", maxHeight: 130, objectFit: "cover" }} />
+                          <div style={{ position: "absolute", bottom: 6, left: 6 }}>
+                            <span style={{ background: "rgba(62,207,142,.9)", borderRadius: 8, padding: "3px 10px", color: "#fff", fontSize: 11, fontWeight: 700 }}>{tr.photoAdded}</span>
+                          </div>
+                          <button onClick={() => setPhotoAvant(null)} style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,.55)", color: "#fff", border: "none", borderRadius: "50%", width: 22, height: 22, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>✕</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Feature 5: Audio recording */}
                   <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
                     <div style={{ color: T.textMid, fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{tr.recordDiscussion}</div>
@@ -4648,7 +4654,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                     <button onClick={() => setPlatformCall({ name: activeBk?.artisan || "Artisan" })} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</button>
-                    <button onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif" }}>
+                    <button disabled={progress >= 0.97 && !photoAvant} onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif", opacity: (progress >= 0.97 && !photoAvant) ? .45 : 1 }}>
                       {Icon.check("#fff", 15)} {tr.closeAndInvoice}
                     </button>
                   </div>
