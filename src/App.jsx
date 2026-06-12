@@ -3712,7 +3712,7 @@ const MARKET_METIERS = [
 ];
 const mLabel = (m, lang) => (lang === "en" && m?.labelEn) ? m.labelEn : (m?.label || "");
 
-function ProMarketplace({ account, listings, setListings, sales, setSales, lang }) {
+function ProMarketplace({ account, listings, setListings, sales, setSales, lang, isPartner = false }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -3788,7 +3788,7 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang 
             </div>
             <div>
               <div style={{ color: "#fff", fontWeight: 900, fontSize: 20, letterSpacing: "-.5px" }}>{tr.marketplace}</div>
-              <div style={{ color: "rgba(255,255,255,.75)", fontSize: 12 }}>{tr.marketplaceDesc}</div>
+              <div style={{ color: "rgba(255,255,255,.75)", fontSize: 12 }}>{isPartner ? (lang === "en" ? "Buy & sell equipment as a company" : "Achetez et vendez du matériel en tant qu'entreprise") : tr.marketplaceDesc}</div>
             </div>
           </div>
           {/* Badge commission */}
@@ -7153,6 +7153,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     { id: "techniciens", icon: Icon.user, l: tr.partnerTechs },
     { id: "rh", icon: Icon.calendar, l: tr.rhTab },
     { id: "abonnement", icon: Icon.star, l: tr.subTab },
+    { id: "marketplace_part", icon: Icon.card, l: tr.marketplace },
     { id: "facturation", icon: Icon.euro, l: tr.partnerFacturation },
     { id: "contrat", icon: Icon.file, l: tr.partnerContrat },
     { id: "conformite", icon: Icon.shield, l: tr.partnerConformite },
@@ -7161,7 +7162,6 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     { id: "profil", icon: Icon.settings, l: tr.partnerProfil },
     { id: "lois", icon: Icon.shield, l: lang === "en" ? "French Law" : "Lois FR" },
     { id: "fe_part", icon: Icon.file, l: lang === "en" ? "E-Invoicing" : "Factu. Élec." },
-    { id: "marketplace_part", icon: Icon.tool, l: lang === "en" ? "Marketplace" : "Marketplace" },
   ];
 
   const downloadInvoice = (mission) => {
@@ -8086,7 +8086,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     if (tab === "profil") return renderProfil();
     if (tab === "lois") return <PartenaireLoiTab lang={lang} account={account} />;
     if (tab === "fe_part") return <FactuElecTab lang={lang} />;
-    if (tab === "marketplace_part") return <ProMarketplace account={{ ...account, artisanId: account.id }} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />;
+    if (tab === "marketplace_part") return <ProMarketplace account={{ ...account, artisanId: account.id, metier: (account.secteurs && account.secteurs[0]) || "serrurier" }} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} isPartner />;
     return null;
   };
 
