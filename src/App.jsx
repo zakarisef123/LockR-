@@ -286,6 +286,31 @@ const TRANS = {
     partnerBonsTab: "Bons publiés", postBonAll: "Publier pour tous les artisans",
     noPartnerBons: "Aucun bon publié pour l'instant", bonPostedAllCraftsmen: "Visible par tous les artisans LOCKR",
     bonOpenPlatform: "Ouvert à tous les artisans",
+    // Partner fleet GPS + RH + abonnement
+    fleetTab: "Flotte GPS", fleetTitle: "Suivi GPS de la flotte", fleetSubtitle: "Position en temps réel de vos employés",
+    fleetOnline: "En ligne", fleetOnMission: "En mission", fleetOffline: "Hors ligne",
+    fleetLastUpdate: "Mise à jour", fleetSpeed: "Vitesse", fleetCenterOn: "Centrer",
+    fleetLiveBadge: "EN DIRECT", fleetNoTech: "Aucun employé actif à suivre",
+    rhTab: "Gestion RH", rhTitle: "Gestion de l'entreprise", rhPlanning: "Planning de la semaine",
+    rhLeaves: "Demandes de congés", rhApprove: "Accepter", rhReject: "Refuser",
+    rhHours: "Heures travaillées (semaine)", rhBonuses: "Primes & bonus", rhAddBonus: "Attribuer une prime",
+    rhBonusAmount: "Montant de la prime (€)", rhBonusReason: "Motif", rhNoLeave: "Aucune demande en attente",
+    rhPayroll: "Masse salariale estimée", rhAlerts: "Alertes RH", rhDocExpiring: "Document expirant bientôt",
+    rhDayOff: "Repos", rhMissionDay: "Mission", rhAvailable: "Disponible",
+    subTab: "Abonnement", subTitle: "Abonnement Entreprise LOCKR",
+    subSubtitle: "Accédez à tous les outils de gestion de votre entreprise",
+    subMonthly: "Mensuel", subAnnual: "Annuel", subPerMonth: "/mois", subPerYear: "/an",
+    subBestOffer: "2 mois offerts", subChoose: "Choisir cette offre", subActive: "Abonnement actif",
+    subUntil: "Valable jusqu'au", subCancel: "Résilier l'abonnement", subResume: "Réactiver",
+    subBenefit1: "Commission réduite à 5% sur toutes les missions",
+    subBenefit2: "Suivi GPS en temps réel de tous vos employés",
+    subBenefit3: "Gestion RH complète : planning, congés, primes",
+    subBenefit4: "Publication de bons pour tous les artisans LOCKR",
+    subBenefit5: "Facturation et statistiques avancées",
+    subBenefit6: "Support prioritaire 7j/7",
+    subPaywallTitle: "Section Entreprise — accès payant",
+    subPaywallText: "Choisissez une offre pour débloquer tous les outils de gestion de votre entreprise.",
+    subPayNow: "S'abonner et payer", subConfirmed: "Abonnement activé !",
     // EarningsChart
     currentMonth: "mois en cours", clickMonthDetail: "Appuyez sur un mois pour voir le détail",
     noMissionThisMonth: "Aucune mission ce mois", downloadInvoiceMonth: "Télécharger la facture",
@@ -556,6 +581,31 @@ const TRANS = {
     partnerBonsTab: "Published Bonuses", postBonAll: "Post for all craftsmen",
     noPartnerBons: "No bonuses posted yet", bonPostedAllCraftsmen: "Visible to all LOCKR craftsmen",
     bonOpenPlatform: "Open to all craftsmen",
+    // Partner fleet GPS + HR + subscription
+    fleetTab: "GPS Fleet", fleetTitle: "Fleet GPS tracking", fleetSubtitle: "Real-time position of your employees",
+    fleetOnline: "Online", fleetOnMission: "On mission", fleetOffline: "Offline",
+    fleetLastUpdate: "Updated", fleetSpeed: "Speed", fleetCenterOn: "Center",
+    fleetLiveBadge: "LIVE", fleetNoTech: "No active employee to track",
+    rhTab: "HR Management", rhTitle: "Company management", rhPlanning: "Weekly schedule",
+    rhLeaves: "Leave requests", rhApprove: "Approve", rhReject: "Reject",
+    rhHours: "Hours worked (week)", rhBonuses: "Bonuses & rewards", rhAddBonus: "Grant a bonus",
+    rhBonusAmount: "Bonus amount (€)", rhBonusReason: "Reason", rhNoLeave: "No pending request",
+    rhPayroll: "Estimated payroll", rhAlerts: "HR alerts", rhDocExpiring: "Document expiring soon",
+    rhDayOff: "Day off", rhMissionDay: "Mission", rhAvailable: "Available",
+    subTab: "Subscription", subTitle: "LOCKR Enterprise Subscription",
+    subSubtitle: "Access all your company management tools",
+    subMonthly: "Monthly", subAnnual: "Annual", subPerMonth: "/month", subPerYear: "/year",
+    subBestOffer: "2 months free", subChoose: "Choose this plan", subActive: "Active subscription",
+    subUntil: "Valid until", subCancel: "Cancel subscription", subResume: "Reactivate",
+    subBenefit1: "Reduced 5% commission on all missions",
+    subBenefit2: "Real-time GPS tracking of all your employees",
+    subBenefit3: "Full HR management: schedule, leaves, bonuses",
+    subBenefit4: "Post bonuses to all LOCKR craftsmen",
+    subBenefit5: "Advanced invoicing and statistics",
+    subBenefit6: "Priority support 7 days a week",
+    subPaywallTitle: "Enterprise section — paid access",
+    subPaywallText: "Choose a plan to unlock all your company management tools.",
+    subPayNow: "Subscribe and pay", subConfirmed: "Subscription activated!",
     // EarningsChart
     currentMonth: "current month", clickMonthDetail: "Tap a month to see details",
     noMissionThisMonth: "No missions this month", downloadInvoiceMonth: "Download invoice",
@@ -1096,6 +1146,87 @@ function makeSvgIcon(L, isFull, color, size = 40, transport = "voiture", photoUr
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 40 40">${inner}</svg>`;
   return L.divIcon({ html: `<div style="filter:drop-shadow(0 2px 10px ${color}99)">${svg}</div>`, className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+}
+
+/* ─── FLEET MAP — suivi GPS en direct de tous les employés ─── */
+function FleetMap({ techs = [], tr, focusId = null }) {
+  const mapRef = useRef(null);
+  const mapObj = useRef(null);
+  const markers = useRef({});
+  const positions = useRef({});
+  const [tick, setTick] = useState(0);
+
+  const statusColor = (s) => s === "en_mission" ? "#c9a030" : s === "actif" ? "#1e9e6b" : "#9ca3af";
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    let dead = false;
+    (async () => {
+      const L = await loadLeaflet();
+      if (dead || !mapRef.current) return;
+      if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; }
+      const map = L.map(mapRef.current, { center: [48.8666, 2.35], zoom: 13, zoomControl: false, attributionControl: false });
+      mapObj.current = map;
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd" }).addTo(map);
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+
+      markers.current = {};
+      techs.forEach((t, i) => {
+        const base = positions.current[t.id] || [48.8566 + 0.02 * Math.sin(i * 2.1) + 0.008 * i, 2.3522 + 0.025 * Math.cos(i * 1.7) - 0.006 * i];
+        positions.current[t.id] = base;
+        const col = statusColor(t.statut);
+        const icon = L.divIcon({
+          html: `<div style="position:relative">
+            ${t.statut !== "inactif" ? `<div style="position:absolute;inset:-8px;border-radius:50%;background:${col};opacity:.18;animation:uberPulse 1.8s ease-out infinite"></div>` : ""}
+            <div style="background:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.25);border:3px solid ${col};font-weight:800;font-size:14px;color:${col};font-family:Inter,sans-serif">${(t.prenom || "?").charAt(0)}${(t.nom || "").charAt(0)}</div>
+          </div>`,
+          className: "", iconSize: [40, 40], iconAnchor: [20, 20]
+        });
+        const mk = L.marker(base, { icon, zIndexOffset: 20 }).addTo(map);
+        mk.bindPopup(`<b>${t.prenom} ${t.nom}</b><br/>${t.metier}<br/>${t.tel}`);
+        markers.current[t.id] = mk;
+      });
+      if (techs.length) {
+        map.fitBounds(L.latLngBounds(Object.values(positions.current)), { padding: [50, 50] });
+      }
+    })();
+    return () => { dead = true; };
+  }, [techs.map(t => t.id).join(",")]);
+
+  // Mouvement live : positions mises à jour toutes les 2s
+  useEffect(() => {
+    const iv = setInterval(() => {
+      techs.forEach(t => {
+        if (t.statut === "inactif") return;
+        const p = positions.current[t.id];
+        if (!p) return;
+        const speed = t.statut === "en_mission" ? 0.0012 : 0.0004;
+        positions.current[t.id] = [p[0] + (Math.random() - 0.5) * speed * 2, p[1] + (Math.random() - 0.5) * speed * 2];
+        markers.current[t.id]?.setLatLng(positions.current[t.id]);
+      });
+      setTick(x => x + 1);
+    }, 2000);
+    return () => clearInterval(iv);
+  }, [techs.map(t => t.id).join(",")]);
+
+  // Centrage sur un employé demandé
+  useEffect(() => {
+    if (focusId && positions.current[focusId] && mapObj.current) {
+      mapObj.current.flyTo(positions.current[focusId], 15, { duration: 0.8 });
+      markers.current[focusId]?.openPopup();
+    }
+  }, [focusId]);
+
+  return (
+    <div style={{ position: "relative", height: 380, background: "#e8eaf0", overflow: "hidden", borderRadius: 16 }}>
+      <style>{`@keyframes uberPulse{0%{transform:scale(1);opacity:.25}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}`}</style>
+      <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+      <div style={{ position: "absolute", top: 12, left: 12, zIndex: 500, background: "#fff", borderRadius: 20, padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 2px 10px rgba(0,0,0,.15)" }}>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#dc2626", animation: "uberPulse 1.4s ease-out infinite", display: "inline-block" }} />
+        <span style={{ fontWeight: 800, fontSize: 11, color: "#111", letterSpacing: ".5px" }}>{tr.fleetLiveBadge}</span>
+      </div>
+    </div>
+  );
 }
 
 /* ─── LIVE MAP ─── */
@@ -6073,19 +6204,30 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const [profileEdit, setProfileEdit] = useState({ ...account });
   const [bonModal, setBonModal] = useState(false);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
+  const [focusTech, setFocusTech] = useState(null);
+  const [subscription, setSubscription] = useState(null); // { plan: "mensuel"|"annuel", since, until }
+  const [leaves, setLeaves] = useState([
+    { id: "lv1", techId: "tech1", dates: "24–28 juin 2026", motif: "Congés payés", statut: "en_attente" },
+    { id: "lv2", techId: "tech3", dates: "3 juillet 2026", motif: "RDV médical", statut: "en_attente" },
+  ]);
+  const [primes, setPrimes] = useState([{ id: "pr1", techId: "tech2", montant: 150, motif: "Mission urgente nuit", date: "05/06/2026" }]);
+  const [primeForm, setPrimeForm] = useState({ techId: "", montant: "", motif: "" });
 
   const myMissions = missions.filter(m => m.partenaireId === account.id);
   const doneMissions = myMissions.filter(m => m.statut === "terminée");
   const activeTechs = techs.filter(t => t.partenaireId === account.id && t.statut !== "inactif");
   const caMois = doneMissions.reduce((s, m) => s + m.montant * 0.6, 0);
-  const commissionMois = caMois * 0.15;
+  const commissionMois = caMois * 0.05; // commission entreprise réduite à 5%
   const conformeCount = docs.filter(d => d.statut === "validé").length;
 
   const tabs = [
     { id: "dashboard", icon: Icon.home, l: tr.partnerDashboard },
+    { id: "flotte", icon: Icon.map, l: tr.fleetTab },
     { id: "missions", icon: Icon.list, l: tr.missions },
     { id: "bons", icon: Icon.percent, l: tr.partnerBonsTab },
     { id: "techniciens", icon: Icon.user, l: tr.partnerTechs },
+    { id: "rh", icon: Icon.calendar, l: tr.rhTab },
+    { id: "abonnement", icon: Icon.star, l: tr.subTab },
     { id: "facturation", icon: Icon.euro, l: tr.partnerFacturation },
     { id: "contrat", icon: Icon.file, l: tr.partnerContrat },
     { id: "conformite", icon: Icon.shield, l: tr.partnerConformite },
@@ -6120,8 +6262,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
       `Montant HT     : ${(mission.montant / 1.2).toFixed(2)} €`,
       `TVA 20%        : ${(mission.montant - mission.montant / 1.2).toFixed(2)} €`,
       `Montant TTC    : ${mission.montant.toFixed(2)} €`,
-      `Commission LOCKR (15%) : ${mission.commission.toFixed(2)} €`,
-      `Net Partenaire : ${mission.netPartenaire.toFixed(2)} €`,
+      `Commission LOCKR (5%) : ${(mission.montant * 0.05).toFixed(2)} €`,
+      `Net Partenaire : ${(mission.montant * 0.95).toFixed(2)} €`,
       "",
       "───────────────────────────────────────────────────────",
       "CONDITIONS DE RÈGLEMENT",
@@ -6175,7 +6317,9 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
       "  directement les clients LOCKR en dehors de la plateforme",
       "",
       "ARTICLE 6 — RÉMUNÉRATION",
-      "85% du montant HT après déduction de la commission LOCKR (15%).",
+      "95% du montant HT après déduction de la commission LOCKR (5%).",
+      "Le partenaire bénéficie du taux réduit de 5% dans le cadre de",
+      "l'abonnement Entreprise LOCKR (mensuel ou annuel).",
       "",
       "ARTICLE 7 — MODALITÉS DE PAIEMENT",
       "Virement bancaire sur l'IBAN déclaré sous 30 jours après paiement client.",
@@ -6275,8 +6419,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12, padding: "10px", background: "rgba(0,0,0,.02)", borderRadius: 8 }}>
               <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.missionAmount}</div><div style={{ fontWeight: 700, fontSize: 13 }}>{m.montant} €</div></div>
-              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.kpiCommission}</div><div style={{ fontWeight: 700, fontSize: 13, color: T.warn }}>{m.commission} €</div></div>
-              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.netPartenaire}</div><div style={{ fontWeight: 700, fontSize: 13, color: T.success }}>{m.netPartenaire} €</div></div>
+              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.kpiCommission} (5%)</div><div style={{ fontWeight: 700, fontSize: 13, color: T.warn }}>{(m.montant * 0.05).toFixed(2)} €</div></div>
+              <div><div style={{ color: T.textLo, fontSize: 10 }}>{tr.netPartenaire}</div><div style={{ fontWeight: 700, fontSize: 13, color: T.success }}>{(m.montant * 0.95).toFixed(2)} €</div></div>
             </div>
             <div style={{ marginBottom: 10 }}>
               <label className="lk-label">{tr.techAssigned}</label>
@@ -6376,7 +6520,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             <span style={{ fontWeight: 700 }}>{Math.round(caMois)} €</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ color: T.textMid, fontSize: 13 }}>{tr.kpiCommission} (15%)</span>
+            <span style={{ color: T.textMid, fontSize: 13 }}>{tr.kpiCommission} (5%)</span>
             <span style={{ fontWeight: 700, color: T.warn }}>{Math.round(commissionMois)} €</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(0,0,0,.08)", paddingTop: 8 }}>
@@ -6428,7 +6572,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         ["Art. 3 — Durée", `1 an à compter du ${account.dateContrat}, renouvelable tacitement. Préavis : 3 mois.`],
         ["Art. 4 — Obligations LOCKR", "Apport de leads qualifiés, gestion des paiements clients, support 7j/7."],
         ["Art. 5 — Obligations Partenaire", "RC Pro à jour, réponse < 5 min, respect des devis, formation RGPD, clause d'exclusivité partielle."],
-        ["Art. 6 — Rémunération", "85% du montant HT après déduction de la commission LOCKR (15%)."],
+        ["Art. 6 — Rémunération", "95% du montant HT après déduction de la commission LOCKR (5% — abonnement Entreprise)."],
         ["Art. 7 — Paiements", "Virement bancaire sous 30 jours après paiement client sur IBAN déclaré."],
         ["Art. 8 — Non-concurrence", "12 mois post-résiliation dans la zone d'intervention déclarée."],
         ["Art. 9 — RGPD", "Partenaire = sous-traitant au sens de l'article 28 RGPD. DPA annexé."],
@@ -6686,11 +6830,247 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     </div>
   );
 
+  /* ── Suivi GPS de la flotte ── */
+  const renderFlotte = () => {
+    const trackable = techs.filter(t => t.partenaireId === account.id);
+    return (
+      <div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.fleetTitle}</div>
+          <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.fleetSubtitle}</div>
+        </div>
+        {trackable.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px", color: T.textLo }}>{tr.fleetNoTech}</div>
+        ) : (
+          <>
+            <FleetMap techs={trackable} tr={tr} focusId={focusTech} />
+            <div style={{ marginTop: 16 }}>
+              {trackable.map(t => {
+                const col = t.statut === "en_mission" ? T.accent : t.statut === "actif" ? T.success : T.textLo;
+                const statusLabel = t.statut === "en_mission" ? tr.fleetOnMission : t.statut === "actif" ? tr.fleetOnline : tr.fleetOffline;
+                const speed = t.statut === "en_mission" ? `${28 + (t.id.charCodeAt(t.id.length - 1) % 25)} km/h` : t.statut === "actif" ? `${(t.id.charCodeAt(t.id.length - 1) % 6)} km/h` : "—";
+                return (
+                  <div key={t.id} className="lk-card" style={{ padding: "14px 16px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                      <div style={{ position: "relative" }}>
+                        <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#fff", border: `3px solid ${col}`, display: "flex", alignItems: "center", justifyContent: "center", color: col, fontWeight: 800, fontSize: 14 }}>{t.prenom.charAt(0)}{t.nom.charAt(0)}</div>
+                        <span style={{ position: "absolute", bottom: 0, right: 0, width: 11, height: 11, borderRadius: "50%", background: col, border: "2px solid #fff" }} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{t.prenom} {t.nom}</div>
+                        <div style={{ fontSize: 12, color: col, fontWeight: 600 }}>{statusLabel}</div>
+                        <div style={{ fontSize: 11, color: T.textLo, marginTop: 2 }}>{tr.fleetSpeed} : {speed} · {tr.fleetLastUpdate} : {new Date().toLocaleTimeString(lang === "en" ? "en-GB" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}</div>
+                      </div>
+                    </div>
+                    <button onClick={() => { setFocusTech(null); setTimeout(() => setFocusTech(t.id), 0); }} className="lk-ghost" style={{ fontSize: 11, padding: "6px 12px" }}>{Icon.pin(T.accent, 12)} {tr.fleetCenterOn}</button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  /* ── Gestion RH ── */
+  const renderRH = () => {
+    const myTechs = techs.filter(t => t.partenaireId === account.id);
+    const days = lang === "en" ? ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"] : ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+    const planFor = (t, d) => {
+      const h = (t.id.charCodeAt(t.id.length - 1) + d) % 5;
+      if (d >= 5) return { l: tr.rhDayOff, c: T.textLo, bg: "rgba(0,0,0,.04)" };
+      if (h <= 1) return { l: tr.rhMissionDay, c: T.accent, bg: "rgba(201,160,48,.08)" };
+      return { l: tr.rhAvailable, c: T.success, bg: "rgba(30,158,107,.07)" };
+    };
+    const hoursFor = (t) => 28 + (t.id.charCodeAt(t.id.length - 1) % 14);
+    const payroll = myTechs.reduce((s, t) => s + 2400 + (t.missions * 12), 0);
+    const expiring = docs.filter(d => d.expiry && new Date(d.expiry) < new Date(Date.now() + 90 * 86400000));
+    return (
+      <div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.rhTitle}</div>
+
+        {/* Planning hebdo */}
+        <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 16, overflowX: "auto" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.rhPlanning}</div>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 520 }}>
+            <thead><tr>
+              <th style={{ textAlign: "left", fontSize: 11, color: T.textLo, padding: "4px 6px" }}></th>
+              {days.map(d => <th key={d} style={{ fontSize: 11, color: T.textLo, padding: "4px 6px" }}>{d}</th>)}
+            </tr></thead>
+            <tbody>
+              {myTechs.map(t => (
+                <tr key={t.id}>
+                  <td style={{ fontSize: 12, fontWeight: 700, color: T.textHi, padding: "5px 6px", whiteSpace: "nowrap" }}>{t.prenom}</td>
+                  {days.map((_, d) => {
+                    const p = planFor(t, d);
+                    return <td key={d} style={{ padding: 3 }}><div style={{ background: p.bg, color: p.c, fontSize: 10, fontWeight: 700, borderRadius: 6, padding: "5px 4px", textAlign: "center" }}>{p.l}</div></td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Congés */}
+        <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.rhLeaves}</div>
+          {leaves.filter(l => l.statut === "en_attente").length === 0 && <div style={{ color: T.textLo, fontSize: 13 }}>{tr.rhNoLeave}</div>}
+          {leaves.filter(l => l.statut === "en_attente").map(l => {
+            const t = myTechs.find(x => x.id === l.techId);
+            return (
+              <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{t ? `${t.prenom} ${t.nom}` : l.techId}</div>
+                  <div style={{ fontSize: 12, color: T.textMid }}>{l.dates} — {l.motif}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setLeaves(p => p.map(x => x.id === l.id ? { ...x, statut: "acceptée" } : x))} className="lk-btn" style={{ width: "auto", padding: "6px 12px", fontSize: 11 }}>{tr.rhApprove}</button>
+                  <button onClick={() => setLeaves(p => p.map(x => x.id === l.id ? { ...x, statut: "refusée" } : x))} className="lk-ghost" style={{ fontSize: 11, padding: "6px 12px", color: T.danger, borderColor: T.danger }}>{tr.rhReject}</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="lk-desktop-2col">
+          {/* Heures travaillées */}
+          <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.rhHours}</div>
+            {myTechs.map(t => {
+              const h = hoursFor(t);
+              return (
+                <div key={t.id} style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: T.textMid }}>{t.prenom} {t.nom}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: h > 38 ? T.warn : T.textHi }}>{h} h</span>
+                  </div>
+                  <div style={{ height: 5, background: "rgba(0,0,0,.06)", borderRadius: 3 }}>
+                    <div style={{ height: "100%", width: `${Math.min(100, (h / 42) * 100)}%`, background: h > 38 ? T.warn : T.success, borderRadius: 3 }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,.08)" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: T.textHi }}>{tr.rhPayroll}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: T.accent }}>{payroll.toLocaleString("fr-FR")} €</span>
+            </div>
+          </div>
+
+          {/* Primes */}
+          <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.rhBonuses}</div>
+            {primes.map(p => {
+              const t = myTechs.find(x => x.id === p.techId);
+              return (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
+                  <span style={{ fontSize: 12, color: T.textMid }}>{t ? t.prenom : p.techId} — {p.motif}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: T.success }}>+{p.montant} €</span>
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 12 }}>
+              <select className="lk-input" value={primeForm.techId} onChange={e => setPrimeForm(p => ({ ...p, techId: e.target.value }))} style={{ marginBottom: 8, cursor: "pointer" }}>
+                <option value="">—</option>
+                {myTechs.map(t => <option key={t.id} value={t.id}>{t.prenom} {t.nom}</option>)}
+              </select>
+              <input type="number" className="lk-input" placeholder={tr.rhBonusAmount} value={primeForm.montant} onChange={e => setPrimeForm(p => ({ ...p, montant: e.target.value }))} style={{ marginBottom: 8 }} />
+              <input className="lk-input" placeholder={tr.rhBonusReason} value={primeForm.motif} onChange={e => setPrimeForm(p => ({ ...p, motif: e.target.value }))} style={{ marginBottom: 8 }} />
+              <button disabled={!primeForm.techId || !primeForm.montant} onClick={() => {
+                setPrimes(p => [...p, { id: uid(), techId: primeForm.techId, montant: parseFloat(primeForm.montant), motif: primeForm.motif, date: new Date().toLocaleDateString("fr-FR") }]);
+                setPrimeForm({ techId: "", montant: "", motif: "" });
+              }} className="lk-btn" style={{ fontSize: 12, opacity: (!primeForm.techId || !primeForm.montant) ? .5 : 1 }}>{tr.rhAddBonus}</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Alertes RH */}
+        <div className="lk-card" style={{ padding: "16px 18px" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.rhAlerts}</div>
+          {expiring.length === 0 && <div style={{ color: T.textLo, fontSize: 13 }}>—</div>}
+          {expiring.map(d => (
+            <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.05)" }}>
+              {Icon.warning(T.warn, 15)}
+              <span style={{ fontSize: 13, color: T.warn, fontWeight: 600 }}>{d.label} — {tr.rhDocExpiring} ({d.expiry})</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Abonnement Entreprise ── */
+  const subBenefits = [tr.subBenefit1, tr.subBenefit2, tr.subBenefit3, tr.subBenefit4, tr.subBenefit5, tr.subBenefit6];
+  const subscribe = (plan) => {
+    const until = new Date(Date.now() + (plan === "annuel" ? 365 : 30) * 86400000);
+    setSubscription({ plan, since: new Date().toLocaleDateString("fr-FR"), until: until.toLocaleDateString("fr-FR") });
+    setTab("dashboard");
+    alert(tr.subConfirmed);
+  };
+  const renderOffers = () => (
+    <div className="lk-desktop-2col" style={{ marginBottom: 20 }}>
+      {[
+        { plan: "mensuel", title: tr.subMonthly, price: "49,90 €", per: tr.subPerMonth, badge: null },
+        { plan: "annuel", title: tr.subAnnual, price: "499 €", per: tr.subPerYear, badge: tr.subBestOffer },
+      ].map(o => (
+        <div key={o.plan} className="lk-card" style={{ padding: "22px 20px", border: o.badge ? `2px solid ${T.accent}` : undefined, position: "relative" }}>
+          {o.badge && <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: T.accent, color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 20, padding: "4px 12px", whiteSpace: "nowrap" }}>{o.badge}</div>}
+          <div style={{ fontWeight: 800, fontSize: 16, color: T.textHi, marginBottom: 6 }}>{o.title}</div>
+          <div style={{ marginBottom: 14 }}>
+            <span style={{ fontWeight: 900, fontSize: 30, color: T.accent }}>{o.price}</span>
+            <span style={{ color: T.textLo, fontSize: 13 }}> {o.per}</span>
+          </div>
+          {subBenefits.map((b, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 7 }}>
+              {Icon.check(T.success, 13)}
+              <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.4 }}>{b}</span>
+            </div>
+          ))}
+          <button onClick={() => subscribe(o.plan)} className="lk-btn" style={{ marginTop: 12, fontSize: 13 }}>{tr.subPayNow}</button>
+        </div>
+      ))}
+    </div>
+  );
+  const renderAbonnement = () => (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.subTitle}</div>
+        <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.subSubtitle}</div>
+      </div>
+      {subscription ? (
+        <div className="lk-card" style={{ padding: "20px 22px", marginBottom: 16, background: "rgba(30,158,107,.04)", border: "1px solid rgba(30,158,107,.2)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontWeight: 800, fontSize: 15, color: T.success }}>{tr.subActive}</span>
+            <span className="lk-badge-ok">{subscription.plan === "annuel" ? tr.subAnnual : tr.subMonthly}</span>
+          </div>
+          <div style={{ fontSize: 13, color: T.textMid }}>{tr.subUntil} {subscription.until}</div>
+          <button onClick={() => setSubscription(null)} className="lk-ghost" style={{ marginTop: 14, fontSize: 12, color: T.danger, borderColor: T.danger }}>{tr.subCancel}</button>
+        </div>
+      ) : renderOffers()}
+    </div>
+  );
+
+  /* ── Paywall : section entreprise payante ── */
+  const renderPaywall = () => (
+    <div>
+      <div style={{ textAlign: "center", padding: "28px 16px 8px" }}>
+        <div style={{ width: 58, height: 58, borderRadius: 16, background: T.grad, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>{Icon.lock("#fff", 26)}</div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.subPaywallTitle}</div>
+        <div style={{ color: T.textMid, fontSize: 13, marginTop: 6, marginBottom: 24 }}>{tr.subPaywallText}</div>
+      </div>
+      {renderOffers()}
+    </div>
+  );
+
   const renderContent = () => {
+    if (!subscription && tab !== "abonnement" && tab !== "profil") return renderPaywall();
     if (tab === "dashboard") return renderDashboard();
+    if (tab === "flotte") return renderFlotte();
     if (tab === "missions") return renderMissions();
     if (tab === "bons") return renderBons();
     if (tab === "techniciens") return renderTechniciens();
+    if (tab === "rh") return renderRH();
+    if (tab === "abonnement") return renderAbonnement();
     if (tab === "facturation") return renderFacturation();
     if (tab === "contrat") return renderContrat();
     if (tab === "conformite") return renderConformite();
