@@ -1,6 +1,43 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 
+/* ─── PROTECTION CODE SOURCE ─── */
+(function protect() {
+  if (typeof window === "undefined") return;
+
+  // 1. Désactiver clic droit (desktop uniquement — pas de touchstart)
+  document.addEventListener("contextmenu", e => {
+    // Autoriser sur les inputs et textareas
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+    e.preventDefault();
+  }, true);
+
+  // 2. Bloquer raccourcis clavier DevTools / view-source (desktop uniquement)
+  document.addEventListener("keydown", e => {
+    if (
+      e.key === "F12" ||
+      (e.ctrlKey && e.shiftKey && ["I","i","J","j","C","c"].includes(e.key)) ||
+      (e.ctrlKey && ["U","u"].includes(e.key)) ||
+      (e.metaKey && e.altKey && ["I","i","J","j","C","c"].includes(e.key))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  // 3. Bloquer copier hors champs de saisie (desktop uniquement)
+  document.addEventListener("copy", e => {
+    const tag = document.activeElement?.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA" && !document.activeElement?.isContentEditable) {
+      e.preventDefault();
+    }
+  }, true);
+
+  // NOTE: Pas de détection DevTools par dimensions — trop agressive sur mobile
+  // (la barre d'adresse / clavier virtuel change les dimensions et bloque l'app)
+})();
+
 const uid = () => Math.random().toString(36).slice(2, 9);
 const fmt = n => `${Math.round(Number(n))} €`;
 const fmtFrom = (n, lang = "fr") => lang === "en" ? `From ${Math.round(Number(n))} €` : `À partir de ${Math.round(Number(n))} €`;
@@ -202,6 +239,22 @@ const TRANS = {
     getStarted: "Commencer",
     proDesc: "Recevez des missions près de chez vous. Gérez votre activité et vos revenus.",
     proDocsRequired: "Documents professionnels requis (SIRET, assurance, pièce d'identité)",
+    entrepriseChoice: "Entreprise / Partenaire",
+    entrepriseDesc: "Gérez votre flotte de techniciens, publiez des bons de travail et bénéficiez d'un tableau de bord entreprise complet.",
+    entrepriseDocsRequired: "Documents entreprise requis (SIRET, Kbis, RC Pro, IBAN)",
+    // RegisterEntrepriseScreen
+    entRegisterTitle: "Inscription Entreprise", entRegisterSubtitle: "Rejoignez le réseau partenaire LOCKR",
+    entStep1: "Informations entreprise", entStep2: "Documents légaux", entStep3: "Confirmation",
+    raisonSocialeLabel: "Raison sociale *", formeJuridique: "Forme juridique *",
+    formeOptions: "SAS,SARL,SA,EURL,SNC,EI,Auto-entrepreneur,Autre",
+    capitalLabel: "Capital social", rcsLabel: "N° RCS", tvaLabel: "N° TVA intracommunautaire",
+    secteurActivite: "Secteurs d'activité *", assuranceRCLabel: "Assurance RC Pro *",
+    kbisRequired: "Extrait Kbis requis (moins de 3 mois)", ibanEntLabel: "IBAN *",
+    uploadKbisRequired: "Téléverser Kbis *", logoLabel: "Logo entreprise",
+    entLegalNote: "Ces documents sont requis par la loi. Votre dossier sera examiné sous 48h ouvrées.",
+    entSubmit: "Soumettre ma demande de partenariat",
+    entPending: "Votre dossier est en cours d'examen. Vous recevrez une réponse sous 48h.",
+    entSecteurs: "Serrurerie,Plomberie,Électricité,Chauffage,Fermetures,Multi-métiers",
     // RegisterClientScreen
     clientRegisterTitle: "Inscription Particulier", clientRegisterSubtitle: "Trouvez un artisan en quelques secondes",
     createMyAccount: "Créer mon compte", repeatPassword: "Répétez votre mot de passe",
@@ -1587,6 +1640,26 @@ const PAY_METHODS = [
 const fmtCard = v => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
 
+function LockrLogo({ size = 30 }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size * 46 / 48} viewBox="0 0 48 46" fill="none">
+      <defs>
+        <linearGradient id="llGold" x1="0" y1="0" x2="48" y2="46" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#f0c93a"/>
+          <stop offset="45%" stopColor="#c9a030"/>
+          <stop offset="100%" stopColor="#8a6b1a"/>
+        </linearGradient>
+        <linearGradient id="llShimmer" x1="0" y1="0" x2="30" y2="46" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#fff8dc" stopOpacity="0.55"/>
+          <stop offset="60%" stopColor="#c9a030" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#llGold)" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
+      <path fill="url(#llShimmer)" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
+    </svg>
+  );
+}
+
 function PayLogo({ id, size = 44 }) {
   const s = { width: size, height: size, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
   if (id === "visa") return (
@@ -1969,7 +2042,7 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
       {isDesktop && (
         <div style={{ width: 360, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px" }}>
           <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            {Icon.lock("#c9a030", 26)}
+            <LockrLogo size={32} />
           </div>
           <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
@@ -2003,6 +2076,23 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.craftsman}</div>
             <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>{tr.proDesc}</div>
             <div style={{ color: T.textLo, fontSize: 11, marginTop: 6, fontStyle: "italic" }}>{tr.proDocsRequired}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
+              <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{tr.getStarted}</span>
+              {Icon.arrow(T.accent, 13)}
+            </div>
+          </button>
+
+          {/* Entreprise / Partenaire */}
+          <button onClick={() => onChoice("entreprise")} style={{ background: "linear-gradient(135deg,rgba(201,160,48,.06),rgba(201,160,48,.02))", border: `2px solid rgba(201,160,48,.35)`, borderRadius: 18, padding: "22px 20px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", transition: "all .2s", boxShadow: "0 2px 16px rgba(201,160,48,.1)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ width: 48, height: 48, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.35)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {Icon.shield(T.accent, 22)}
+              </div>
+              <span style={{ background: T.accent, color: "#fff", fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 20, letterSpacing: ".5px" }}>PARTENAIRE</span>
+            </div>
+            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{tr.entrepriseChoice}</div>
+            <div style={{ color: T.textMid, fontSize: 13, lineHeight: 1.5 }}>{tr.entrepriseDesc}</div>
+            <div style={{ color: T.textLo, fontSize: 11, marginTop: 6, fontStyle: "italic" }}>{tr.entrepriseDocsRequired}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14 }}>
               <span style={{ color: T.accent, fontWeight: 600, fontSize: 13 }}>{tr.getStarted}</span>
               {Icon.arrow(T.accent, 13)}
@@ -2067,7 +2157,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
       {isDesktop && (
         <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh" }}>
           <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            {Icon.lock("#c9a030", 26)}
+            <LockrLogo size={32} />
           </div>
           <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
@@ -2209,7 +2299,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
       {isDesktop && (
         <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh", position: "sticky", top: 0, alignSelf: "flex-start" }}>
           <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            {Icon.lock("#c9a030", 26)}
+            <LockrLogo size={32} />
           </div>
           <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.joinProLockr}</div>
@@ -2385,6 +2475,250 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
   );
 }
 
+/* ─── REGISTER ENTREPRISE ─── */
+function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr" }) {
+  const tr = TRANS[lang] || TRANS.fr;
+  const w = useWindowSize();
+  const isDesktop = w >= BP;
+  const [step, setStep] = useState(1);
+  // Step 1 — Infos entreprise
+  const [raisonSociale, setRaisonSociale] = useState("");
+  const [forme, setForme] = useState("SARL");
+  const [siret, setSiret] = useState("");
+  const [capital, setCapital] = useState("");
+  const [rcs, setRcs] = useState("");
+  const [tva, setTva] = useState("");
+  const [ville, setVille] = useState("");
+  const [email, setEmail] = useState("");
+  const [tel, setTel] = useState("");
+  const [pass, setPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [secteurs, setSecteurs] = useState([]);
+  // Step 2 — Documents
+  const [kbisFile, setKbisFile] = useState(null);
+  const [rcProFile, setRcProFile] = useState(null);
+  const [ibanFile, setIbanFile] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [iban, setIban] = useState("");
+  const [cguOk, setCguOk] = useState(false);
+  const [errs, setErrs] = useState({});
+  const [modal, setModal] = useState(false);
+  const [pending, setPending] = useState(null);
+  const kbisRef = useRef(null);
+  const rcRef = useRef(null);
+  const ibanRef = useRef(null);
+  const logoRef = useRef(null);
+
+  const clr = k => setErrs(p => { const e = { ...p }; delete e[k]; return e; });
+  const formeOptions = (tr.formeOptions || "SAS,SARL,SA,EURL,SNC,EI,Auto-entrepreneur,Autre").split(",");
+  const secteurOptions = (tr.entSecteurs || "Serrurerie,Plomberie,Électricité,Chauffage,Fermetures,Multi-métiers").split(",");
+
+  const toggleSecteur = (s) => setSecteurs(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+
+  const validateStep1 = () => {
+    const e = {};
+    if (!raisonSociale.trim()) e.rs = lang === "en" ? "Company name required" : "Raison sociale requise";
+    if (!siret.replace(/\s/g, "").match(/^\d{14}$/)) e.siret = tr.siretInvalid;
+    if (accounts.some(a => a.email === email)) e.email = tr.emailUsed;
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) e.email = tr.invalidEmail;
+    if (!tel || tel.replace(/\D/g, "").length < 6) e.tel = tr.invalidPhone;
+    if (pass.length < 6) e.pass = tr.minChars;
+    if (pass !== confirm) e.confirm = tr.passMismatch;
+    if (secteurs.length === 0) e.secteurs = lang === "en" ? "Select at least one sector" : "Sélectionnez au moins un secteur";
+    setErrs(e); return Object.keys(e).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const e = {};
+    if (!kbisFile) e.kbis = lang === "en" ? "Kbis required" : "Extrait Kbis requis";
+    if (!rcProFile) e.rc = lang === "en" ? "RC Pro required" : "Attestation RC Pro requise";
+    if (!iban.trim()) e.iban = lang === "en" ? "IBAN required" : "IBAN requis";
+    if (!cguOk) e.cgu = tr.cguRequired;
+    setErrs(e); return Object.keys(e).length === 0;
+  };
+
+  const submit = () => {
+    if (!validateStep2()) return;
+    const acc = {
+      id: uid(), role: "partenaire",
+      nom: raisonSociale, email, pass, verified: false,
+      forme, siret, capital, rcs, tva, iban, ville, tel,
+      secteurs: secteurs.map(s => s.toLowerCase()),
+      assurance: rcProFile ? "RC Pro fournie" : "",
+      qualibat: "", logo: logoFile || null,
+      statut: "en_attente", dateContrat: new Date().toLocaleDateString("fr-FR"),
+      dossierStatus: "pending",
+    };
+    setPending(acc);
+    setModal(true);
+  };
+
+  const onVerified = () => {
+    setAccounts(p => [...p, { ...pending, verified: true }]);
+    setModal(false);
+    onSuccess({ ...pending, verified: true });
+  };
+
+  const handleFile = (ref, setter) => {
+    ref.current?.click();
+    ref.current && (ref.current.onchange = e => {
+      const f = e.target.files?.[0];
+      if (f) setter(f.name);
+    });
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto", display: "flex", flexDirection: isDesktop ? "row" : "column" }}>
+      <style>{CSS}</style>
+      {isDesktop && (
+        <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh", position: "sticky", top: 0 }}>
+          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>{Icon.shield("#c9a030", 26)}</div>
+          <div style={{ fontSize: 32, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
+          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 13, textAlign: "center", lineHeight: 1.7 }}>{lang === "en" ? "Join the LOCKR partner network" : "Rejoignez le réseau partenaire LOCKR"}</div>
+          <div style={{ marginTop: 32, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+            {[lang === "en" ? "5% commission on all missions" : "Commission à 5% sur toutes les missions",
+              lang === "en" ? "Real-time GPS fleet tracking" : "Suivi GPS flotte en temps réel",
+              lang === "en" ? "Full HR management" : "Gestion RH complète",
+              lang === "en" ? "Dedicated marketplace" : "Marketplace dédié"].map((b, i) => (
+              <div key={i} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {Icon.check("#c9a030", 13)}
+                <span style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>{b}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+      <div style={{ maxWidth: 560, width: "100%", padding: "28px 18px 80px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+          <button onClick={step === 1 ? onBack : () => setStep(1)} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>{tr.entRegisterTitle}</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.stepWord} {step} {tr.ofWord} 2 — {step === 1 ? tr.entStep1 : tr.entStep2}</div>
+          </div>
+        </div>
+        {/* Barre de progression */}
+        <div style={{ height: 4, background: "rgba(0,0,0,.07)", borderRadius: 2, marginBottom: 24 }}>
+          <div style={{ height: "100%", borderRadius: 2, background: T.grad, width: step === 1 ? "50%" : "100%", transition: "width .4s" }} />
+        </div>
+
+        {step === 1 && (
+          <div className="lk-card" style={{ padding: "22px 18px" }}>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 18, display: "flex", gap: 8, alignItems: "center" }}>{Icon.shield(T.accent, 16)} {tr.entStep1}</div>
+            <Field label={tr.raisonSocialeLabel} value={raisonSociale} onChange={e => { setRaisonSociale(e.target.value); clr("rs"); }} placeholder="BâtiPro SARL" err={errs.rs} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+              <div>
+                <label className="lk-label">{tr.formeJuridique}</label>
+                <select className="lk-input" value={forme} onChange={e => setForme(e.target.value)} style={{ cursor: "pointer" }}>
+                  {formeOptions.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
+              <Field label={tr.siretLabel} value={siret} onChange={e => { setSiret(e.target.value); clr("siret"); }} placeholder="12345678900012" err={errs.siret} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+              <Field label={tr.capitalLabel + " (€)"} value={capital} onChange={e => setCapital(e.target.value)} placeholder="50 000" />
+              <Field label={tr.rcsLabel} value={rcs} onChange={e => setRcs(e.target.value)} placeholder="Paris B 123 456 789" />
+            </div>
+            <Field label={tr.tvaLabel} value={tva} onChange={e => setTva(e.target.value)} placeholder="FR12345678900" />
+            <Field label={tr.email} value={email} onChange={e => { setEmail(e.target.value); clr("email"); }} placeholder="contact@entreprise.fr" type="email" err={errs.email} />
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.phone}</label>
+              <PhoneInput value={tel} onChange={v => { setTel(v); clr("tel"); }} />
+              {errs.tel && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.tel}</div>}
+            </div>
+            <Field label={tr.city} value={ville} onChange={e => setVille(e.target.value)} placeholder="Paris" />
+            {/* Secteurs */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.secteurActivite}</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                {secteurOptions.map(s => (
+                  <button key={s} type="button" onClick={() => { toggleSecteur(s); clr("secteurs"); }} style={{ border: `1.5px solid ${secteurs.includes(s) ? T.accent : T.border}`, borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", background: secteurs.includes(s) ? "rgba(201,160,48,.1)" : T.surface, color: secteurs.includes(s) ? T.accent : T.textMid }}>{s}</button>
+                ))}
+              </div>
+              {errs.secteurs && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.secteurs}</div>}
+            </div>
+            <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
+              <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder={tr.minChars} type="password" err={errs.pass} />
+              <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder={tr.repeatPassword || tr.confirmPassword} type="password" err={errs.confirm} />
+            </div>
+            <button onClick={() => { if (validateStep1()) setStep(2); }} className="lk-btn">{tr.next} {Icon.arrow("#fff", 14)}</button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="lk-card" style={{ padding: "22px 18px" }}>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 18, display: "flex", gap: 8, alignItems: "center" }}>{Icon.file(T.accent, 16)} {tr.entStep2}</div>
+            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: T.textMid }}>{tr.entLegalNote}</div>
+
+            {/* Kbis */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.uploadKbisRequired}</label>
+              <input type="file" ref={kbisRef} accept=".pdf,.jpg,.png" style={{ display: "none" }} onChange={e => setKbisFile(e.target.files?.[0]?.name || null)} />
+              <button type="button" onClick={() => kbisRef.current?.click()} className="lk-ghost" style={{ width: "100%", justifyContent: "flex-start", gap: 8, fontSize: 12, color: kbisFile ? T.success : T.textMid }}>
+                {Icon.file(kbisFile ? T.success : T.textMid, 14)} {kbisFile || tr.uploadKbis}
+              </button>
+              {errs.kbis && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.kbis}</div>}
+            </div>
+
+            {/* RC Pro */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.assuranceRCLabel}</label>
+              <input type="file" ref={rcRef} accept=".pdf,.jpg,.png" style={{ display: "none" }} onChange={e => setRcProFile(e.target.files?.[0]?.name || null)} />
+              <button type="button" onClick={() => rcRef.current?.click()} className="lk-ghost" style={{ width: "100%", justifyContent: "flex-start", gap: 8, fontSize: 12, color: rcProFile ? T.success : T.textMid }}>
+                {Icon.shield(rcProFile ? T.success : T.textMid, 14)} {rcProFile || tr.uploadInsurance}
+              </button>
+              {errs.rc && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.rc}</div>}
+            </div>
+
+            {/* IBAN */}
+            <div style={{ marginBottom: 14 }}>
+              <label className="lk-label">{tr.ibanEntLabel}</label>
+              <input className="lk-input" value={iban} onChange={e => { setIban(e.target.value); clr("iban"); }} placeholder="FR76 3000 6000 0112 3456 7890 189" />
+              {errs.iban && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.iban}</div>}
+            </div>
+
+            {/* Logo (optionnel) */}
+            <div style={{ marginBottom: 18 }}>
+              <label className="lk-label">{tr.logoLabel} ({tr.optionalWord})</label>
+              <input type="file" ref={logoRef} accept=".jpg,.png,.svg" style={{ display: "none" }} onChange={e => setLogoFile(e.target.files?.[0]?.name || null)} />
+              <button type="button" onClick={() => logoRef.current?.click()} className="lk-ghost" style={{ width: "100%", justifyContent: "flex-start", gap: 8, fontSize: 12, color: logoFile ? T.success : T.textMid }}>
+                {Icon.image(logoFile ? T.success : T.textMid, 14)} {logoFile || (lang === "en" ? "Upload logo" : "Téléverser logo")}
+              </button>
+            </div>
+
+            {/* CGU */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input type="checkbox" checked={cguOk} onChange={e => { setCguOk(e.target.checked); clr("cgu"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+                <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>{tr.cguAccept} — <span style={{ color: T.accent, textDecoration: "underline" }}>{tr.cguLink}</span></span>
+              </label>
+              {errs.cgu && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.cgu}</div>}
+            </div>
+
+            {/* Récap infos step 1 */}
+            <div style={{ background: "rgba(0,0,0,.03)", borderRadius: 10, padding: "12px 14px", marginBottom: 16, fontSize: 12, color: T.textMid }}>
+              <div style={{ fontWeight: 700, color: T.textHi, marginBottom: 6 }}>{raisonSociale} — {forme}</div>
+              <div>SIRET : {siret}</div>
+              <div>{email} · {ville}</div>
+              <div style={{ marginTop: 4 }}>{secteurs.join(", ")}</div>
+            </div>
+
+            <div style={{ background: "rgba(30,158,107,.05)", border: "1px solid rgba(30,158,107,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: T.textMid }}>{tr.entPending}</div>
+            <button onClick={submit} className="lk-btn">{tr.entSubmit} {Icon.check("#fff", 14)}</button>
+          </div>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
+        </div>
+      </div>
+      </div>
+      {modal && pending && <EmailConfirmModal account={pending} onVerified={onVerified} onClose={() => setModal(false)} lang={lang} />}
+    </div>
+  );
+}
+
 /* ─── LOGIN ─── */
 function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -2443,7 +2777,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
             {/* Logo */}
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 36 }}>
               <div style={{ width: 52, height: 52, background: "rgba(201,160,48,.18)", border: "1.5px solid rgba(201,160,48,.45)", borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {Icon.lock("#c9a030", 26)}
+                <LockrLogo size={30} />
               </div>
               <div>
                 <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-1.5px", lineHeight: 1 }}>LOCKR</div>
@@ -2504,7 +2838,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(10,10,10,.5) 0%,rgba(10,10,10,.85) 70%,rgba(10,10,10,.98) 100%)" }} />
             <div style={{ position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
-                <div style={{ width: 38, height: 38, background: "rgba(201,160,48,.18)", border: "1px solid rgba(201,160,48,.4)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#c9a030", 18)}</div>
+                <div style={{ width: 38, height: 38, background: "rgba(201,160,48,.18)", border: "1px solid rgba(201,160,48,.4)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={22} /></div>
                 <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", letterSpacing: "-1px" }}>LOCKR</span>
               </div>
               <p style={{ color: "rgba(255,255,255,.7)", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", maxWidth: 340 }}>{tr.loginWhoText}</p>
@@ -2567,7 +2901,9 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           </div>
           {/* Partenaires link */}
           <div style={{ textAlign: "center", marginTop: 12 }}>
-            <button onClick={() => {}} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif" }}>Partenaires LOCKR — Pro ? Rejoignez-nous</button>
+            <button onClick={onRegister} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif" }}>
+              {lang === "en" ? "Become a LOCKR partner — Join us" : "Devenir partenaire LOCKR — Rejoignez-nous"}
+            </button>
           </div>
         </div>
       </div>
@@ -4872,7 +5208,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           {/* Logo */}
           <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 30, height: 30, background: T.grad, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 14)}</div>
+              <div style={{ width: 30, height: 30, background: "transparent", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={22} /></div>
               <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
             </div>
           </div>
@@ -5529,7 +5865,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       <style>{CSS}</style>
       <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: T.grad, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 13)}</div>
+          <div style={{ width: 26, height: 26, background: "transparent", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={20} /></div>
           <span style={{ fontSize: 17, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -5817,7 +6153,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)" }}>
         <button onClick={() => setScreen("home")} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: T.grad, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 13)}</div>
+          <div style={{ width: 26, height: 26, background: "transparent", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={20} /></div>
           <span style={{ fontSize: 16, fontWeight: 800, color: T.textHi }}>{tr.liveTracking}</span>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 20, padding: "5px 10px" }}>
@@ -8061,7 +8397,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const renderPaywall = () => (
     <div>
       <div style={{ textAlign: "center", padding: "28px 16px 8px" }}>
-        <div style={{ width: 58, height: 58, borderRadius: 16, background: T.grad, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>{Icon.lock("#fff", 26)}</div>
+        <div style={{ width: 58, height: 58, borderRadius: 16, background: "rgba(201,160,48,.12)", border: "1.5px solid rgba(201,160,48,.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}><LockrLogo size={36} /></div>
         <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.subPaywallTitle}</div>
         <div style={{ color: T.textMid, fontSize: 13, marginTop: 6, marginBottom: 24 }}>{tr.subPaywallText}</div>
       </div>
@@ -8101,7 +8437,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         <div style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0, background: "#fff", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
           <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 30, height: 30, background: T.grad, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 14)}</div>
+              <div style={{ width: 30, height: 30, background: "transparent", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={22} /></div>
               <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
             </div>
           </div>
@@ -8129,7 +8465,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         {!isDesktop && (
           <div style={{ background: "#fff", borderBottom: `1px solid ${T.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 26, height: 26, background: T.grad, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.lock("#fff", 12)}</div>
+              <div style={{ width: 26, height: 26, background: "transparent", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={20} /></div>
               <span style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>LOCKR</span>
             </div>
             <div style={{ color: T.accent, fontSize: 11, fontWeight: 700 }}>{tr.partnerCertified}</div>
@@ -8367,9 +8703,10 @@ export default function App() {
     if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />);
     if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
   }
-  if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
+  if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : type === "entreprise" ? "register-entreprise" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
   if (screen === "register-client") return wrapper(<RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
   if (screen === "register-pro") return wrapper(<RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
+  if (screen === "register-entreprise") return wrapper(<RegisterEntrepriseScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
   return wrapper(<LoginScreen onLogin={(acc) => {
     const banned = bannedList.find(b => b.email === acc.email);
     if (banned) { alert((TRANS[lang] || TRANS.fr).accountBanned); return; }
