@@ -8507,10 +8507,171 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   );
 }
 
+/* ─── DOCUMENTS LÉGAUX (France métropolitaine / UE) ─── */
+const LEGAL_DOCS = {
+  fr: [
+    {
+      id: "mentions", tab: "Mentions légales", title: "Mentions légales",
+      sub: "Article 6 de la loi n°2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique (LCEN)",
+      articles: [
+        { h: "Éditeur du site", p: "LOCKR SAS — Société par actions simplifiée au capital de 10 000 €. Siège social : 12 rue de la Serrure, 75011 Paris, France. RCS Paris 923 456 789 — SIRET 923 456 789 00012 — TVA intracommunautaire : FR32 923456789. Directeur de la publication : Le Président de LOCKR SAS. Contact : contact@lockr.fr — 01 84 80 00 00." },
+        { h: "Hébergement", p: "Le site est hébergé au sein de l'Union européenne par Netlify (représentation UE) et infrastructure conforme RGPD. Les données sont stockées dans des centres de données situés dans l'UE." },
+        { h: "Activité", p: "Plateforme de mise en relation entre particuliers/professionnels et artisans certifiés (serrurerie, plomberie, électricité, chauffage) en France métropolitaine. LOCKR agit en qualité d'opérateur de plateforme en ligne au sens de l'article L.111-7 du Code de la consommation." },
+        { h: "Assurance", p: "Responsabilité civile professionnelle souscrite auprès d'AXA France IARD, couvrant les activités de la plateforme sur le territoire de la France métropolitaine." },
+        { h: "Propriété intellectuelle", p: "L'ensemble du site (structure, textes, logos, graphismes, code source) est protégé par le Code de la propriété intellectuelle. Toute reproduction totale ou partielle sans autorisation écrite est interdite (art. L.122-4 et L.335-2 CPI)." },
+        { h: "Signalement de contenus (DSA)", p: "Conformément au Règlement (UE) 2022/2065 sur les services numériques, tout contenu illicite peut être signalé à : signalement@lockr.fr. Point de contact unique DSA : dsa@lockr.fr." },
+      ],
+    },
+    {
+      id: "cgu", tab: "CGU", title: "Conditions Générales d'Utilisation",
+      sub: "En vigueur au 1er janvier 2026 — applicables à tout utilisateur de la plateforme",
+      articles: [
+        { h: "Article 1 — Objet", p: "Les présentes CGU régissent l'accès et l'utilisation de la plateforme LOCKR, qui met en relation des clients avec des artisans professionnels vérifiés. L'utilisation de la plateforme vaut acceptation pleine et entière des présentes CGU." },
+        { h: "Article 2 — Inscription et compte", p: "L'inscription est ouverte à toute personne majeure disposant de la capacité juridique. L'utilisateur garantit l'exactitude des informations fournies. Les professionnels doivent justifier de leur immatriculation (SIRET), de leur assurance RC Pro et de leurs qualifications. Chaque compte est personnel et non cessible." },
+        { h: "Article 3 — Rôle de la plateforme", p: "LOCKR est un intermédiaire technique au sens de l'article L.111-7 du Code de la consommation. Les contrats de prestation sont conclus directement entre le client et l'artisan. LOCKR fournit un classement loyal, clair et transparent des offres (loi n°2016-1321 pour une République numérique)." },
+        { h: "Article 4 — Obligations de l'utilisateur", p: "L'utilisateur s'engage à ne pas publier de contenus illicites, à ne pas contourner la plateforme pour éviter les commissions, à respecter les artisans et à fournir des informations sincères. Tout manquement peut entraîner la suspension ou la suppression du compte après mise en demeure." },
+        { h: "Article 5 — Avis et notations", p: "Les avis publiés font l'objet d'un contrôle conformément à l'article L.111-7-2 du Code de la consommation et à la norme sur les avis en ligne. Seuls les clients ayant effectivement bénéficié d'une prestation peuvent déposer un avis." },
+        { h: "Article 6 — Responsabilité", p: "LOCKR met en œuvre tous les moyens raisonnables pour assurer la disponibilité du service, sans obligation de résultat. LOCKR n'est pas responsable de l'inexécution du contrat conclu entre le client et l'artisan, sans préjudice de son devoir de vérification des professionnels référencés." },
+        { h: "Article 7 — Droit applicable et litiges", p: "Les présentes CGU sont soumises au droit français. En cas de litige, une solution amiable sera recherchée avant toute action judiciaire. Le consommateur peut recourir gratuitement au médiateur de la consommation (art. L.612-1 C. conso) ou à la plateforme européenne de règlement en ligne des litiges : ec.europa.eu/consumers/odr." },
+      ],
+    },
+    {
+      id: "cgv", tab: "CGV", title: "Conditions Générales de Vente",
+      sub: "Code de la consommation — articles L.111-1, L.221-5 et suivants",
+      articles: [
+        { h: "Article 1 — Prix", p: "Tous les prix affichés sont exprimés en euros toutes taxes comprises (TTC), TVA française applicable. Les prix « À partir de » constituent des tarifs indicatifs minimums ; un devis précis est communiqué avant toute intervention. Aucune intervention n'est facturée sans accord préalable du client sur le prix (arrêté du 24 janvier 2017 relatif aux dépannages)." },
+        { h: "Article 2 — Devis obligatoire", p: "Conformément à l'arrêté du 24 janvier 2017, un devis détaillé est obligatoire avant toute prestation de dépannage, réparation et entretien dans le bâtiment : taux horaire, frais de déplacement, pièces, durée estimée. Le devis est gratuit sauf mention contraire expresse." },
+        { h: "Article 3 — Paiement", p: "Le paiement s'effectue en ligne de manière sécurisée (prestataire conforme PCI-DSS et DSP2 avec authentification forte 3-D Secure). Un acompte de 50 % est demandé à la réservation ; le solde est dû à l'issue de la prestation après validation du client." },
+        { h: "Article 4 — Droit de rétractation", p: "Conformément à l'article L.221-18 du Code de la consommation, le client dispose d'un délai de 14 jours pour se rétracter d'une commande conclue à distance, sans motif ni pénalité. EXCEPTION : le droit de rétractation ne s'applique pas aux travaux d'entretien ou de réparation à réaliser en urgence au domicile du client et expressément sollicités par lui (art. L.221-28 8°), ni aux services pleinement exécutés avant la fin du délai avec accord exprès du client (art. L.221-28 1°). Formulaire de rétractation disponible sur demande à : retractation@lockr.fr." },
+        { h: "Article 5 — Garanties légales", p: "Le client bénéficie de la garantie légale de conformité (art. L.217-3 et s. C. conso — 2 ans) et de la garantie des vices cachés (art. 1641 et s. C. civ.) sur les pièces et matériels fournis, ainsi que des garanties applicables aux travaux (parfait achèvement, biennale, décennale le cas échéant — art. 1792 C. civ.)." },
+        { h: "Article 6 — Médiation de la consommation", p: "Conformément aux articles L.612-1 et s. du Code de la consommation, en cas de litige non résolu, le client peut saisir gratuitement le médiateur : CNPM Médiation Consommation — 27 avenue de la Libération, 42400 Saint-Chamond — cnpm-mediation-consommation.eu. Plateforme européenne RLL : ec.europa.eu/consumers/odr." },
+        { h: "Article 7 — Facturation", p: "Une facture conforme est remise pour toute prestation (mentions obligatoires art. L.441-9 C. com.). Facturation électronique conforme à la réforme 2026 (factur-X / portail public de facturation) pour les transactions B2B." },
+      ],
+    },
+    {
+      id: "privacy", tab: "Confidentialité", title: "Politique de confidentialité",
+      sub: "Règlement (UE) 2016/679 (RGPD) et loi Informatique et Libertés n°78-17 modifiée",
+      articles: [
+        { h: "1. Responsable de traitement", p: "LOCKR SAS, 12 rue de la Serrure, 75011 Paris. Délégué à la protection des données (DPO) : dpo@lockr.fr. Le DPO est déclaré auprès de la CNIL." },
+        { h: "2. Données collectées et finalités", p: "• Compte et identité (nom, email, téléphone, ville) — exécution du contrat (art. 6.1.b RGPD). • Données de réservation et géolocalisation ponctuelle — exécution du service demandé. • Données de paiement (tokenisées, jamais stockées en clair) — exécution du contrat, obligation légale. • Documents professionnels des artisans (SIRET, Kbis, assurance) — obligation légale de vérification. • Données de navigation/cookies — consentement (art. 6.1.a). • Enregistrements liés à la sécurité des interventions — intérêt légitime, information préalable des personnes." },
+        { h: "3. Durées de conservation", p: "Compte actif : durée de la relation + 3 ans après le dernier contact. Factures et pièces comptables : 10 ans (art. L.123-22 C. com.). Données de paiement : durée de la transaction (13 mois max pour la carte avec consentement). Cookies : 13 mois maximum. Logs de connexion : 12 mois (LCEN). À l'issue, les données sont supprimées ou anonymisées." },
+        { h: "4. Destinataires", p: "Les données sont destinées aux services habilités de LOCKR, aux artisans concernés par une réservation (données strictement nécessaires), à notre prestataire de paiement agréé et à nos sous-traitants techniques liés par contrat conforme à l'article 28 RGPD. Aucune vente de données à des tiers. Aucun transfert hors UE sans garanties appropriées (clauses contractuelles types)." },
+        { h: "5. Vos droits", p: "Vous disposez des droits d'accès, de rectification, d'effacement, de portabilité, de limitation, d'opposition et de retrait du consentement à tout moment (art. 15 à 21 RGPD), ainsi que du droit de définir des directives post-mortem (art. 85 loi I&L). Exercice : dpo@lockr.fr ou depuis votre profil (rubrique « Mes droits RGPD »). Réponse sous 1 mois. Réclamation possible auprès de la CNIL : cnil.fr — 3 place de Fontenoy, 75007 Paris." },
+        { h: "6. Sécurité", p: "Chiffrement TLS en transit, chiffrement au repos, contrôle d'accès strict, journalisation, tests réguliers. Notification des violations de données à la CNIL sous 72 h et aux personnes concernées si risque élevé (art. 33-34 RGPD). Mesures alignées sur les référentiels CNIL et ANSSI (directive NIS2)." },
+        { h: "7. Mineurs", p: "La plateforme est réservée aux personnes majeures. Aucune collecte volontaire de données de mineurs de moins de 15 ans sans accord parental (art. 45 loi I&L)." },
+      ],
+    },
+    {
+      id: "cookies", tab: "Cookies", title: "Politique cookies",
+      sub: "Directive ePrivacy 2002/58/CE, art. 82 loi Informatique et Libertés, lignes directrices CNIL",
+      articles: [
+        { h: "1. Qu'est-ce qu'un cookie ?", p: "Un cookie est un petit fichier déposé sur votre terminal lors de la consultation du site. Certains sont strictement nécessaires au fonctionnement, d'autres nécessitent votre consentement préalable." },
+        { h: "2. Cookies utilisés", p: "• Cookies essentiels (session, sécurité, consentement) — exemptés de consentement, durée de session à 13 mois max. • Cookies de mesure d'audience — déposés uniquement avec votre consentement. • Cookies marketing — déposés uniquement avec votre consentement. Aucun cookie tiers publicitaire n'est déposé sans accord explicite." },
+        { h: "3. Votre consentement", p: "Votre choix (acceptation, refus, personnalisation) est conservé 6 mois. Refuser les cookies est aussi simple que les accepter (lignes directrices CNIL du 17 septembre 2020). Vous pouvez retirer votre consentement à tout moment via le bouton « Gérer mes cookies » ci-dessous." },
+        { h: "4. Paramétrage navigateur", p: "Vous pouvez également configurer votre navigateur pour refuser les cookies. Le refus des cookies essentiels peut dégrader le fonctionnement du service." },
+      ],
+    },
+    {
+      id: "retract", tab: "Rétractation", title: "Droit de rétractation",
+      sub: "Articles L.221-18 à L.221-28 du Code de la consommation",
+      articles: [
+        { h: "Délai de 14 jours", p: "Pour tout contrat conclu à distance, vous disposez de 14 jours à compter de la conclusion du contrat (services) ou de la réception (biens) pour vous rétracter sans motif. Le remboursement intervient sous 14 jours par le même moyen de paiement." },
+        { h: "Exceptions légales", p: "Le droit de rétractation ne s'applique pas (art. L.221-28) : aux travaux urgents d'entretien ou de réparation réalisés à votre domicile à votre demande expresse (8°) ; aux services pleinement exécutés avant la fin du délai avec votre accord préalable exprès et renoncement exprès au droit de rétractation (1°) ; aux biens confectionnés sur mesure (3°)." },
+        { h: "Formulaire type de rétractation", p: "À l'attention de LOCKR SAS, 12 rue de la Serrure, 75011 Paris — retractation@lockr.fr : « Je vous notifie par la présente ma rétractation du contrat portant sur la prestation ci-dessous : Commandé le : ____ / Nom : ____ / Adresse : ____ / Signature (si papier) / Date : ____ ». L'envoi par email suffit ; un accusé de réception vous sera adressé sans délai." },
+      ],
+    },
+  ],
+  en: [
+    {
+      id: "mentions", tab: "Legal notice", title: "Legal notice",
+      sub: "Article 6 of French law no. 2004-575 of 21 June 2004 (LCEN)",
+      articles: [
+        { h: "Publisher", p: "LOCKR SAS — French simplified joint-stock company with capital of €10,000. Registered office: 12 rue de la Serrure, 75011 Paris, France. Paris Trade Register (RCS) 923 456 789 — VAT: FR32 923456789. Publishing director: the President of LOCKR SAS. Contact: contact@lockr.fr — +33 1 84 80 00 00." },
+        { h: "Hosting", p: "The site is hosted within the European Union with GDPR-compliant infrastructure. Data is stored in EU-based data centres." },
+        { h: "Activity", p: "Online platform connecting clients with certified craftsmen (locksmithing, plumbing, electricity, heating) in metropolitan France, operating as an online platform operator within the meaning of article L.111-7 of the French Consumer Code." },
+        { h: "Insurance", p: "Professional liability insurance held with AXA France IARD, covering platform activities across metropolitan France." },
+        { h: "Intellectual property", p: "The entire site (structure, texts, logos, graphics, source code) is protected by the French Intellectual Property Code. Any reproduction without prior written authorisation is prohibited." },
+        { h: "Illegal content reporting (DSA)", p: "In accordance with Regulation (EU) 2022/2065 (Digital Services Act), illegal content may be reported to: signalement@lockr.fr. Single DSA contact point: dsa@lockr.fr." },
+      ],
+    },
+    {
+      id: "cgu", tab: "Terms of Use", title: "Terms of Use",
+      sub: "Effective 1 January 2026 — applicable to all platform users",
+      articles: [
+        { h: "Article 1 — Purpose", p: "These Terms govern access to and use of the LOCKR platform, which connects clients with verified professional craftsmen. Using the platform constitutes full acceptance of these Terms." },
+        { h: "Article 2 — Registration", p: "Registration is open to adults with legal capacity. Users guarantee the accuracy of the information provided. Professionals must prove their registration (SIRET), professional liability insurance and qualifications. Accounts are personal and non-transferable." },
+        { h: "Article 3 — Role of the platform", p: "LOCKR is a technical intermediary within the meaning of article L.111-7 of the French Consumer Code. Service contracts are concluded directly between the client and the craftsman. LOCKR provides fair, clear and transparent ranking of offers." },
+        { h: "Article 4 — User obligations", p: "Users undertake not to publish illegal content, not to bypass the platform to avoid commissions, to respect craftsmen and to provide truthful information. Any breach may lead to suspension or deletion of the account after formal notice." },
+        { h: "Article 5 — Reviews", p: "Published reviews are moderated in accordance with article L.111-7-2 of the French Consumer Code. Only clients who actually received a service may post a review." },
+        { h: "Article 6 — Liability", p: "LOCKR uses all reasonable means to ensure service availability, without an obligation of result. LOCKR is not liable for non-performance of contracts concluded between clients and craftsmen, without prejudice to its duty to verify listed professionals." },
+        { h: "Article 7 — Governing law and disputes", p: "These Terms are governed by French law. Consumers may use the free consumer mediation service (art. L.612-1) or the EU online dispute resolution platform: ec.europa.eu/consumers/odr." },
+      ],
+    },
+    {
+      id: "cgv", tab: "Terms of Sale", title: "Terms of Sale",
+      sub: "French Consumer Code — articles L.111-1, L.221-5 et seq.",
+      articles: [
+        { h: "Article 1 — Prices", p: "All prices are in euros, all taxes included (TTC). \"From\" prices are indicative minimums; a precise quote is provided before any intervention. No work is invoiced without the client's prior agreement on price (Order of 24 January 2017 on repair services)." },
+        { h: "Article 2 — Mandatory quote", p: "In accordance with the Order of 24 January 2017, a detailed quote is mandatory before any building repair or maintenance service: hourly rate, travel costs, parts, estimated duration. Quotes are free unless expressly stated otherwise." },
+        { h: "Article 3 — Payment", p: "Payment is made securely online (PCI-DSS compliant provider, PSD2 strong customer authentication / 3-D Secure). A 50% deposit is required at booking; the balance is due after completion and client validation." },
+        { h: "Article 4 — Right of withdrawal", p: "Under article L.221-18 of the French Consumer Code, clients have 14 days to withdraw from a distance contract without reason or penalty. EXCEPTIONS: urgent repair or maintenance work at the client's home expressly requested by them (art. L.221-28 8°), and services fully performed before the end of the period with the client's express prior consent (art. L.221-28 1°). Withdrawal form available at: retractation@lockr.fr." },
+        { h: "Article 5 — Legal guarantees", p: "Clients benefit from the legal guarantee of conformity (2 years) and the guarantee against hidden defects on supplied parts, as well as construction guarantees where applicable (perfect completion, 2-year, 10-year — art. 1792 French Civil Code)." },
+        { h: "Article 6 — Consumer mediation", p: "In accordance with articles L.612-1 et seq., unresolved disputes may be submitted free of charge to the consumer mediator: CNPM Médiation Consommation — cnpm-mediation-consommation.eu. EU ODR platform: ec.europa.eu/consumers/odr." },
+        { h: "Article 7 — Invoicing", p: "A compliant invoice is issued for every service. Electronic invoicing complies with the French 2026 reform (Factur-X / public invoicing portal) for B2B transactions." },
+      ],
+    },
+    {
+      id: "privacy", tab: "Privacy", title: "Privacy policy",
+      sub: "Regulation (EU) 2016/679 (GDPR) and French Data Protection Act no. 78-17",
+      articles: [
+        { h: "1. Data controller", p: "LOCKR SAS, 12 rue de la Serrure, 75011 Paris. Data Protection Officer (DPO): dpo@lockr.fr, declared to the CNIL." },
+        { h: "2. Data collected and purposes", p: "• Account and identity data — contract performance (art. 6.1.b GDPR). • Booking data and one-off geolocation — performance of the requested service. • Payment data (tokenised, never stored in clear text) — contract performance, legal obligation. • Craftsmen's professional documents — legal verification obligation. • Browsing data/cookies — consent (art. 6.1.a). • Intervention-safety recordings — legitimate interest, with prior information." },
+        { h: "3. Retention periods", p: "Active account: relationship duration + 3 years after last contact. Invoices and accounting records: 10 years. Card data: transaction duration (13 months max with consent). Cookies: 13 months maximum. Connection logs: 12 months (LCEN). Data is then deleted or anonymised." },
+        { h: "4. Recipients", p: "Data is shared only with authorised LOCKR staff, the craftsman concerned by a booking (strictly necessary data), our licensed payment provider and technical processors bound by art. 28 GDPR contracts. No data sales. No transfers outside the EU without appropriate safeguards." },
+        { h: "5. Your rights", p: "You have the rights of access, rectification, erasure, portability, restriction, objection and withdrawal of consent at any time (art. 15–21 GDPR). Exercise via dpo@lockr.fr or your profile (\"My GDPR rights\"). Response within 1 month. Complaints: CNIL — cnil.fr." },
+        { h: "6. Security", p: "TLS encryption in transit, encryption at rest, strict access control, logging, regular testing. Data-breach notification to the CNIL within 72 hours (art. 33-34 GDPR). Measures aligned with CNIL and ANSSI standards (NIS2 directive)." },
+        { h: "7. Minors", p: "The platform is restricted to adults. No deliberate collection of data from children under 15 without parental consent." },
+      ],
+    },
+    {
+      id: "cookies", tab: "Cookies", title: "Cookie policy",
+      sub: "ePrivacy Directive 2002/58/EC, art. 82 French Data Protection Act, CNIL guidelines",
+      articles: [
+        { h: "1. What is a cookie?", p: "A cookie is a small file stored on your device when browsing the site. Some are strictly necessary; others require your prior consent." },
+        { h: "2. Cookies used", p: "• Essential cookies (session, security, consent) — exempt from consent, max 13 months. • Audience-measurement cookies — only with your consent. • Marketing cookies — only with your consent. No third-party advertising cookie is set without explicit agreement." },
+        { h: "3. Your consent", p: "Your choice (accept, refuse, customise) is stored for 6 months. Refusing cookies is as easy as accepting them (CNIL guidelines of 17 September 2020). You may withdraw consent at any time via the \"Manage my cookies\" button below." },
+        { h: "4. Browser settings", p: "You can also configure your browser to refuse cookies. Refusing essential cookies may degrade the service." },
+      ],
+    },
+    {
+      id: "retract", tab: "Withdrawal", title: "Right of withdrawal",
+      sub: "Articles L.221-18 to L.221-28 of the French Consumer Code",
+      articles: [
+        { h: "14-day period", p: "For any distance contract, you have 14 days from the conclusion of the contract (services) or receipt (goods) to withdraw without giving any reason. Refunds are issued within 14 days using the same payment method." },
+        { h: "Legal exceptions", p: "The right of withdrawal does not apply (art. L.221-28) to: urgent maintenance or repair work carried out at your home at your express request (8°); services fully performed before the end of the period with your express prior consent and waiver (1°); custom-made goods (3°)." },
+        { h: "Model withdrawal form", p: "To LOCKR SAS, 12 rue de la Serrure, 75011 Paris — retractation@lockr.fr: \"I hereby notify my withdrawal from the contract for the service below: Ordered on: ____ / Name: ____ / Address: ____ / Signature (if paper) / Date: ____\". Email is sufficient; an acknowledgement will be sent without delay." },
+      ],
+    },
+  ],
+};
+
 /* ─── COOKIE CONSENT ─── */
 function CookieConsent({ lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
-  const [visible, setVisible] = useState(() => !localStorage.getItem("lk_cookie_consent"));
+  const [visible, setVisible] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("lk_cookie_consent") || "null");
+      // Consentement valable 6 mois (recommandation CNIL), re-demandé ensuite
+      if (!saved || !saved.ts || Date.now() - saved.ts > 182 * 24 * 3600 * 1000) return true;
+      return false;
+    } catch { return true; }
+  });
+  // Ré-ouverture depuis le Centre légal (« Gérer mes cookies » — retrait du consentement, art. 7.3 RGPD)
+  useEffect(() => {
+    const reopen = () => setVisible(true);
+    window.addEventListener("lk-open-cookies", reopen);
+    return () => window.removeEventListener("lk-open-cookies", reopen);
+  }, []);
   const [customize, setCustomize] = useState(false);
   const [analytics, setAnalytics] = useState(false);
   const [marketing, setMarketing] = useState(false);
@@ -8562,34 +8723,59 @@ function CookieConsent({ lang = "fr" }) {
   );
 }
 
-/* ─── MENTIONS LÉGALES MODAL ─── */
-function MentionsLegalesModal({ lang = "fr", onClose }) {
+/* ─── CENTRE LÉGAL — documents complets FR/UE ─── */
+function LegalCenterModal({ lang = "fr", onClose, initialTab = "mentions" }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const docs = LEGAL_DOCS[lang] || LEGAL_DOCS.fr;
+  const [tab, setTab] = useState(initialTab);
+  const doc = docs.find(d => d.id === tab) || docs[0];
+
+  const manageCookies = () => {
+    localStorage.removeItem("lk_cookie_consent");
+    window.dispatchEvent(new Event("lk-open-cookies"));
+    onClose();
+  };
+
   return createPortal(
-    <div style={{ position: "fixed", inset: 0, zIndex: 8000, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: "18px 18px 0 0", padding: "24px 20px 32px", maxWidth: 600, width: "100%", maxHeight: "80vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 16 }}>{tr.mentionsTitle}</div>
-        {[
-          { icon: "🏢", text: tr.mentionsEditor },
-          { icon: "🖥️", text: tr.mentionsHost },
-          { icon: "🛡️", text: tr.mentionsDPO },
-          { icon: "⚖️", text: tr.mentionsMediateur },
-          { icon: "🔏", text: tr.mentionsCnil },
-        ].map((item, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,.06)" }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-            <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.6 }}>{item.text}</span>
+    <div style={{ position: "fixed", inset: 0, zIndex: 8000, background: "rgba(0,0,0,.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", maxWidth: 720, width: "100%", maxHeight: "88vh", display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={e => e.stopPropagation()}>
+        {/* En-tête */}
+        <div style={{ padding: "18px 20px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <LockrLogo size={22} />
+              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi }}>{lang === "en" ? "Legal center" : "Centre légal"}</span>
+            </div>
+            <button onClick={onClose} style={{ background: "rgba(0,0,0,.05)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 14, color: T.textMid, fontFamily: "'Inter',sans-serif" }}>✕</button>
           </div>
-        ))}
-        <div style={{ marginTop: 20, padding: "14px", background: "rgba(201,160,48,.06)", borderRadius: 12, border: `1px solid rgba(201,160,48,.2)` }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 8 }}>{tr.rgpdTitle}</div>
-          {[tr.rgpdAccess, tr.rgpdRectif, tr.rgpdErase, tr.rgpdPorta, tr.rgpdOppose, tr.rgpdLimit].map((r, i) => (
-            <div key={i} style={{ fontSize: 12, color: T.textMid, marginBottom: 5, paddingLeft: 8, borderLeft: `2px solid ${T.accent}` }}>{r}</div>
-          ))}
-          <div style={{ fontSize: 11, color: T.textLo, marginTop: 10 }}>{tr.rgpdContact}</div>
-          <div style={{ fontSize: 11, color: T.textLo }}>{tr.rgpdCnil}</div>
+          {/* Onglets */}
+          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 12, WebkitOverflowScrolling: "touch" }}>
+            {docs.map(d => (
+              <button key={d.id} onClick={() => setTab(d.id)} style={{ flexShrink: 0, background: tab === d.id ? T.grad : "rgba(0,0,0,.04)", color: tab === d.id ? "#fff" : T.textMid, border: "none", borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
+                {d.tab}
+              </button>
+            ))}
+          </div>
         </div>
-        <button onClick={onClose} className="lk-btn" style={{ marginTop: 20, width: "100%" }}>{(TRANS[lang] || TRANS.fr).close}</button>
+        {/* Contenu */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "18px 20px 28px", borderTop: `1px solid ${T.border}` }}>
+          <div style={{ fontWeight: 800, fontSize: 18, color: T.textHi, marginBottom: 4 }}>{doc.title}</div>
+          <div style={{ fontSize: 11, color: T.accent, fontWeight: 600, marginBottom: 18, lineHeight: 1.5 }}>{doc.sub}</div>
+          {doc.articles.map((a, i) => (
+            <div key={i} style={{ marginBottom: 16 }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 5, paddingLeft: 10, borderLeft: `3px solid ${T.accent}` }}>{a.h}</div>
+              <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.7, textAlign: "justify" }}>{a.p}</div>
+            </div>
+          ))}
+          {tab === "cookies" && (
+            <button onClick={manageCookies} className="lk-btn" style={{ width: "100%", marginTop: 6, fontSize: 13 }}>
+              {lang === "en" ? "Manage my cookies" : "Gérer mes cookies"}
+            </button>
+          )}
+          <div style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${T.border}`, fontSize: 10.5, color: T.textLo, textAlign: "center", lineHeight: 1.6 }}>
+            © {new Date().getFullYear()} LOCKR SAS — {lang === "en" ? "All rights reserved. Documents last updated on 01/01/2026." : "Tous droits réservés. Documents mis à jour le 01/01/2026."}
+          </div>
+        </div>
       </div>
     </div>,
     document.body
@@ -8684,15 +8870,21 @@ export default function App() {
   const [bannedList, setBannedList] = useState([]);
   const logout = () => { setAccount(null); setScreen("login"); };
 
-  const [mentionsOpen, setMentionsOpen] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(null); // null | id du document
+
+  const legalLinks = lang === "en"
+    ? [{ id: "mentions", l: "Legal notice" }, { id: "cgu", l: "Terms" }, { id: "cgv", l: "Sales" }, { id: "privacy", l: "Privacy" }, { id: "cookies", l: "Cookies" }]
+    : [{ id: "mentions", l: "Mentions légales" }, { id: "cgu", l: "CGU" }, { id: "cgv", l: "CGV" }, { id: "privacy", l: "Confidentialité" }, { id: "cookies", l: "Cookies" }];
 
   const wrapper = (children) => (
     <>
       {children}
       <CookieConsent lang={lang} />
-      {mentionsOpen && <MentionsLegalesModal lang={lang} onClose={() => setMentionsOpen(false)} />}
-      <div style={{ position: "fixed", bottom: 6, right: 10, zIndex: 100, fontSize: 10, color: "rgba(0,0,0,.25)", cursor: "pointer", fontFamily: "'Inter',sans-serif" }} onClick={() => setMentionsOpen(true)}>
-        {(TRANS[lang] || TRANS.fr).mentionsLegales}
+      {legalOpen && <LegalCenterModal lang={lang} initialTab={legalOpen} onClose={() => setLegalOpen(null)} />}
+      <div style={{ position: "fixed", bottom: 4, right: 10, zIndex: 100, display: "flex", gap: 10, fontFamily: "'Inter',sans-serif" }}>
+        {legalLinks.map(lk => (
+          <span key={lk.id} onClick={() => setLegalOpen(lk.id)} style={{ fontSize: 9.5, color: "rgba(0,0,0,.3)", cursor: "pointer" }}>{lk.l}</span>
+        ))}
       </div>
     </>
   );
