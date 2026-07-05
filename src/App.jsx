@@ -425,6 +425,9 @@ const TRANS = {
     cguAccept: "J'accepte les CGU et la politique de confidentialité",
     cguRequired: "Vous devez accepter les CGU pour continuer",
     cguLink: "Lire les CGU",
+    liabClientAccept: "Je reconnais que LOCKR est un simple intermédiaire de mise en relation : le contrat de prestation est conclu directement et exclusivement avec l'artisan intervenant, seul responsable de l'exécution, de la qualité et des dommages éventuels liés à son intervention. Tout recours s'exerce contre l'artisan et son assurance RC Pro.",
+    liabProAccept: "En tant que professionnel indépendant, je reconnais être seul responsable de mes interventions, de leur conformité et des dommages causés, à l'exclusion de toute responsabilité de LOCKR. Je certifie disposer d'une assurance RC Pro valide couvrant mes prestations et je m'engage à garantir et indemniser LOCKR contre toute réclamation d'un client liée à mes interventions.",
+    liabRequired: "Vous devez accepter cette clause de responsabilité pour continuer",
     // RGPD rights
     rgpdTitle: "Vos droits RGPD", rgpdRightsTitle: "Droits sur vos données personnelles",
     rgpdAccess: "Droit d'accès — demander une copie de vos données",
@@ -801,6 +804,9 @@ const TRANS = {
     cguAccept: "I accept the T&Cs and privacy policy",
     cguRequired: "You must accept the T&Cs to continue",
     cguLink: "Read T&Cs",
+    liabClientAccept: "I acknowledge that LOCKR is a mere connecting intermediary: the service contract is concluded directly and exclusively with the intervening craftsman, who is solely responsible for the performance, quality and any damage related to his intervention. Any claim shall be brought against the craftsman and his professional liability insurance.",
+    liabProAccept: "As an independent professional, I acknowledge that I am solely responsible for my interventions, their compliance and any damage caused, to the exclusion of any liability of LOCKR. I certify that I hold valid professional liability insurance covering my services and undertake to indemnify and hold LOCKR harmless against any client claim related to my interventions.",
+    liabRequired: "You must accept this liability clause to continue",
     // GDPR rights
     rgpdTitle: "Your GDPR rights", rgpdRightsTitle: "Your personal data rights",
     rgpdAccess: "Right of access — request a copy of your data",
@@ -1784,7 +1790,70 @@ function PlatformCallModal({ name, onClose, onConnected, lang = "fr" }) {
   , document.body);
 }
 
-function PayModal({ amount, onClose, onDone, lang = "fr" }) {
+/* Virements automatiques (Stripe Connect Express) — l'artisan connecte son IBAN,
+   ensuite chaque paiement client est splitté automatiquement : part artisan versée
+   directement, commission LOCKR retenue. Aucun reversement manuel. */
+function StripeConnectCard({ lang = "fr", email, nom }) {
+  const [acct, setAcct] = useState(() => localStorage.getItem("lk_stripe_acct") || null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const fr = lang !== "en";
+
+  const activate = async () => {
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch("/.netlify/functions/connect-onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, nom, accountId: acct }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.accountId) localStorage.setItem("lk_stripe_acct", data.accountId);
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error();
+    } catch {
+      setErr(fr ? "Paiements non configurés sur la plateforme (mode démo)." : "Payments not configured on the platform (demo mode).");
+    }
+    setLoading(false);
+  };
+
+  const done = acct && localStorage.getItem("lk_stripe_onboard_done") === "1";
+  return (
+    <div className="lk-card" style={{ padding: "18px 20px", marginTop: 20, borderLeft: `4px solid ${done ? T.success : T.accent}` }}>
+      <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 6 }}>💶 {fr ? "Virements automatiques" : "Automatic payouts"}</div>
+      <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.6, marginBottom: 12 }}>
+        {done
+          ? (fr ? "Vos virements automatiques sont activés ✓ — votre part de chaque intervention est versée directement sur votre compte bancaire (sous 48 h après validation client)." : "Automatic payouts enabled ✓ — your share of each intervention is paid directly to your bank account (within 48h after client validation).")
+          : (fr ? "Connectez votre IBAN de façon sécurisée (Stripe) pour recevoir automatiquement votre part de chaque intervention, sans délai de reversement manuel." : "Securely connect your IBAN (Stripe) to automatically receive your share of each intervention, with no manual transfer delay.")}
+      </div>
+      {!done && (
+        <button onClick={activate} disabled={loading} className="lk-btn" style={{ fontSize: 12, opacity: loading ? 0.6 : 1 }}>
+          {loading ? (fr ? "Ouverture…" : "Opening…") : (fr ? "Activer les virements automatiques" : "Enable automatic payouts")}
+        </button>
+      )}
+      {err && <div style={{ color: T.warn, fontSize: 11, marginTop: 8 }}>{err}</div>}
+    </div>
+  );
+}
+
+/* Paiement réel via Stripe Checkout (fonction serverless /.netlify/functions/create-checkout).
+   Si Stripe n'est pas configuré (clé absente, dev local), bascule automatique en mode démo. */
+async function startStripeCheckout({ amount, label, type, bookingId, email, artisanStripeId }) {
+  try {
+    const res = await fetch("/.netlify/functions/create-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, label, type, bookingId, email, artisanStripeId }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data && data.url) { window.location.href = data.url; return true; }
+    return false;
+  } catch { return false; }
+}
+
+function PayModal({ amount, onClose, onDone, lang = "fr", payLabel, payType, bookingId, payerEmail, artisanStripeId }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [step, setStep] = useState("method");
   const [method, setMethod] = useState(null);
@@ -1797,14 +1866,21 @@ function PayModal({ amount, onClose, onDone, lang = "fr" }) {
     else if (m.type === "bank") setStep("bank");
     else setStep("confirm");
   };
+  // Tente le paiement réel Stripe ; si indisponible, simulation (démo)
+  const process_ = async (delay) => {
+    setStep("processing");
+    const real = await startStripeCheckout({ amount, label: payLabel || tr.settlementLabel, type: payType, bookingId, email: payerEmail, artisanStripeId });
+    if (real) return; // redirection vers la page Stripe sécurisée
+    setTimeout(() => setStep("done"), delay);
+  };
   const payCard = () => {
     if (card.num.replace(/\s/g, "").length < 16) return setErr(tr.cardInvalid);
     if (card.exp.length < 5) return setErr(tr.expInvalid);
     if (card.cvv.length < 3) return setErr(tr.cvvInvalid);
     if (!card.nom) return setErr(tr.holderRequired);
-    setErr(""); setStep("processing"); setTimeout(() => setStep("done"), 2000);
+    setErr(""); process_(2000);
   };
-  const payNow = () => { setStep("processing"); setTimeout(() => setStep("done"), 1600); };
+  const payNow = () => { process_(1600); };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -2121,6 +2197,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
   const [cguOk, setCguOk] = useState(false);
+  const [liabOk, setLiabOk] = useState(false);
 
   const clr = k => setErrs(p => { const e = { ...p }; delete e[k]; return e; });
 
@@ -2134,13 +2211,14 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
     if (pass.length < 6) e.pass = tr.minChars;
     if (pass !== confirm) e.confirm = tr.passMismatch;
     if (!cguOk) e.cgu = tr.cguRequired;
+    if (!liabOk) e.liab = tr.liabRequired;
     return e;
   };
 
   const submit = () => {
     const e = validate();
     if (Object.keys(e).length) { setErrs(e); return; }
-    const acc = { id: uid(), role: "client", nom: prenom + " " + nom, email, pass, verified: false, photo: null, ville, tel };
+    const acc = { id: uid(), role: "client", nom: prenom + " " + nom, email, pass, verified: false, photo: null, ville, tel, cguAcceptedAt: ts(), liabAcceptedAt: ts() };
     setPending(acc);
     setModal(true);
   };
@@ -2206,6 +2284,14 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
             </label>
             {errs.cgu && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.cgu}</div>}
           </div>
+          {/* Clause de responsabilité — recours contre l'artisan uniquement */}
+          <div style={{ marginBottom: 14, padding: "12px 14px", background: "rgba(201,160,48,.05)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12 }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+              <input type="checkbox" checked={liabOk} onChange={e => { setLiabOk(e.target.checked); clr("liab"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+              <span style={{ fontSize: 11, color: T.textMid, lineHeight: 1.55 }}>{tr.liabClientAccept}</span>
+            </label>
+            {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
+          </div>
           <button onClick={submit} className="lk-btn">{tr.createMyAccount} {Icon.arrow("#fff", 14)}</button>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
@@ -2244,6 +2330,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
   const [cguOk, setCguOk] = useState(false);
+  const [liabOk, setLiabOk] = useState(false);
   const idRef = useRef(null);
   const insRef = useRef(null);
   const kbisRef = useRef(null);
@@ -2269,6 +2356,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
     if (!idCardFile) e.idCard = tr.idCardRequired;
     if (!insuranceFile) e.insurance = tr.insuranceRequired;
     if (!cguOk) e.cgu = tr.cguRequired;
+    if (!liabOk) e.liab = tr.liabRequired;
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -2282,6 +2370,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
       nom: prenom + " " + nom, email, pass, verified: false,
       photo: null, ville, tel, transport, metier, siret, iban, certif,
       hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile, dossierStatus: "pending",
+      cguAcceptedAt: ts(), liabAcceptedAt: ts(),
     };
     setPending(acc);
     setModal(true);
@@ -2460,6 +2549,14 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
               </label>
               {errs.cgu && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.cgu}</div>}
             </div>
+            {/* Clause de responsabilité professionnelle — engagement d'indemnisation */}
+            <div style={{ marginBottom: 14, padding: "12px 14px", background: "rgba(201,160,48,.05)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input type="checkbox" checked={liabOk} onChange={e => { setLiabOk(e.target.checked); clr("liab"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+                <span style={{ fontSize: 11, color: T.textMid, lineHeight: 1.55 }}>{tr.liabProAccept}</span>
+              </label>
+              {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
+            </div>
             <button onClick={submit} className="lk-btn">{tr.submitDossier} {Icon.check("#fff", 14)}</button>
           </div>
         )}
@@ -2501,6 +2598,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
   const [logoFile, setLogoFile] = useState(null);
   const [iban, setIban] = useState("");
   const [cguOk, setCguOk] = useState(false);
+  const [liabOk, setLiabOk] = useState(false);
   const [errs, setErrs] = useState({});
   const [modal, setModal] = useState(false);
   const [pending, setPending] = useState(null);
@@ -2534,6 +2632,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
     if (!rcProFile) e.rc = lang === "en" ? "RC Pro required" : "Attestation RC Pro requise";
     if (!iban.trim()) e.iban = lang === "en" ? "IBAN required" : "IBAN requis";
     if (!cguOk) e.cgu = tr.cguRequired;
+    if (!liabOk) e.liab = tr.liabRequired;
     setErrs(e); return Object.keys(e).length === 0;
   };
 
@@ -2548,6 +2647,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
       qualibat: "", logo: logoFile || null,
       statut: "en_attente", dateContrat: new Date().toLocaleDateString("fr-FR"),
       dossierStatus: "pending",
+      cguAcceptedAt: ts(), liabAcceptedAt: ts(),
     };
     setPending(acc);
     setModal(true);
@@ -2693,6 +2793,15 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
                 <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5 }}>{tr.cguAccept} — <span style={{ color: T.accent, textDecoration: "underline" }}>{tr.cguLink}</span></span>
               </label>
               {errs.cgu && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.cgu}</div>}
+            </div>
+
+            {/* Clause de responsabilité entreprise — engagement d'indemnisation */}
+            <div style={{ marginBottom: 14, padding: "12px 14px", background: "rgba(201,160,48,.05)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input type="checkbox" checked={liabOk} onChange={e => { setLiabOk(e.target.checked); clr("liab"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+                <span style={{ fontSize: 11, color: T.textMid, lineHeight: 1.55 }}>{tr.liabProAccept}</span>
+              </label>
+              {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
             </div>
 
             {/* Récap infos step 1 */}
@@ -4017,6 +4126,9 @@ function ProProfileTab({ account, setAccounts, bookings, lang = "fr" }) {
       </div>
 
       <button onClick={save} className="lk-btn">{Icon.check("#fff", 15)} {tr.saveProfile}</button>
+
+      {/* Virements automatiques Stripe Connect */}
+      <StripeConnectCard lang={lang} email={account.email} nom={account.nom} />
 
       {/* RGPD Rights */}
       <div className="lk-card" style={{ padding: "18px 20px", marginTop: 20, borderLeft: `4px solid #2563eb` }}>
@@ -8531,8 +8643,9 @@ const LEGAL_DOCS = {
         { h: "Article 3 — Rôle de la plateforme", p: "LOCKR est un intermédiaire technique au sens de l'article L.111-7 du Code de la consommation. Les contrats de prestation sont conclus directement entre le client et l'artisan. LOCKR fournit un classement loyal, clair et transparent des offres (loi n°2016-1321 pour une République numérique)." },
         { h: "Article 4 — Obligations de l'utilisateur", p: "L'utilisateur s'engage à ne pas publier de contenus illicites, à ne pas contourner la plateforme pour éviter les commissions, à respecter les artisans et à fournir des informations sincères. Tout manquement peut entraîner la suspension ou la suppression du compte après mise en demeure." },
         { h: "Article 5 — Avis et notations", p: "Les avis publiés font l'objet d'un contrôle conformément à l'article L.111-7-2 du Code de la consommation et à la norme sur les avis en ligne. Seuls les clients ayant effectivement bénéficié d'une prestation peuvent déposer un avis." },
-        { h: "Article 6 — Responsabilité", p: "LOCKR met en œuvre tous les moyens raisonnables pour assurer la disponibilité du service, sans obligation de résultat. LOCKR n'est pas responsable de l'inexécution du contrat conclu entre le client et l'artisan, sans préjudice de son devoir de vérification des professionnels référencés." },
-        { h: "Article 7 — Droit applicable et litiges", p: "Les présentes CGU sont soumises au droit français. En cas de litige, une solution amiable sera recherchée avant toute action judiciaire. Le consommateur peut recourir gratuitement au médiateur de la consommation (art. L.612-1 C. conso) ou à la plateforme européenne de règlement en ligne des litiges : ec.europa.eu/consumers/odr." },
+        { h: "Article 6 — Responsabilité de la plateforme", p: "LOCKR est un intermédiaire technique de mise en relation et n'est PAS partie au contrat de prestation conclu entre le client et l'artisan. LOCKR met en œuvre tous les moyens raisonnables pour assurer la disponibilité du service et la vérification des professionnels référencés (SIRET, assurance RC Pro, qualifications), sans obligation de résultat. La responsabilité de LOCKR ne saurait être engagée au titre de l'exécution, de l'inexécution, de la mauvaise exécution ou des dommages de toute nature résultant de la prestation réalisée par l'artisan, qui en assume seul l'entière responsabilité." },
+        { h: "Article 7 — Responsabilité des artisans et recours", p: "L'artisan intervient en qualité de professionnel indépendant, sous sa seule responsabilité. Il est seul responsable de la qualité, de la conformité, des délais et des dommages éventuels liés à ses interventions, couverts par son assurance RC Pro obligatoire (et garantie décennale le cas échéant). Toute réclamation, demande d'indemnisation ou action relative à une prestation doit être dirigée exclusivement contre l'artisan intervenant et son assureur, dont les coordonnées figurent sur le devis et la facture. En acceptant les présentes CGU, l'artisan s'engage à garantir et relever indemne LOCKR de toute condamnation, réclamation ou frais liés à ses interventions. Cette clause ne prive pas le consommateur de ses droits légaux à l'égard du professionnel prestataire." },
+        { h: "Article 8 — Droit applicable et litiges", p: "Les présentes CGU sont soumises au droit français. En cas de litige, une solution amiable sera recherchée avant toute action judiciaire. Le consommateur peut recourir gratuitement au médiateur de la consommation (art. L.612-1 C. conso) ou à la plateforme européenne de règlement en ligne des litiges : ec.europa.eu/consumers/odr. L'acceptation des CGU lors de l'inscription est horodatée et conservée à titre de preuve (art. 1366-1367 C. civ. — écrit et signature électroniques)." },
       ],
     },
     {
@@ -8603,8 +8716,9 @@ const LEGAL_DOCS = {
         { h: "Article 3 — Role of the platform", p: "LOCKR is a technical intermediary within the meaning of article L.111-7 of the French Consumer Code. Service contracts are concluded directly between the client and the craftsman. LOCKR provides fair, clear and transparent ranking of offers." },
         { h: "Article 4 — User obligations", p: "Users undertake not to publish illegal content, not to bypass the platform to avoid commissions, to respect craftsmen and to provide truthful information. Any breach may lead to suspension or deletion of the account after formal notice." },
         { h: "Article 5 — Reviews", p: "Published reviews are moderated in accordance with article L.111-7-2 of the French Consumer Code. Only clients who actually received a service may post a review." },
-        { h: "Article 6 — Liability", p: "LOCKR uses all reasonable means to ensure service availability, without an obligation of result. LOCKR is not liable for non-performance of contracts concluded between clients and craftsmen, without prejudice to its duty to verify listed professionals." },
-        { h: "Article 7 — Governing law and disputes", p: "These Terms are governed by French law. Consumers may use the free consumer mediation service (art. L.612-1) or the EU online dispute resolution platform: ec.europa.eu/consumers/odr." },
+        { h: "Article 6 — Platform liability", p: "LOCKR is a technical connecting intermediary and is NOT a party to the service contract concluded between the client and the craftsman. LOCKR uses all reasonable means to ensure service availability and verification of listed professionals (SIRET, liability insurance, qualifications), without an obligation of result. LOCKR shall not be liable for the performance, non-performance, poor performance or any damage resulting from the service carried out by the craftsman, who bears sole and full responsibility." },
+        { h: "Article 7 — Craftsmen's liability and recourse", p: "The craftsman acts as an independent professional under his sole responsibility. He is solely liable for the quality, compliance, deadlines and any damage related to his interventions, covered by his mandatory professional liability insurance (and 10-year guarantee where applicable). Any claim, compensation request or action relating to a service must be directed exclusively against the intervening craftsman and his insurer, whose details appear on the quote and invoice. By accepting these Terms, the craftsman undertakes to indemnify and hold LOCKR harmless against any judgment, claim or costs related to his interventions. This clause does not deprive consumers of their statutory rights against the service provider." },
+        { h: "Article 8 — Governing law and disputes", p: "These Terms are governed by French law. Consumers may use the free consumer mediation service (art. L.612-1) or the EU online dispute resolution platform: ec.europa.eu/consumers/odr. Acceptance of the Terms at registration is time-stamped and stored as evidence (art. 1366-1367 French Civil Code — electronic writing and signature)." },
       ],
     },
     {
@@ -8871,6 +8985,27 @@ export default function App() {
   const logout = () => { setAccount(null); setScreen("login"); };
 
   const [legalOpen, setLegalOpen] = useState(null); // null | id du document
+  const [payReturn, setPayReturn] = useState(() => new URLSearchParams(window.location.search).get("paiement"));
+
+  // Retour de la page de paiement Stripe
+  useEffect(() => {
+    if (payReturn) {
+      window.history.replaceState({}, "", window.location.pathname);
+      const t = setTimeout(() => setPayReturn(null), 6000);
+      return () => clearTimeout(t);
+    }
+  }, [payReturn]);
+
+  // Retour de l'onboarding Stripe Connect (virements automatiques artisan)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stripe_onboard") === "done") {
+      const acct = params.get("acct");
+      if (acct) localStorage.setItem("lk_stripe_acct", acct);
+      localStorage.setItem("lk_stripe_onboard_done", "1");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const legalLinks = lang === "en"
     ? [{ id: "mentions", l: "Legal notice" }, { id: "cgu", l: "Terms" }, { id: "cgv", l: "Sales" }, { id: "privacy", l: "Privacy" }, { id: "cookies", l: "Cookies" }]
@@ -8880,6 +9015,13 @@ export default function App() {
     <>
       {children}
       <CookieConsent lang={lang} />
+      {payReturn && (
+        <div style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 10000, background: payReturn === "succes" ? T.success : T.danger, color: "#fff", borderRadius: 12, padding: "12px 20px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,.2)", display: "flex", alignItems: "center", gap: 8 }}>
+          {payReturn === "succes"
+            ? (lang === "en" ? "✓ Payment confirmed — thank you!" : "✓ Paiement confirmé — merci !")
+            : (lang === "en" ? "Payment cancelled" : "Paiement annulé")}
+        </div>
+      )}
       {legalOpen && <LegalCenterModal lang={lang} initialTab={legalOpen} onClose={() => setLegalOpen(null)} />}
       <div style={{ position: "fixed", bottom: 4, right: 10, zIndex: 100, display: "flex", gap: 10, fontFamily: "'Inter',sans-serif" }}>
         {legalLinks.map(lk => (
