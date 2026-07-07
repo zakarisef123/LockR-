@@ -5510,22 +5510,23 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
 
   const acomptesPending = []; // acomptes gérés par LOCKR — aucune action requise du pro
 
-  /* Navigation ultra-simple : 4 sections seulement.
-     Toutes les fonctionnalités restent accessibles via les sous-onglets. */
+  /* Navigation ultra-simple : 3 sections. Tout le travail (bons, missions,
+     carte, calendrier, historique) se pilote depuis l'Accueil ; chaque vue
+     détaillée s'ouvre avec un bouton « ← Accueil » pour revenir. */
   const tabs = [
     { id: "accueil", icon: Icon.home || Icon.list, l: lang === "en" ? "Home" : "Accueil" },
-    { id: "missions_group", icon: Icon.list, l: tr.missions },
     { id: "marketplace", icon: Icon.card, l: tr.marketplace },
     { id: "compte_group", icon: Icon.user, l: lang === "en" ? "My account" : "Mon compte" },
   ];
-  const missionsSubs = [
-    { id: "bons", l: tr.bonuses },
-    { id: "active", l: tr.inProgress },
-    { id: "carte", l: lang === "en" ? "Live map" : "Carte live" },
-    { id: "missions", l: tr.missions },
-    { id: "calendar", l: tr.calendarTab },
-    { id: "history", l: tr.history },
-  ];
+  // Vues de travail : accessibles uniquement depuis l'Accueil
+  const workViews = {
+    bons: tr.bonuses,
+    active: tr.inProgress,
+    carte: lang === "en" ? "Live map" : "Carte live",
+    missions: tr.missions,
+    calendar: tr.calendarTab,
+    history: tr.history,
+  };
   const compteSubs = [
     { id: "profil", l: tr.proProfile },
     { id: "stats", l: tr.stats },
@@ -5533,14 +5534,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
     { id: "factu", l: tr.factuTab },
     { id: "partenaires", l: "Partenaires" },
   ];
-  const [missionsSub, setMissionsSub] = useState("bons");
   const [compteSub, setCompteSub] = useState("profil");
-  // Vue effective affichée (groupe → sous-onglet actif)
-  const view = tab === "missions_group" ? missionsSub : tab === "compte_group" ? compteSub : tab;
+  // Vue effective affichée
+  const view = tab === "compte_group" ? compteSub : tab;
+  const inWorkView = Object.keys(workViews).includes(tab);
   // Navigation directe vers une vue précise (depuis l'accueil)
   const goView = (id) => {
-    if (missionsSubs.some(s => s.id === id)) { setMissionsSub(id); setTab("missions_group"); }
-    else if (compteSubs.some(s => s.id === id)) { setCompteSub(id); setTab("compte_group"); }
+    if (compteSubs.some(s => s.id === id)) { setCompteSub(id); setTab("compte_group"); }
     else setTab(id);
   };
 
@@ -5595,12 +5595,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", border: "none", background: tab === t.id ? "rgba(28,28,28,.06)" : "transparent", borderRadius: 10, padding: "11px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: 2, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
                 <div style={{ position: "relative" }}>
                   {t.icon(tab === t.id ? T.accent : T.textLo, 16)}
-                  {t.id === "missions_group" && acomptesPending.length > 0 && (
+                  {t.id === "accueil" && acomptesPending.length > 0 && (
                     <div style={{ position: "absolute", top: -4, right: -5, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #fff" }} />
                   )}
                 </div>
                 <span style={{ color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13 }}>{t.l}</span>
-                {t.id === "missions_group" && acomptesPending.length > 0 && (
+                {t.id === "accueil" && acomptesPending.length > 0 && (
                   <div style={{ marginLeft: "auto", background: T.warn, borderRadius: 10, padding: "1px 6px", minWidth: 18, textAlign: "center" }}>
                     <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>{acomptesPending.length}</span>
                   </div>
@@ -5659,7 +5659,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif", position: "relative" }}>
                 {t.icon(tab === t.id ? T.accent : T.textLo, 14)}
-                {t.id === "missions_group" && acomptesPending.length > 0 && (
+                {t.id === "accueil" && acomptesPending.length > 0 && (
                   <div style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #f4f4f2" }} />
                 )}
                 <span style={{ color: tab === t.id ? T.accent : T.textLo, fontSize: 10, fontWeight: 600 }}>{t.l}</span>
@@ -5691,18 +5691,26 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
             if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
           }}>
-          {/* Sous-onglets simples pour les sections groupées */}
-          {(tab === "missions_group" || tab === "compte_group") && (
+          {/* Sous-onglets Mon compte */}
+          {tab === "compte_group" && (
             <div style={{ display: "flex", gap: 6, padding: "12px 14px 0", overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0 }}>
-              {(tab === "missions_group" ? missionsSubs : compteSubs).map(s => {
-                const activeSub = (tab === "missions_group" ? missionsSub : compteSub) === s.id;
-                const setSub = tab === "missions_group" ? setMissionsSub : setCompteSub;
+              {compteSubs.map(s => {
+                const activeSub = compteSub === s.id;
                 return (
-                  <button key={s.id} onClick={() => setSub(s.id)} style={{ flexShrink: 0, background: activeSub ? T.grad : "#fff", color: activeSub ? "#fff" : T.textMid, border: activeSub ? "none" : `1px solid ${T.border}`, borderRadius: 20, padding: "8px 15px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                  <button key={s.id} onClick={() => setCompteSub(s.id)} style={{ flexShrink: 0, background: activeSub ? T.grad : "#fff", color: activeSub ? "#fff" : T.textMid, border: activeSub ? "none" : `1px solid ${T.border}`, borderRadius: 20, padding: "8px 15px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
                     {s.l}
                   </button>
                 );
               })}
+            </div>
+          )}
+          {/* Barre retour vers l'Accueil quand on est dans une vue de travail */}
+          {inWorkView && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px 0", flexShrink: 0 }}>
+              <button onClick={() => setTab("accueil")} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 20, padding: "8px 16px", fontSize: 13, fontWeight: 700, color: T.textHi, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+                {Icon.back(T.textHi, 13)} {lang === "en" ? "Home" : "Accueil"}
+              </button>
+              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi }}>{workViews[tab]}</span>
             </div>
           )}
           {view === "accueil" && (() => {
@@ -5743,6 +5751,21 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   ))}
                 </div>
 
+                {/* Accès rapides — gros boutons simples */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+                  {[
+                    { id: "carte", ic: "🗺️", l: fr ? "Carte" : "Map" },
+                    { id: "calendar", ic: "📅", l: fr ? "Calendrier" : "Calendar" },
+                    { id: "missions", ic: "📋", l: fr ? "Missions" : "Missions" },
+                    { id: "history", ic: "🕐", l: fr ? "Historique" : "History" },
+                  ].map(a => (
+                    <button key={a.id} onClick={() => goView(a.id)} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "12px 4px", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "center" }}>
+                      <div style={{ fontSize: 20 }}>{a.ic}</div>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textMid, marginTop: 4 }}>{a.l}</div>
+                    </button>
+                  ))}
+                </div>
+
                 {/* 1. BONS À ACCEPTER */}
                 <Section color={T.accent} title={fr ? "🎯 Bons à accepter" : "🎯 Vouchers to accept"} count={bonsDispo.length} goTab="bons" goLabel={fr ? "Accepter →" : "Accept →"}>
                   {bonsDispo.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucun bon disponible pour le moment." : "No voucher available right now."}</div>}
@@ -5752,7 +5775,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                         <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.urgence ? "🔴 " : ""}{b.titre}</div>
                         <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
                       </div>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: T.accent, flexShrink: 0, marginLeft: 10 }}>{fmt(b.montantEstime)}</div>
+                      <div style={{ fontWeight: 800, fontSize: 12, color: T.accent, flexShrink: 0, marginLeft: 10 }}>{fmtFrom(b.montantEstime, lang)}</div>
                     </div>
                   ))}
                 </Section>
@@ -8507,7 +8530,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
               </div>
               <div style={{ textAlign: "right" }}>
                 {bon.urgence && <div className="lk-tag-urgent" style={{ display: "inline-block", marginBottom: 4 }}>URGENT</div>}
-                <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{bon.montantEstime} €</div>
+                <div style={{ color: T.accent, fontWeight: 700, fontSize: 13 }}>{fmtFrom(bon.montantEstime, lang)}</div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -9440,7 +9463,14 @@ function AdminDigitalConformiteTab({ lang = "fr" }) {
 /* ─── ROOT ─── */
 export default function App() {
   const [screen, setScreen] = useState("login");
-  const [account, setAccount] = useState(null);
+  // Session persistante : reconnexion automatique (client, pro, partenaire, admin)
+  const [account, setAccount] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("lk_session") || "null"); } catch { return null; }
+  });
+  const loginAs = (acc) => {
+    setAccount(acc);
+    try { localStorage.setItem("lk_session", JSON.stringify(acc)); } catch {}
+  };
   const [bookings, setBookings] = useState(INIT_BOOKINGS);
   const [accounts, setAccounts] = useState(INIT_ACCOUNTS);
   const [bons, setBons] = useState(INIT_BONS);
@@ -9456,7 +9486,7 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem("lk_priority_order") || "[]"); } catch { return []; }
   });
   useEffect(() => { localStorage.setItem("lk_priority_order", JSON.stringify(priorityOrder)); }, [priorityOrder]);
-  const logout = () => { setAccount(null); setScreen("login"); };
+  const logout = () => { setAccount(null); localStorage.removeItem("lk_session"); setScreen("login"); };
 
   const [legalOpen, setLegalOpen] = useState(null); // null | id du document
   const [payReturn, setPayReturn] = useState(() => new URLSearchParams(window.location.search).get("paiement"));
@@ -9512,12 +9542,12 @@ export default function App() {
     if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
   }
   if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : type === "entreprise" ? "register-entreprise" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
-  if (screen === "register-client") return wrapper(<RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
-  if (screen === "register-pro") return wrapper(<RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
-  if (screen === "register-entreprise") return wrapper(<RegisterEntrepriseScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { setAccount(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
+  if (screen === "register-client") return wrapper(<RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { loginAs(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
+  if (screen === "register-pro") return wrapper(<RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { loginAs(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
+  if (screen === "register-entreprise") return wrapper(<RegisterEntrepriseScreen onBack={() => setScreen("register-choice")} onSuccess={acc => { loginAs(acc); }} accounts={accounts} setAccounts={setAccounts} lang={lang} />);
   return wrapper(<LoginScreen onLogin={(acc) => {
     const banned = bannedList.find(b => b.email === acc.email);
     if (banned) { alert((TRANS[lang] || TRANS.fr).accountBanned); return; }
-    setAccount(acc);
+    loginAs(acc);
   }} onRegister={() => setScreen("register-choice")} accounts={accounts} lang={lang} setLang={setLang} />);
 }
