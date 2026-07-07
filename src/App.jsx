@@ -1790,6 +1790,28 @@ function PlatformCallModal({ name, onClose, onConnected, lang = "fr" }) {
   , document.body);
 }
 
+/* ─── DISPATCH PRIORITAIRE ───
+   L'admin définit un ordre de priorité (max 15 techniciens). Un bon d'intervention
+   est proposé au technicien n°1 pendant 2 minutes ; sans réponse, il défile au
+   n°2, etc. Après le dernier de la liste, le bon devient visible par tous. */
+const DISPATCH_WINDOW_MS = 2 * 60 * 1000;
+
+function dispatchState(bon, priorityOrder) {
+  if (!priorityOrder || priorityOrder.length === 0) return { open: true, idx: -1, remaining: 0 };
+  const start = new Date(bon.dispatchTs || bon.createdAt).getTime();
+  const idx = Math.floor((Date.now() - start) / DISPATCH_WINDOW_MS);
+  if (idx >= priorityOrder.length) return { open: true, idx: -1, remaining: 0 };
+  const remaining = DISPATCH_WINDOW_MS - ((Date.now() - start) % DISPATCH_WINDOW_MS);
+  return { open: false, idx, current: priorityOrder[idx], remaining };
+}
+
+function bonVisibleForPro(bon, artisanId, priorityOrder) {
+  // La cascade prioritaire ne concerne que les interventions de la plateforme
+  if (bon.postedBy !== "platform") return true;
+  const st = dispatchState(bon, priorityOrder);
+  return st.open || st.current === artisanId;
+}
+
 /* Virements automatiques (Stripe Connect Express) — l'artisan connecte son IBAN,
    ensuite chaque paiement client est splitté automatiquement : part artisan versée
    directement, commission LOCKR retenue. Aucun reversement manuel. */
@@ -3381,8 +3403,15 @@ function ChatRegional({ account, chatMessages, setChatMessages, lang = "fr" }) {
 }
 
 /* ─── BONS DISPONIBLES ─── */
-function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr" }) {
+function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr", priorityOrder = [] }) {
   const tr = TRANS[lang] || TRANS.fr;
+  // Tick de re-rendu pour faire défiler le dispatch prioritaire (fenêtres de 2 min)
+  const [, setDispatchTick] = useState(0);
+  useEffect(() => {
+    if (!priorityOrder.length) return;
+    const iv = setInterval(() => setDispatchTick(t => t + 1), 5000);
+    return () => clearInterval(iv);
+  }, [priorityOrder.length]);
   const [postModal, setPostModal] = useState(false);
   const [rdvModal, setRdvModal] = useState(null);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
@@ -3415,7 +3444,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
   useEffect(() => () => Object.values(timerRefs.current).forEach(clearInterval), []);
   // Feature 9: sort by pro score
   const proScore = bookings.filter(b => b.artisanId === account.artisanId && b.statut === "terminée").length;
-  const bonsRegion = bons.filter(b => b.region === myRegion).slice().sort((a, b) => {
+  const bonsRegion = bons.filter(b => b.region === myRegion && bonVisibleForPro(b, account.artisanId, priorityOrder)).slice().sort((a, b) => {
     if (proScore >= 5) {
       if (a.urgence && !b.urgence) return -1;
       if (!a.urgence && b.urgence) return 1;
@@ -5060,7 +5089,7 @@ function FactuElecTab({ lang = "fr" }) {
   );
 }
 
-function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang }) {
+function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [] }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -5663,7 +5692,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 </div>
               </div>
             </div>
-          ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} />)}
+          ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} />)}
           {tab === "partenaires" && <div style={{ padding: "14px" }}><PartenaireScreen lang={lang} /></div>}
           {tab === "auto" && <AutoEntrepriseTab account={account} bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {tab === "factu" && <FactuElecTab lang={lang} />}
@@ -6486,7 +6515,7 @@ function PartenaireScreen({ lang = "fr" }) {
   );
 }
 
-function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], onLogout, lang = "fr", setLang, bannedList = [], setBannedList }) {
+function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {} }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -6509,7 +6538,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const adminBons = bons.filter(b => b.postedBy === "platform");
 
   const posterBonAdmin = () => {
-    const b = { id: uid(), titre: newBon.titre || "Intervention LOCKR", adresse: newBon.adresse, probleme: newBon.probleme, urgence: newBon.urgence, montantEstime: parseFloat(newBon.montantEstime) || 100, postedBy: "platform", postedByNom: "LOCKR", region: newBon.region, lat: 48.8566, lng: 2.3522, createdAt: ts(), techPct: newBon.techPct };
+    const b = { id: uid(), titre: newBon.titre || "Intervention LOCKR", adresse: newBon.adresse, probleme: newBon.probleme, urgence: newBon.urgence, montantEstime: parseFloat(newBon.montantEstime) || 100, postedBy: "platform", postedByNom: "LOCKR", region: newBon.region, lat: 48.8566, lng: 2.3522, createdAt: ts(), techPct: newBon.techPct, dispatchTs: ts() };
     setBons(p => [...p, b]);
     setPostModal(false);
     setPostSuccess(true);
@@ -6542,6 +6571,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     { id: "facturation", l: "Facturation" },
     { id: "comptabilite", l: "Comptabilité" },
     { id: "partenaires", l: "Partenaires" },
+    { id: "priorites", l: `${lang === "en" ? "Priorities" : "Priorités"} (${priorityOrder.length})` },
     { id: "digital_conformite", l: tr.adminDigitalTab },
   ];
   // Feature 15: Facturation state
@@ -7162,6 +7192,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
           </>
         )}
         {tab === "partenaires" && <PartenaireScreen />}
+        {tab === "priorites" && <AdminPrioritesTab lang={lang} accounts={accounts} bons={bons} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} />}
         {tab === "digital_conformite" && <AdminDigitalConformiteTab lang={lang} />}
         </div>
       {rejectTarget && (
@@ -8896,6 +8927,129 @@ function LegalCenterModal({ lang = "fr", onClose, initialTab = "mentions" }) {
   );
 }
 
+/* ─── ADMIN PRIORITÉS — ordre de dispatch des techniciens ─── */
+function AdminPrioritesTab({ lang = "fr", accounts, bons, priorityOrder, setPriorityOrder }) {
+  const fr = lang !== "en";
+  const MAX = 15;
+  // Techniciens disponibles (pros validés)
+  const pros = accounts.filter(a => a.role === "pro" && a.dossierStatus !== "pending");
+  const byArtisanId = Object.fromEntries(pros.map(p => [p.artisanId, p]));
+  const available = pros.filter(p => !priorityOrder.includes(p.artisanId));
+
+  // Tick pour rafraîchir les comptes à rebours du suivi live
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const add = (artisanId) => {
+    if (priorityOrder.length >= MAX) return;
+    setPriorityOrder([...priorityOrder, artisanId]);
+  };
+  const remove = (artisanId) => setPriorityOrder(priorityOrder.filter(id => id !== artisanId));
+  const move = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= priorityOrder.length) return;
+    const next = [...priorityOrder];
+    [next[i], next[j]] = [next[j], next[i]];
+    setPriorityOrder(next);
+  };
+
+  const fmtMs = ms => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+
+  // Bons plateforme en cours de dispatch
+  const activeBons = bons.filter(b => b.postedBy === "platform");
+
+  return (
+    <div>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 4 }}>{fr ? "Ordre de priorité des techniciens" : "Technician priority order"}</div>
+      <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20 }}>
+        {fr
+          ? `Jusqu'à ${MAX} techniciens. Chaque intervention est proposée au n°1 pendant 2 minutes ; sans réponse elle défile automatiquement au suivant. Après le dernier, elle devient visible par tous.`
+          : `Up to ${MAX} technicians. Each intervention is offered to #1 for 2 minutes; without a response it automatically moves to the next. After the last one, it becomes visible to everyone.`}
+      </div>
+
+      {/* Liste ordonnée */}
+      <div className="lk-card" style={{ padding: "18px 20px", marginBottom: 18 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>
+          {fr ? "File de priorité" : "Priority queue"} ({priorityOrder.length}/{MAX})
+        </div>
+        {priorityOrder.length === 0 && (
+          <div style={{ color: T.textLo, fontSize: 12, padding: "10px 0" }}>
+            {fr ? "Aucun technicien prioritaire — les bons sont visibles par tous immédiatement." : "No priority technician — interventions are visible to everyone immediately."}
+          </div>
+        )}
+        {priorityOrder.map((aid, i) => {
+          const p = byArtisanId[aid];
+          return (
+            <div key={aid} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < priorityOrder.length - 1 ? "1px solid rgba(0,0,0,.05)" : "none" }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: i === 0 ? T.grad : "rgba(0,0,0,.06)", color: i === 0 ? "#fff" : T.textMid, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{p ? p.nom : aid}</div>
+                <div style={{ fontSize: 11, color: T.textLo }}>{p ? `${p.ville || ""}` : (fr ? "Technicien introuvable" : "Technician not found")}</div>
+              </div>
+              <button onClick={() => move(i, -1)} disabled={i === 0} className="lk-ghost" style={{ padding: "5px 9px", fontSize: 12, opacity: i === 0 ? 0.3 : 1 }}>▲</button>
+              <button onClick={() => move(i, 1)} disabled={i === priorityOrder.length - 1} className="lk-ghost" style={{ padding: "5px 9px", fontSize: 12, opacity: i === priorityOrder.length - 1 ? 0.3 : 1 }}>▼</button>
+              <button onClick={() => remove(aid)} style={{ background: "rgba(220,38,38,.08)", border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", color: T.danger, fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>{fr ? "Retirer" : "Remove"}</button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Ajouter un technicien */}
+      <div className="lk-card" style={{ padding: "18px 20px", marginBottom: 18 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{fr ? "Ajouter un technicien" : "Add a technician"}</div>
+        {available.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Tous les techniciens validés sont déjà dans la file." : "All approved technicians are already in the queue."}</div>}
+        {available.map(p => (
+          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.04)" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{p.nom}</div>
+              <div style={{ fontSize: 11, color: T.textLo }}>{p.ville || ""}</div>
+            </div>
+            <button onClick={() => add(p.artisanId)} disabled={priorityOrder.length >= MAX}
+              style={{ background: priorityOrder.length >= MAX ? "rgba(0,0,0,.06)" : "rgba(201,160,48,.1)", border: `1px solid ${priorityOrder.length >= MAX ? "transparent" : "rgba(201,160,48,.35)"}`, borderRadius: 8, padding: "6px 12px", cursor: priorityOrder.length >= MAX ? "default" : "pointer", color: priorityOrder.length >= MAX ? T.textLo : T.accent, fontSize: 11, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+              + {fr ? "Ajouter" : "Add"}
+            </button>
+          </div>
+        ))}
+        {priorityOrder.length >= MAX && <div style={{ color: T.warn, fontSize: 11, marginTop: 8 }}>{fr ? `Limite de ${MAX} techniciens atteinte.` : `Limit of ${MAX} technicians reached.`}</div>}
+      </div>
+
+      {/* Suivi live du dispatch */}
+      {priorityOrder.length > 0 && (
+        <div className="lk-card" style={{ padding: "18px 20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{fr ? "Dispatch en cours" : "Live dispatch"}</div>
+          {activeBons.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune intervention en attente." : "No pending intervention."}</div>}
+          {activeBons.map(b => {
+            const st = dispatchState(b, priorityOrder);
+            const cur = st.current ? byArtisanId[st.current] : null;
+            return (
+              <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,.04)" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{b.titre}</div>
+                  <div style={{ fontSize: 11, color: T.textLo }}>{b.region} · {fmt(b.montantEstime)}</div>
+                </div>
+                {st.open ? (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: T.textMid, background: "rgba(0,0,0,.05)", borderRadius: 8, padding: "5px 10px" }}>{fr ? "Visible par tous" : "Visible to all"}</span>
+                ) : (
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: T.accent }}>→ n°{st.idx + 1} {cur ? cur.nom : ""}</div>
+                    <div style={{ fontSize: 11, color: T.textLo }}>{fr ? "défile dans" : "moves on in"} {fmtMs(st.remaining)}</div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── ADMIN DIGITAL CONFORMITE TAB ─── */
 function AdminDigitalConformiteTab({ lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
@@ -8982,6 +9136,12 @@ export default function App() {
   const [interventionChats, setInterventionChats] = useState({});
   const [lang, setLang] = useState("fr");
   const [bannedList, setBannedList] = useState([]);
+  // Ordre de priorité des techniciens (max 15) — défini par l'admin.
+  // Chaque bon est proposé au 1er pendant 2 min, puis défile au suivant.
+  const [priorityOrder, setPriorityOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("lk_priority_order") || "[]"); } catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem("lk_priority_order", JSON.stringify(priorityOrder)); }, [priorityOrder]);
   const logout = () => { setAccount(null); setScreen("login"); };
 
   const [legalOpen, setLegalOpen] = useState(null); // null | id du document
@@ -9033,8 +9193,8 @@ export default function App() {
 
   if (account) {
     if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />);
-    if (account.role === "pro") return wrapper(<ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} />);
-    if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} />);
+    if (account.role === "pro") return wrapper(<ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} priorityOrder={priorityOrder} />);
+    if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} />);
     if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
   }
   if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : type === "entreprise" ? "register-entreprise" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
