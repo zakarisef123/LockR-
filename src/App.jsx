@@ -2345,7 +2345,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
   const [pass, setPass] = useState("");
   const [confirm, setConfirm] = useState("");
   const [transport, setTransport] = useState("voiture");
-  const [metier, setMetier] = useState("serrurier");
+  const [metiers, setMetiers] = useState(["serrurier"]); // plusieurs secteurs possibles
   const [siret, setSiret] = useState("");
   const [iban, setIban] = useState("");
   const [certif, setCertif] = useState("aucune");
@@ -2363,6 +2363,29 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
   const clr = k => setErrs(p => { const e = { ...p }; delete e[k]; return e; });
 
+  /* Vérification automatique d'un document : format accepté (photo/PDF) et
+     taille max 10 Mo. Renvoie null si valide, sinon le message d'erreur. */
+  const checkDoc = (f) => {
+    if (!f) return lang === "en" ? "File missing" : "Fichier manquant";
+    const okType = /\.(jpe?g|png|webp|heic|pdf)$/i.test(f.name) || /^image\/|pdf$/.test(f.type);
+    if (!okType) return lang === "en" ? "Invalid format — photo or PDF only" : "Format invalide — photo ou PDF uniquement";
+    if (f.size > 10 * 1024 * 1024) return lang === "en" ? "File too large (max 10 MB)" : "Fichier trop lourd (max 10 Mo)";
+    return null;
+  };
+
+  /* Vérification SIRET : 14 chiffres + clé de Luhn (algorithme officiel INSEE) */
+  const siretValid = (v) => {
+    const d = v.replace(/\s/g, "");
+    if (!/^\d{14}$/.test(d)) return false;
+    let sum = 0;
+    for (let i = 0; i < 14; i++) {
+      let n = Number(d[i]);
+      if (i % 2 === 0) { n *= 2; if (n > 9) n -= 9; }
+      sum += n;
+    }
+    return sum % 10 === 0;
+  };
+
   const validateStep1 = () => {
     const e = {};
     if (!prenom.trim()) e.prenom = tr.firstnameRequired;
@@ -2378,9 +2401,11 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
   const validateStep2 = () => {
     const e = {};
-    if (!siret.replace(/\s/g, "").match(/^\d{14}$/)) e.siret = tr.siretInvalid;
-    if (!idCardFile) e.idCard = tr.idCardRequired;
-    if (!insuranceFile) e.insurance = tr.insuranceRequired;
+    if (metiers.length === 0) e.metiers = lang === "en" ? "Select at least one sector" : "Sélectionnez au moins un secteur d'activité";
+    if (!siretValid(siret)) e.siret = tr.siretInvalid;
+    const idErr = checkDoc(idCardFile); if (idErr) e.idCard = idCardFile ? idErr : tr.idCardRequired;
+    const insErr = checkDoc(insuranceFile); if (insErr) e.insurance = insuranceFile ? insErr : tr.insuranceRequired;
+    const kbisErr = checkDoc(kbisFile); if (kbisErr) e.kbis = kbisFile ? kbisErr : (lang === "en" ? "Kbis / INSEE certificate required" : "Kbis ou avis de situation INSEE requis");
     if (!cguOk) e.cgu = tr.cguRequired;
     if (!liabOk) e.liab = tr.liabRequired;
     setErrs(e);
@@ -2394,7 +2419,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
     const acc = {
       id: uid(), role: "pro", artisanId: "a" + uid(),
       nom: prenom + " " + nom, email, pass, verified: false,
-      photo: null, ville, tel, transport, metier, siret, iban, certif,
+      photo: null, ville, tel, transport, metier: metiers[0], metiers, siret, iban, certif,
       hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile, dossierStatus: "pending",
       cguAcceptedAt: ts(), liabAcceptedAt: ts(),
     };
@@ -2470,13 +2495,25 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
               </select>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.selectMetier}</label>
-              <select className="lk-input" value={metier} onChange={e => setMetier(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="serrurier">{tr.metierSerrurier}</option>
-                <option value="plombier">{tr.metierPlombier}</option>
-                <option value="electricien">{tr.metierElectricien}</option>
-                <option value="chauffagiste">{tr.metierChauffagiste}</option>
-              </select>
+              <label className="lk-label">{tr.selectMetier} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({lang === "en" ? "several possible" : "plusieurs possibles"})</span></label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {[
+                  { id: "serrurier", l: tr.metierSerrurier },
+                  { id: "plombier", l: tr.metierPlombier },
+                  { id: "electricien", l: tr.metierElectricien },
+                  { id: "chauffagiste", l: tr.metierChauffagiste },
+                ].map(m => {
+                  const on = metiers.includes(m.id);
+                  return (
+                    <button key={m.id} type="button"
+                      onClick={() => { setMetiers(p => on ? p.filter(x => x !== m.id) : [...p, m.id]); clr("metiers"); }}
+                      style={{ background: on ? "rgba(201,160,48,.1)" : "#fff", border: `1.5px solid ${on ? T.accent : T.border}`, borderRadius: 20, padding: "9px 16px", fontSize: 13, fontWeight: 700, color: on ? T.accent : T.textMid, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+                      {on && Icon.check(T.accent, 13)} {m.l}
+                    </button>
+                  );
+                })}
+              </div>
+              {errs.metiers && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.metiers}</div>}
             </div>
             <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
               <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder={tr.minChars} type="password" err={errs.pass} />
@@ -2517,11 +2554,11 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
             {/* Carte d'identité */}
             <div style={{ marginBottom: 14 }}>
               <label className="lk-label">{tr.idCardLabel}</label>
-              <input type="file" accept="image/*,.pdf" ref={idRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setIdCardFile(f); clr("idCard"); } }} style={{ display: "none" }} />
+              <input type="file" accept="image/*,.pdf" ref={idRef} onChange={e => { const f = e.target.files?.[0]; if (!f) return; const err = checkDoc(f); if (err) { setIdCardFile(null); setErrs(p => ({ ...p, idCard: err })); } else { setIdCardFile(f); clr("idCard"); } }} style={{ display: "none" }} />
               <button type="button" onClick={() => idRef.current?.click()} style={{ width: "100%", background: idCardFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.idCard ? "rgba(220,38,38,.5)" : idCardFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
                 {idCardFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
                 <span style={{ color: idCardFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {idCardFile ? idCardFile.name : tr.uploadIdCard}
+                  {idCardFile ? `${idCardFile.name} — ✓` : tr.uploadIdCard}
                 </span>
               </button>
               {errs.idCard && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.idCard}</div>}
@@ -2530,11 +2567,11 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
             {/* Assurance RC Pro */}
             <div style={{ marginBottom: 14 }}>
               <label className="lk-label">{tr.insuranceLabel}</label>
-              <input type="file" accept="image/*,.pdf" ref={insRef} onChange={e => { const f = e.target.files?.[0]; if (f) { setInsuranceFile(f); clr("insurance"); } }} style={{ display: "none" }} />
+              <input type="file" accept="image/*,.pdf" ref={insRef} onChange={e => { const f = e.target.files?.[0]; if (!f) return; const err = checkDoc(f); if (err) { setInsuranceFile(null); setErrs(p => ({ ...p, insurance: err })); } else { setInsuranceFile(f); clr("insurance"); } }} style={{ display: "none" }} />
               <button type="button" onClick={() => insRef.current?.click()} style={{ width: "100%", background: insuranceFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.insurance ? "rgba(220,38,38,.5)" : insuranceFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
                 {insuranceFile ? Icon.check(T.success, 18) : Icon.shield(T.textLo, 18)}
                 <span style={{ color: insuranceFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {insuranceFile ? insuranceFile.name : tr.uploadInsurance}
+                  {insuranceFile ? `${insuranceFile.name} — ✓` : tr.uploadInsurance}
                 </span>
               </button>
               {errs.insurance && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.insurance}</div>}
@@ -2542,14 +2579,15 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
             {/* Kbis (optionnel) */}
             <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.kbisLabel} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({tr.optionalWord})</span></label>
-              <input type="file" accept="image/*,.pdf" ref={kbisRef} onChange={e => { const f = e.target.files?.[0]; if (f) setKbisFile(f); }} style={{ display: "none" }} />
+              <label className="lk-label">{tr.kbisLabel} *</label>
+              <input type="file" accept="image/*,.pdf" ref={kbisRef} onChange={e => { const f = e.target.files?.[0]; if (!f) return; const err = checkDoc(f); if (err) { setKbisFile(null); setErrs(p => ({ ...p, kbis: err })); } else { setKbisFile(f); clr("kbis"); } }} style={{ display: "none" }} />
               <button type="button" onClick={() => kbisRef.current?.click()} style={{ width: "100%", background: kbisFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${kbisFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
                 {kbisFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
                 <span style={{ color: kbisFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {kbisFile ? kbisFile.name : tr.uploadKbis}
+                  {kbisFile ? `${kbisFile.name} — ✓` : tr.uploadKbis}
                 </span>
               </button>
+              {errs.kbis && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.kbis}</div>}
             </div>
 
             {/* IBAN */}
@@ -3701,7 +3739,8 @@ function CalendarScreen({ bookings, artisanId, lang = "fr" }) {
   const [curMonth, setCurMonth] = useState(now.getMonth());
   const [selectedDay, setSelectedDay] = useState(null);
 
-  const myBk = bookings.filter(b => b.artisanId === artisanId && (b.rdvDate || b.rdv2Date));
+  // RDV programmés + missions en attente/en cours (affichées le jour de leur création si pas de RDV)
+  const myBk = bookings.filter(b => b.artisanId === artisanId && (b.rdvDate || b.rdv2Date || ["assignée", "en_route", "en_cours"].includes(b.statut)));
 
   const prevMonth = () => { if (curMonth === 0) { setCurYear(y => y - 1); setCurMonth(11); } else setCurMonth(m => m - 1); };
   const nextMonth = () => { if (curMonth === 11) { setCurYear(y => y + 1); setCurMonth(0); } else setCurMonth(m => m + 1); };
@@ -3726,7 +3765,9 @@ function CalendarScreen({ bookings, artisanId, lang = "fr" }) {
     return myBk.filter(b => {
       const r1 = b.rdvDate ? b.rdvDate.slice(0, 10) : null;
       const r2 = b.rdv2Date ? b.rdv2Date.slice(0, 10) : null;
-      return r1 === dateStr || r2 === dateStr;
+      // Mission en attente sans RDV → visible le jour de sa création
+      const pending = !r1 && !r2 && ["assignée", "en_route", "en_cours"].includes(b.statut) ? (b.createdAt || "").slice(0, 10) : null;
+      return r1 === dateStr || r2 === dateStr || pending === dateStr;
     });
   };
 
@@ -5093,6 +5134,99 @@ function FactuElecTab({ lang = "fr" }) {
   );
 }
 
+/* ─── CARTE LIVE PRO — position du technicien, clients, km et temps de trajet ─── */
+const haversineKm = (a, b) => {
+  const R = 6371, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+
+function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr" }) {
+  const fr = lang !== "en";
+  const artisan = DEMO_ARTISANS.find(a => a.id === account.artisanId);
+  const fallback = { lat: artisan?.lat || 48.8566, lng: artisan?.lng || 2.3522 };
+  const [myPos, setMyPos] = useState(fallback);
+  const mapRef = useRef(null);
+  const mapObj = useRef(null);
+
+  // Position réelle du technicien si le GPS est autorisé
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watch = navigator.geolocation.watchPosition(
+      p => setMyPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      () => {}, { enableHighAccuracy: true, maximumAge: 10000 }
+    );
+    return () => navigator.geolocation.clearWatch(watch);
+  }, []);
+
+  // Cibles : missions en cours + bons disponibles (avec coordonnées)
+  const active = bookings.filter(b => b.artisanId === account.artisanId && ["assignée", "en_route", "en_cours"].includes(b.statut));
+  const myRegion = account.ville || "Paris";
+  const bonsDispo = bons.filter(b => b.region === myRegion && bonVisibleForPro(b, account.artisanId, priorityOrder));
+  const targets = [
+    ...active.map((b, i) => ({ id: b.id, type: "mission", label: b.clientNom || "Client", adresse: b.adresse, lat: b.lat || 48.8566 + (i + 1) * 0.006, lng: b.lng || 2.3522 + (i + 1) * 0.006, urgence: false })),
+    ...bonsDispo.filter(b => b.lat && b.lng).map(b => ({ id: b.id, type: "bon", label: b.titre, adresse: b.adresse, lat: b.lat, lng: b.lng, urgence: b.urgence, montant: b.montantEstime })),
+  ].map(t => {
+    const km = haversineKm(myPos, t);
+    // Vitesse moyenne urbaine ~25 km/h → minutes de trajet estimées
+    const mins = Math.max(2, Math.round(km / 25 * 60));
+    return { ...t, km, mins };
+  }).sort((a, b) => a.km - b.km);
+
+  // Carte Leaflet
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const L = await loadLeaflet();
+      if (cancelled || !mapRef.current) return;
+      if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; }
+      const map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView([myPos.lat, myPos.lng], 12);
+      mapObj.current = map;
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd" }).addTo(map);
+      // Marqueur technicien (doré pulsant)
+      L.marker([myPos.lat, myPos.lng], { icon: L.divIcon({ className: "", html: `<div style="width:18px;height:18px;border-radius:50%;background:#c9a030;border:3px solid #fff;box-shadow:0 0 0 6px rgba(201,160,48,.25)"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map).bindPopup(fr ? "Vous êtes ici" : "You are here");
+      // Marqueurs clients
+      targets.forEach(t => {
+        const color = t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b";
+        L.marker([t.lat, t.lng], { icon: L.divIcon({ className: "", html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.3)"></div>`, iconSize: [14, 14], iconAnchor: [7, 7] }) }).addTo(map)
+          .bindPopup(`<b>${t.label}</b><br/>${t.adresse || ""}<br/>${t.km.toFixed(1)} km · ~${t.mins} min`);
+      });
+      if (targets.length) {
+        const grp = L.featureGroup(targets.map(t => L.marker([t.lat, t.lng])).concat(L.marker([myPos.lat, myPos.lng])));
+        map.fitBounds(grp.getBounds().pad(0.25));
+      }
+    })();
+    return () => { cancelled = true; if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; } };
+  }, [myPos.lat, myPos.lng, targets.length]);
+
+  return (
+    <div style={{ padding: "14px" }}>
+      <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 3 }}>🗺️ {fr ? "Carte live" : "Live map"}</div>
+      <div style={{ color: T.textLo, fontSize: 11.5, marginBottom: 12 }}>{fr ? "Votre position, vos clients, la distance et le temps de trajet estimé." : "Your position, your clients, distance and estimated travel time."}</div>
+      <div ref={mapRef} style={{ height: 300, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 14 }} />
+      {/* Légende */}
+      <div style={{ display: "flex", gap: 14, marginBottom: 12, fontSize: 10.5, color: T.textMid, flexWrap: "wrap" }}>
+        <span>🟡 {fr ? "Vous" : "You"}</span><span>🔵 {fr ? "Mission en cours" : "Ongoing mission"}</span><span>🟢 {fr ? "Bon disponible" : "Available voucher"}</span><span>🔴 {fr ? "Bon urgent" : "Urgent voucher"}</span>
+      </div>
+      {/* Liste triée par distance */}
+      {targets.length === 0 && <div style={{ textAlign: "center", color: T.textLo, fontSize: 13, padding: "24px 0" }}>{fr ? "Aucun client ni bon à proximité." : "No client or voucher nearby."}</div>}
+      {targets.map(t => (
+        <div key={t.type + t.id} className="lk-card" style={{ padding: "12px 15px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b"}` }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.urgence ? "🔴 " : ""}{t.label}</div>
+            <div style={{ fontSize: 11, color: T.textLo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.adresse}</div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: T.accent }}>{t.km < 1 ? `${Math.round(t.km * 1000)} m` : `${t.km.toFixed(1)} km`}</div>
+            <div style={{ fontSize: 11, color: T.textMid, fontWeight: 600 }}>⏱ ~{t.mins} min</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [] }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
@@ -5142,42 +5276,89 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const sevenDaysAgo = Date.now() - 7 * 86400000;
   const hasPaymentBlock = done.some(b => b.statutPaiement === "en_attente" && new Date(b.createdAt).getTime() < sevenDaysAgo);
 
-  // Notification sonore + vibration quand nouvelle mission dans le rayon
-  const lastBonCount = useRef(0);
+  // ── ALERTE INTERVENTION < 25 KM : notification téléphone + vibration + jingle LOCKR ──
+  const NOTIF_RADIUS_KM = 25;
+  const proPos = useRef({ lat: artisan?.lat || 48.8566, lng: artisan?.lng || 2.3522 });
+  const notifiedIds = useRef(new Set());
+  const firstScan = useRef(true);
+
+  // Permission de notification demandée dès la connexion + suivi de la position
   useEffect(() => {
-    const proMetier = account.metier || "";
-    const proRegion = (account.ville || "").toLowerCase().trim();
-    const relevant = bookings.filter(b =>
-      b.statut === "en_attente" &&
-      (!proMetier || !b.metier || b.metier === proMetier) &&
-      (!proRegion || !b.region || b.region.toLowerCase().includes(proRegion) || proRegion.includes(b.region?.toLowerCase()))
-    );
-    if (lastBonCount.current > 0 && relevant.length > lastBonCount.current) {
-      // Son d'alerte via Web Audio API
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const playTone = (freq, start, dur) => {
-          const o = ctx.createOscillator(); const g = ctx.createGain();
-          o.connect(g); g.connect(ctx.destination);
-          o.frequency.value = freq; o.type = "sine";
-          g.gain.setValueAtTime(0, ctx.currentTime + start);
-          g.gain.linearRampToValueAtTime(0.35, ctx.currentTime + start + 0.02);
-          g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
-          o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur + 0.05);
-        };
-        playTone(880, 0, 0.12); playTone(1100, 0.15, 0.12); playTone(1320, 0.30, 0.2);
-      } catch (e) { /* Audio non disponible */ }
-      // Vibration
-      if (navigator.vibrate) navigator.vibrate([150, 80, 150, 80, 300]);
-      // Notification navigateur
-      if (Notification.permission === "granted") {
-        new Notification("🔔 Nouvelle mission LOCKR", { body: "Une intervention disponible près de chez vous !", icon: "/favicon.ico" });
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission();
-      }
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
     }
-    lastBonCount.current = relevant.length;
-  }, [bookings]);
+    if (navigator.geolocation) {
+      const watch = navigator.geolocation.watchPosition(
+        p => { proPos.current = { lat: p.coords.latitude, lng: p.coords.longitude }; },
+        () => {}, { enableHighAccuracy: false, maximumAge: 60000 }
+      );
+      return () => navigator.geolocation.clearWatch(watch);
+    }
+  }, []);
+
+  // Jingle LOCKR reconnaissable : 5 notes montantes puis rappel grave
+  const playLockrJingle = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const playTone = (freq, start, dur, vol = 0.4) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq; o.type = "triangle";
+        g.gain.setValueAtTime(0, ctx.currentTime + start);
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.02);
+        g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+        o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur + 0.05);
+      };
+      // Signature sonore LOCKR : do-mi-sol-do aigu ×2 + note grave finale
+      playTone(523, 0, 0.11); playTone(659, 0.12, 0.11); playTone(784, 0.24, 0.11); playTone(1046, 0.36, 0.22);
+      playTone(523, 0.65, 0.11); playTone(659, 0.77, 0.11); playTone(784, 0.89, 0.11); playTone(1046, 1.01, 0.22);
+      playTone(392, 1.35, 0.35, 0.3);
+    } catch (e) { /* Audio non disponible */ }
+  };
+
+  useEffect(() => {
+    const proMetiers = account.metiers || (account.metier ? [account.metier] : []);
+    const proRegion = (account.ville || "").toLowerCase().trim();
+
+    // Interventions candidates : réservations clients en attente + bons plateforme visibles
+    const candidates = [
+      ...bookings.filter(b => b.statut === "en_attente" && (!proMetiers.length || !b.metier || proMetiers.includes(b.metier)))
+        .map(b => ({ id: "bk_" + b.id, label: b.probleme || "Intervention", adresse: b.adresse, lat: b.lat, lng: b.lng, region: b.region })),
+      ...bons.filter(b => b.postedBy === "platform" && bonVisibleForPro(b, account.artisanId, priorityOrder))
+        .map(b => ({ id: "bon_" + b.id, label: b.titre, adresse: b.adresse, lat: b.lat, lng: b.lng, region: b.region })),
+    ];
+
+    // Filtre distance : < 25 km si coordonnées connues, sinon même région
+    const nearby = candidates.filter(c => {
+      if (c.lat && c.lng) return haversineKm(proPos.current, c) <= NOTIF_RADIUS_KM;
+      return !proRegion || !c.region || c.region.toLowerCase().includes(proRegion) || proRegion.includes(c.region.toLowerCase());
+    });
+
+    const fresh = nearby.filter(c => !notifiedIds.current.has(c.id));
+    fresh.forEach(c => notifiedIds.current.add(c.id));
+
+    // Pas d'alerte au premier chargement — uniquement pour les nouvelles interventions
+    if (firstScan.current) { firstScan.current = false; return; }
+    if (fresh.length === 0) return;
+
+    const c = fresh[0];
+    const km = c.lat && c.lng ? haversineKm(proPos.current, c) : null;
+    const kmTxt = km != null ? (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`) : "";
+
+    // 1. Jingle sonore reconnaissable
+    playLockrJingle();
+    // 2. Vibration longue et distinctive (motif LOCKR)
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
+    // 3. Notification téléphone/navigateur
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification("⚡ LOCKR — Intervention à proximité !", {
+        body: `${c.label}${kmTxt ? ` · à ${kmTxt} de vous` : ""}${c.adresse ? `\n${c.adresse}` : ""}`,
+        icon: "/favicon.svg",
+        tag: c.id,
+        vibrate: [300, 100, 300, 100, 600],
+      });
+    }
+  }, [bookings, bons]);
 
   const startMission = b => {
     // Feature 8: add rdvDate for immediate missions
@@ -5329,20 +5510,39 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
 
   const acomptesPending = []; // acomptes gérés par LOCKR — aucune action requise du pro
 
+  /* Navigation ultra-simple : 4 sections seulement.
+     Toutes les fonctionnalités restent accessibles via les sous-onglets. */
   const tabs = [
     { id: "accueil", icon: Icon.home || Icon.list, l: lang === "en" ? "Home" : "Accueil" },
-    { id: "bons", icon: Icon.percent, l: tr.bonuses },
-    { id: "missions", icon: Icon.list, l: tr.missions },
-    { id: "active", icon: Icon.map, l: tr.inProgress },
+    { id: "missions_group", icon: Icon.list, l: tr.missions },
     { id: "marketplace", icon: Icon.card, l: tr.marketplace },
-    { id: "calendar", icon: Icon.calendar, l: tr.calendarTab },
-    { id: "stats", icon: Icon.chart, l: tr.stats },
-    { id: "history", icon: Icon.hist, l: tr.history },
-    { id: "profil", icon: Icon.user, l: tr.proProfile },
-    { id: "partenaires", icon: Icon.shield, l: "Partenaires" },
-    { id: "auto", icon: Icon.euro, l: tr.autoTab },
-    { id: "factu", icon: Icon.file, l: tr.factuTab },
+    { id: "compte_group", icon: Icon.user, l: lang === "en" ? "My account" : "Mon compte" },
   ];
+  const missionsSubs = [
+    { id: "bons", l: tr.bonuses },
+    { id: "active", l: tr.inProgress },
+    { id: "carte", l: lang === "en" ? "Live map" : "Carte live" },
+    { id: "missions", l: tr.missions },
+    { id: "calendar", l: tr.calendarTab },
+    { id: "history", l: tr.history },
+  ];
+  const compteSubs = [
+    { id: "profil", l: tr.proProfile },
+    { id: "stats", l: tr.stats },
+    { id: "auto", l: tr.autoTab },
+    { id: "factu", l: tr.factuTab },
+    { id: "partenaires", l: "Partenaires" },
+  ];
+  const [missionsSub, setMissionsSub] = useState("bons");
+  const [compteSub, setCompteSub] = useState("profil");
+  // Vue effective affichée (groupe → sous-onglet actif)
+  const view = tab === "missions_group" ? missionsSub : tab === "compte_group" ? compteSub : tab;
+  // Navigation directe vers une vue précise (depuis l'accueil)
+  const goView = (id) => {
+    if (missionsSubs.some(s => s.id === id)) { setMissionsSub(id); setTab("missions_group"); }
+    else if (compteSubs.some(s => s.id === id)) { setCompteSub(id); setTab("compte_group"); }
+    else setTab(id);
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
@@ -5395,12 +5595,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", border: "none", background: tab === t.id ? "rgba(28,28,28,.06)" : "transparent", borderRadius: 10, padding: "11px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: 2, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
                 <div style={{ position: "relative" }}>
                   {t.icon(tab === t.id ? T.accent : T.textLo, 16)}
-                  {t.id === "missions" && acomptesPending.length > 0 && (
+                  {t.id === "missions_group" && acomptesPending.length > 0 && (
                     <div style={{ position: "absolute", top: -4, right: -5, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #fff" }} />
                   )}
                 </div>
                 <span style={{ color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13 }}>{t.l}</span>
-                {t.id === "missions" && acomptesPending.length > 0 && (
+                {t.id === "missions_group" && acomptesPending.length > 0 && (
                   <div style={{ marginLeft: "auto", background: T.warn, borderRadius: 10, padding: "1px 6px", minWidth: 18, textAlign: "center" }}>
                     <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>{acomptesPending.length}</span>
                   </div>
@@ -5459,7 +5659,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             {tabs.map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif", position: "relative" }}>
                 {t.icon(tab === t.id ? T.accent : T.textLo, 14)}
-                {t.id === "missions" && acomptesPending.length > 0 && (
+                {t.id === "missions_group" && acomptesPending.length > 0 && (
                   <div style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #f4f4f2" }} />
                 )}
                 <span style={{ color: tab === t.id ? T.accent : T.textLo, fontSize: 10, fontWeight: 600 }}>{t.l}</span>
@@ -5482,6 +5682,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           onTouchStart={e => !isDesktop && setSwipeTouchX(e.touches[0].clientX)}
           onTouchEnd={e => {
             if (isDesktop) return;
+            // Pas de swipe d'onglet sur la carte (le glissement sert à se déplacer dessus)
+            if (e.target.closest && e.target.closest(".leaflet-container")) return;
             const dx = e.changedTouches[0].clientX - swipeTouchX;
             if (Math.abs(dx) < 60) return;
             const ids = tabs.map(t => t.id);
@@ -5489,7 +5691,21 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
             if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
           }}>
-          {tab === "accueil" && (() => {
+          {/* Sous-onglets simples pour les sections groupées */}
+          {(tab === "missions_group" || tab === "compte_group") && (
+            <div style={{ display: "flex", gap: 6, padding: "12px 14px 0", overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0 }}>
+              {(tab === "missions_group" ? missionsSubs : compteSubs).map(s => {
+                const activeSub = (tab === "missions_group" ? missionsSub : compteSub) === s.id;
+                const setSub = tab === "missions_group" ? setMissionsSub : setCompteSub;
+                return (
+                  <button key={s.id} onClick={() => setSub(s.id)} style={{ flexShrink: 0, background: activeSub ? T.grad : "#fff", color: activeSub ? "#fff" : T.textMid, border: activeSub ? "none" : `1px solid ${T.border}`, borderRadius: 20, padding: "8px 15px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                    {s.l}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {view === "accueil" && (() => {
             const fr = lang !== "en";
             const myRegion = account.ville || "Paris";
             const bonsDispo = bons.filter(b => b.region === myRegion && bonVisibleForPro(b, account.artisanId, priorityOrder));
@@ -5498,7 +5714,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14, borderLeft: `4px solid ${color}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>{title} <span style={{ color, fontWeight: 900 }}>({count})</span></div>
-                  {goTab && <button onClick={() => setTab(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
+                  {goTab && <button onClick={() => goView(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
                 </div>
                 {children}
               </div>
@@ -5513,11 +5729,25 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   </div>
                 </div>
 
+                {/* Chiffres clés */}
+                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                  {[
+                    { n: fmt(earnings), l: fr ? "€ générés" : "€ earned", c: T.success, bg: "rgba(30,158,107,.07)" },
+                    { n: fmt(active.reduce((s, b) => s + (b.montantFinal ?? b.montant ?? 0) * 0.40, 0)), l: fr ? "€ en attente" : "€ pending", c: T.warn, bg: "rgba(217,119,6,.07)" },
+                    { n: active.length, l: fr ? "missions en attente" : "pending missions", c: "#2563eb", bg: "rgba(37,99,235,.07)" },
+                  ].map((s, i) => (
+                    <div key={i} style={{ flex: 1, background: s.bg, borderRadius: 14, padding: "13px 10px", textAlign: "center" }}>
+                      <div style={{ fontWeight: 900, fontSize: 17, color: s.c, letterSpacing: "-.5px" }}>{s.n}</div>
+                      <div style={{ fontSize: 10, color: T.textMid, fontWeight: 600, marginTop: 2 }}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+
                 {/* 1. BONS À ACCEPTER */}
                 <Section color={T.accent} title={fr ? "🎯 Bons à accepter" : "🎯 Vouchers to accept"} count={bonsDispo.length} goTab="bons" goLabel={fr ? "Accepter →" : "Accept →"}>
                   {bonsDispo.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucun bon disponible pour le moment." : "No voucher available right now."}</div>}
                   {bonsDispo.slice(0, 3).map(b => (
-                    <div key={b.id} onClick={() => setTab("bons")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
+                    <div key={b.id} onClick={() => goView("bons")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.urgence ? "🔴 " : ""}{b.titre}</div>
                         <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
@@ -5533,7 +5763,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   {active.map(b => {
                     const days = Math.floor((Date.now() - new Date(b.createdAt).getTime()) / 86400000);
                     return (
-                      <div key={b.id} onClick={() => setTab("active")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
+                      <div key={b.id} onClick={() => goView("active")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.clientNom} — {(PROBLEMES.find(p => p.id === b.probleme) || {}).label || b.probleme}</div>
                           <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
@@ -5565,7 +5795,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               </div>
             );
           })()}
-          {tab === "missions" && (
+          {view === "missions" && (
             <div style={{ padding: "14px" }}>
               {hasPaymentBlock && (
                 <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 14, padding: "16px 18px", marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -5633,7 +5863,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               })}
             </div>
           )}
-          {tab === "active" && (
+          {view === "active" && (
             <div style={{ padding: "14px" }}>
               {/* Feature 1: Photo avant — before starting mission */}
               {!activeMission && active.length > 0 && (
@@ -5763,7 +5993,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               )}
             </div>
           )}
-          {tab === "bons" && (hasPaymentBlock ? (
+          {view === "bons" && (hasPaymentBlock ? (
             <div style={{ padding: "14px" }}>
               <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 14, padding: "20px 18px", display: "flex", gap: 12, alignItems: "flex-start" }}>
                 {Icon.warning(T.danger, 22)}
@@ -5774,14 +6004,15 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               </div>
             </div>
           ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} />)}
-          {tab === "partenaires" && <div style={{ padding: "14px" }}><PartenaireScreen lang={lang} /></div>}
-          {tab === "auto" && <AutoEntrepriseTab account={account} bookings={bookings} artisanId={account.artisanId} lang={lang} />}
-          {tab === "factu" && <FactuElecTab lang={lang} />}
-          {tab === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
-          {tab === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />}
-          {tab === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
-          {tab === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
-          {tab === "history" && (
+          {view === "partenaires" && <div style={{ padding: "14px" }}><PartenaireScreen lang={lang} /></div>}
+          {view === "auto" && <AutoEntrepriseTab account={account} bookings={bookings} artisanId={account.artisanId} lang={lang} />}
+          {view === "factu" && <FactuElecTab lang={lang} />}
+          {view === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
+          {view === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />}
+          {view === "carte" && <ProLiveMap account={account} bookings={bookings} bons={bons} priorityOrder={priorityOrder} lang={lang} />}
+          {view === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
+          {view === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
+          {view === "history" && (
             <div style={{ padding: "14px" }}>
               <button onClick={() => setMonthlyModal(true)} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 12, padding: "12px 16px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16, fontFamily: "'Inter',sans-serif" }}>
                 {Icon.file("#fff", 15)} {tr.downloadMonthlyReport}
@@ -8700,6 +8931,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
           onTouchStart={e => !isDesktop && setSwipeTouchX(e.touches[0].clientX)}
           onTouchEnd={e => {
             if (isDesktop) return;
+            // Pas de swipe d'onglet sur la carte (le glissement sert à naviguer dessus)
+            if (e.target.closest && e.target.closest(".leaflet-container")) return;
             const dx = e.changedTouches[0].clientX - swipeTouchX;
             if (Math.abs(dx) < 60) return;
             const ids = tabs.map(t => t.id);
