@@ -5097,7 +5097,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
-  const [tab, setTab] = useState("bons");
+  const [tab, setTab] = useState("accueil");
   const [activeMission, setActiveMission] = useState(null);
   const [progress, setProgress] = useState(0);
   const [dispo, setDispo] = useState(true);
@@ -5330,6 +5330,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const acomptesPending = []; // acomptes gérés par LOCKR — aucune action requise du pro
 
   const tabs = [
+    { id: "accueil", icon: Icon.home || Icon.list, l: lang === "en" ? "Home" : "Accueil" },
     { id: "bons", icon: Icon.percent, l: tr.bonuses },
     { id: "missions", icon: Icon.list, l: tr.missions },
     { id: "active", icon: Icon.map, l: tr.inProgress },
@@ -5488,6 +5489,82 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
             if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
           }}>
+          {tab === "accueil" && (() => {
+            const fr = lang !== "en";
+            const myRegion = account.ville || "Paris";
+            const bonsDispo = bons.filter(b => b.region === myRegion && bonVisibleForPro(b, account.artisanId, priorityOrder));
+            const doneRecent = done.slice(-5).reverse();
+            const Section = ({ color, title, count, children, goTab, goLabel }) => (
+              <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14, borderLeft: `4px solid ${color}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>{title} <span style={{ color, fontWeight: 900 }}>({count})</span></div>
+                  {goTab && <button onClick={() => setTab(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
+                </div>
+                {children}
+              </div>
+            );
+            return (
+              <div style={{ padding: "14px" }}>
+                {/* Salutation + dispo */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{fr ? "Bonjour" : "Hello"} {account.nom.split(" ")[0]} 👋</div>
+                  <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>
+                    {fr ? "Tout est là : vos bons, vos missions en cours et vos missions terminées." : "Everything is here: your vouchers, ongoing and completed missions."}
+                  </div>
+                </div>
+
+                {/* 1. BONS À ACCEPTER */}
+                <Section color={T.accent} title={fr ? "🎯 Bons à accepter" : "🎯 Vouchers to accept"} count={bonsDispo.length} goTab="bons" goLabel={fr ? "Accepter →" : "Accept →"}>
+                  {bonsDispo.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucun bon disponible pour le moment." : "No voucher available right now."}</div>}
+                  {bonsDispo.slice(0, 3).map(b => (
+                    <div key={b.id} onClick={() => setTab("bons")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.urgence ? "🔴 " : ""}{b.titre}</div>
+                        <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: T.accent, flexShrink: 0, marginLeft: 10 }}>{fmt(b.montantEstime)}</div>
+                    </div>
+                  ))}
+                </Section>
+
+                {/* 2. MISSIONS EN COURS — affichées tant que non validées/clôturées */}
+                <Section color="#2563eb" title={fr ? "🔧 Missions en cours" : "🔧 Ongoing missions"} count={active.length} goTab="active" goLabel={fr ? "Continuer →" : "Continue →"}>
+                  {active.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune mission en cours." : "No ongoing mission."}</div>}
+                  {active.map(b => {
+                    const days = Math.floor((Date.now() - new Date(b.createdAt).getTime()) / 86400000);
+                    return (
+                      <div key={b.id} onClick={() => setTab("active")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.clientNom} — {(PROBLEMES.find(p => p.id === b.probleme) || {}).label || b.probleme}</div>
+                          <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
+                          {days >= 1 && <div style={{ fontSize: 10.5, color: T.warn, fontWeight: 700, marginTop: 2 }}>⏳ {fr ? `En attente depuis ${days} jour${days > 1 ? "s" : ""} — à clôturer` : `Pending for ${days} day${days > 1 ? "s" : ""} — to close`}</div>}
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: "#2563eb", background: "rgba(37,99,235,.08)", borderRadius: 7, padding: "4px 8px", flexShrink: 0, marginLeft: 10 }}>{(tr.statuts && tr.statuts[b.statut]) || b.statut}</span>
+                      </div>
+                    );
+                  })}
+                </Section>
+
+                {/* 3. MISSIONS TERMINÉES */}
+                <Section color={T.success} title={fr ? "✅ Missions terminées" : "✅ Completed missions"} count={done.length} goTab="history">
+                  {done.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune mission terminée." : "No completed mission."}</div>}
+                  {doneRecent.map(b => (
+                    <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.04)" }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{b.clientNom}</div>
+                        <div style={{ fontSize: 11, color: T.textLo }}>{fmtDate(b.createdAt)}</div>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: T.success }}>{fmt((b.montantFinal ?? b.montant) * 0.40)}</div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,.06)", display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 12, color: T.textMid, fontWeight: 600 }}>{fr ? "Total gagné" : "Total earned"}</span>
+                    <span style={{ fontSize: 15, fontWeight: 900, color: T.success }}>{fmt(earnings)}</span>
+                  </div>
+                </Section>
+              </div>
+            );
+          })()}
           {tab === "missions" && (
             <div style={{ padding: "14px" }}>
               {hasPaymentBlock && (
