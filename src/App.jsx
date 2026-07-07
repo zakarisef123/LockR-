@@ -1808,7 +1808,11 @@ function dispatchState(bon, priorityOrder) {
 function bonVisibleForPro(bon, artisanId, priorityOrder) {
   // La cascade prioritaire ne concerne que les interventions de la plateforme
   if (bon.postedBy !== "platform") return true;
+  if (!priorityOrder || priorityOrder.length === 0) return true;
+  // Les bons plateforme sont réservés EXCLUSIVEMENT aux artisans choisis par l'admin
+  if (!priorityOrder.includes(artisanId)) return false;
   const st = dispatchState(bon, priorityOrder);
+  // Après le tour complet : visible par tous les artisans de la liste (jamais les autres)
   return st.open || st.current === artisanId;
 }
 
@@ -8969,8 +8973,8 @@ function AdminPrioritesTab({ lang = "fr", accounts, bons, priorityOrder, setPrio
       <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 4 }}>{fr ? "Ordre de priorité des techniciens" : "Technician priority order"}</div>
       <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20 }}>
         {fr
-          ? `Jusqu'à ${MAX} techniciens. Chaque intervention est proposée au n°1 pendant 2 minutes ; sans réponse elle défile automatiquement au suivant. Après le dernier, elle devient visible par tous.`
-          : `Up to ${MAX} technicians. Each intervention is offered to #1 for 2 minutes; without a response it automatically moves to the next. After the last one, it becomes visible to everyone.`}
+          ? `Jusqu'à ${MAX} techniciens. Les interventions LOCKR sont réservées exclusivement aux artisans de cette liste : proposées au n°1 pendant 2 minutes, puis défilent au suivant. Après le tour complet, elles restent visibles par tous les artisans de la liste (jamais les autres).`
+          : `Up to ${MAX} technicians. LOCKR interventions are reserved exclusively for artisans on this list: offered to #1 for 2 minutes, then moving to the next. After a full cycle, they remain visible to all listed artisans (never others).`}
       </div>
 
       {/* Liste ordonnée */}
@@ -9034,7 +9038,7 @@ function AdminPrioritesTab({ lang = "fr", accounts, bons, priorityOrder, setPrio
                   <div style={{ fontSize: 11, color: T.textLo }}>{b.region} · {fmt(b.montantEstime)}</div>
                 </div>
                 {st.open ? (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: T.textMid, background: "rgba(0,0,0,.05)", borderRadius: 8, padding: "5px 10px" }}>{fr ? "Visible par tous" : "Visible to all"}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: T.textMid, background: "rgba(0,0,0,.05)", borderRadius: 8, padding: "5px 10px" }}>{fr ? "Visible par toute la liste" : "Visible to whole list"}</span>
                 ) : (
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: T.accent }}>→ n°{st.idx + 1} {cur ? cur.nom : ""}</div>
