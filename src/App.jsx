@@ -1235,6 +1235,9 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 *{box-sizing:border-box;margin:0;padding:0}
+/* Mode sombre — inversion douce, images et cartes préservées */
+.lk-dark{filter:invert(.93) hue-rotate(180deg);background:#151515}
+.lk-dark img,.lk-dark video,.lk-dark .leaflet-container{filter:invert(1) hue-rotate(180deg)}
 body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;background:#fffbf0}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#d0d0cc;border-radius:4px}
@@ -3486,12 +3489,16 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
   useEffect(() => () => Object.values(timerRefs.current).forEach(clearInterval), []);
   // Feature 9: sort by pro score
   const proScore = bookings.filter(b => b.artisanId === account.artisanId && b.statut === "terminée").length;
+  // Tri : urgences d'abord (si score >= 5), puis par distance croissante
+  const proPos0 = DEMO_ARTISANS.find(a => a.id === account.artisanId) || { lat: 48.8566, lng: 2.3522 };
   const bonsRegion = bons.filter(b => b.region === myRegion && bonVisibleForPro(b, account.artisanId, priorityOrder)).slice().sort((a, b) => {
     if (proScore >= 5) {
       if (a.urgence && !b.urgence) return -1;
       if (!a.urgence && b.urgence) return 1;
     }
-    return 0;
+    const da = a.lat && a.lng ? haversineKm(proPos0, a) : 999;
+    const db = b.lat && b.lng ? haversineKm(proPos0, b) : 999;
+    return da - db;
   });
 
   const prendre = (bon) => setRdvModal(bon);
@@ -3510,6 +3517,8 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
     setBookings(p => [...p, bk]);
     setBons(p => p.filter(b => b.id !== bon.id));
     setRdvModal(null);
+    // Confirmation : vibration + toast bien visible
+    if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
     const suffix = rdvOpts.rdvDate ? ` — ${tr.rdvScheduled}` : "";
     setNotif(`${tr.bonusAccepted} ${bon.titre}${suffix}`);
     setTimeout(() => setNotif(null), 4000);
@@ -5142,13 +5151,18 @@ const haversineKm = (a, b) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr" }) {
+function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr", onSelect = () => {} }) {
   const fr = lang !== "en";
   const artisan = DEMO_ARTISANS.find(a => a.id === account.artisanId);
   const fallback = { lat: artisan?.lat || 48.8566, lng: artisan?.lng || 2.3522 };
   const [myPos, setMyPos] = useState(fallback);
   const mapRef = useRef(null);
   const mapObj = useRef(null);
+  const meMarker = useRef(null);
+  const targetLayer = useRef(null);
+  const didFit = useRef(false);
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   // Position réelle du technicien si le GPS est autorisé
   useEffect(() => {
@@ -5174,35 +5188,57 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr" }
     return { ...t, km, mins };
   }).sort((a, b) => a.km - b.km);
 
-  // Carte Leaflet
+  // Carte Leaflet — créée UNE SEULE FOIS (jamais recréée : le zoom de
+  // l'utilisateur est conservé quand la position ou les cibles changent)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const L = await loadLeaflet();
-      if (cancelled || !mapRef.current) return;
-      if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; }
-      const map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView([myPos.lat, myPos.lng], 12);
+      if (cancelled || !mapRef.current || mapObj.current) return;
+      const map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView([fallback.lat, fallback.lng], 12);
       mapObj.current = map;
       L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd" }).addTo(map);
-      // Marqueur technicien (doré pulsant)
-      L.marker([myPos.lat, myPos.lng], { icon: L.divIcon({ className: "", html: `<div style="width:18px;height:18px;border-radius:50%;background:#c9a030;border:3px solid #fff;box-shadow:0 0 0 6px rgba(201,160,48,.25)"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map).bindPopup(fr ? "Vous êtes ici" : "You are here");
-      // Marqueurs clients
+      targetLayer.current = L.layerGroup().addTo(map);
+    })();
+    return () => { cancelled = true; if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; meMarker.current = null; targetLayer.current = null; didFit.current = false; } };
+  }, []);
+
+  // Mise à jour des marqueurs SANS toucher au zoom ni recréer la carte
+  useEffect(() => {
+    (async () => {
+      const L = await loadLeaflet();
+      const map = mapObj.current;
+      if (!map || !targetLayer.current) return;
+      // Marqueur technicien (doré) — déplacé, pas recréé
+      if (!meMarker.current) {
+        meMarker.current = L.marker([myPos.lat, myPos.lng], { icon: L.divIcon({ className: "", html: `<div style="width:18px;height:18px;border-radius:50%;background:#c9a030;border:3px solid #fff;box-shadow:0 0 0 6px rgba(201,160,48,.25)"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map).bindPopup(fr ? "Vous êtes ici" : "You are here");
+      } else {
+        meMarker.current.setLatLng([myPos.lat, myPos.lng]);
+      }
+      // Marqueurs interventions — cliquables : popup avec bouton « Ouvrir »
+      targetLayer.current.clearLayers();
       targets.forEach(t => {
         const color = t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b";
-        L.marker([t.lat, t.lng], { icon: L.divIcon({ className: "", html: `<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.3)"></div>`, iconSize: [14, 14], iconAnchor: [7, 7] }) }).addTo(map)
-          .bindPopup(`<b>${t.label}</b><br/>${t.adresse || ""}<br/>${t.km.toFixed(1)} km · ~${t.mins} min`);
+        const m = L.marker([t.lat, t.lng], { icon: L.divIcon({ className: "", html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35);cursor:pointer"></div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(targetLayer.current);
+        const btnId = `lkmap_${t.type}_${t.id}`;
+        m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><b style="font-size:13px">${t.label}</b><br/><span style="font-size:11px;color:#666">${t.adresse || ""}</span><br/><span style="font-size:11px">${t.km.toFixed(1)} km · ~${t.mins} min${t.montant ? ` · <b>${fr ? "À partir de" : "From"} ${Math.round(t.montant)} €</b>` : ""}</span><br/><button id="${btnId}" style="margin-top:7px;width:100%;background:linear-gradient(135deg,#c9a030,#8a6b1a);color:#fff;border:none;border-radius:8px;padding:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif">${t.type === "mission" ? (fr ? "Ouvrir la mission" : "Open mission") : (fr ? "Voir le bon" : "View voucher")}</button></div>`);
+        m.on("popupopen", () => {
+          const btn = document.getElementById(btnId);
+          if (btn) btn.onclick = () => { map.closePopup(); onSelectRef.current(t); };
+        });
       });
-      if (targets.length) {
+      // Cadrage automatique UNE SEULE FOIS au premier affichage
+      if (!didFit.current && targets.length) {
         const grp = L.featureGroup(targets.map(t => L.marker([t.lat, t.lng])).concat(L.marker([myPos.lat, myPos.lng])));
         map.fitBounds(grp.getBounds().pad(0.25));
+        didFit.current = true;
       }
     })();
-    return () => { cancelled = true; if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; } };
-  }, [myPos.lat, myPos.lng, targets.length]);
+  }, [myPos.lat, myPos.lng, JSON.stringify(targets.map(t => t.type + t.id))]);
 
   return (
     <div style={{ padding: "14px" }}>
-      <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 3 }}>🗺️ {fr ? "Carte live" : "Live map"}</div>
+      <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 3, display: "flex", alignItems: "center", gap: 8 }}>{Icon.map(T.accent, 18)} {fr ? "Carte live" : "Live map"}</div>
       <div style={{ color: T.textLo, fontSize: 11.5, marginBottom: 12 }}>{fr ? "Votre position, vos clients, la distance et le temps de trajet estimé." : "Your position, your clients, distance and estimated travel time."}</div>
       <div ref={mapRef} style={{ height: 300, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 14 }} />
       {/* Légende */}
@@ -5212,7 +5248,7 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr" }
       {/* Liste triée par distance */}
       {targets.length === 0 && <div style={{ textAlign: "center", color: T.textLo, fontSize: 13, padding: "24px 0" }}>{fr ? "Aucun client ni bon à proximité." : "No client or voucher nearby."}</div>}
       {targets.map(t => (
-        <div key={t.type + t.id} className="lk-card" style={{ padding: "12px 15px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b"}` }}>
+        <div key={t.type + t.id} onClick={() => onSelect(t)} className="lk-card" style={{ padding: "12px 15px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b"}`, cursor: "pointer" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.urgence ? "🔴 " : ""}{t.label}</div>
             <div style={{ fontSize: 11, color: T.textLo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.adresse}</div>
@@ -5221,6 +5257,7 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr" }
             <div style={{ fontWeight: 800, fontSize: 14, color: T.accent }}>{t.km < 1 ? `${Math.round(t.km * 1000)} m` : `${t.km.toFixed(1)} km`}</div>
             <div style={{ fontSize: 11, color: T.textMid, fontWeight: 600 }}>⏱ ~{t.mins} min</div>
           </div>
+          <div style={{ flexShrink: 0 }}>{Icon.arrow(T.textLo, 14)}</div>
         </div>
       ))}
     </div>
@@ -5233,6 +5270,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const isDesktop = w >= BP;
   const [tab, setTab] = useState("accueil");
   const [activeMission, setActiveMission] = useState(null);
+  const [recapMission, setRecapMission] = useState(null); // récap d'une mission terminée (depuis l'Accueil)
+  const [histMonth, setHistMonth] = useState("all"); // filtre historique par mois
   const [progress, setProgress] = useState(0);
   const [dispo, setDispo] = useState(true);
   const [clotureModal, setClotureModal] = useState(false);
@@ -5271,6 +5310,27 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const active = myM.filter(b => ["assignée", "en_route", "en_cours"].includes(b.statut));
   const done = myM.filter(b => b.statut === "terminée");
   const earnings = done.reduce((s, b) => s + (b.montantFinal ?? b.montant) * 0.40, 0);
+
+  // Compteur de bons disponibles (badge barre du bas + résumé accueil)
+  const myRegionPro = account.ville || "Paris";
+  const bonsDispoCount = bons.filter(b => b.region === myRegionPro && bonVisibleForPro(b, account.artisanId, priorityOrder)).length;
+  // Mission actuellement démarrée (barre « Reprendre » persistante)
+  const missionEnCours = active.find(b => b.statut === "en_cours");
+  // RDV du jour (résumé matinal sur l'accueil)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const rdvToday = myM.filter(b => (b.rdvDate || "").slice(0, 10) === todayStr && b.statut !== "terminée")
+    .sort((a, b) => new Date(a.rdvDate) - new Date(b.rdvDate));
+  // Mode sombre (persisté)
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lk_dark") === "1");
+  useEffect(() => { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); }, [darkMode]);
+  // Écran de bienvenue au premier lancement
+  const [onboard, setOnboard] = useState(() => !localStorage.getItem("lk_pro_onboarded"));
+  const [onboardStep, setOnboardStep] = useState(0);
+  // Pull-to-refresh (mobile)
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStart = useRef(null);
+  // Itinéraire GPS vers le client
+  const openItineraire = (adresse) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(adresse || "")}&travelmode=driving`, "_blank");
 
   // Feature 2: payment block check (unpaid > 7 days)
   const sevenDaysAgo = Date.now() - 7 * 86400000;
@@ -5545,7 +5605,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
 
       {/* SIDEBAR DESKTOP */}
@@ -5637,10 +5697,24 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: dispo ? T.success : T.danger, fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                   <div style={{ width: 5, height: 5, borderRadius: "50%", background: dispo ? T.success : T.danger }} />{dispo ? tr.dispoShort : tr.indispoShort}
                 </button>
+                <button onClick={() => setDarkMode(d => !d)} title={darkMode ? "Mode clair" : "Mode sombre"} style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 20, padding: "6px 10px", cursor: "pointer", fontFamily: "'Inter',sans-serif", fontSize: 13 }}>{darkMode ? "☀️" : "🌙"}</button>
                 <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 10px" }}>{Icon.sign()}</button>
               </div>
             </div>
           </div>
+        )}
+        {/* Bannière hors ligne — visible tant que le pro est indisponible */}
+        {!dispo && (
+          <div style={{ background: "rgba(107,114,128,.95)", color: "#fff", padding: "9px 16px", fontSize: 12, fontWeight: 700, textAlign: "center", fontFamily: "'Inter',sans-serif" }}>
+            ⏸ {lang === "en" ? "You are offline — you will not receive any missions" : "Vous êtes hors ligne — vous ne recevez pas de missions"}
+          </div>
+        )}
+        {/* Barre persistante « Mission en cours » — visible partout sauf sur le suivi */}
+        {missionEnCours && view !== "active" && (
+          <button onClick={() => { setActiveMission(missionEnCours); setTab("active"); }} style={{ background: "linear-gradient(135deg,#2563eb,#1e40af)", color: "#fff", padding: "10px 16px", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "'Inter',sans-serif", width: "100%" }}>
+            <span style={{ fontSize: 12.5, fontWeight: 700 }}>🔧 {lang === "en" ? "Ongoing mission" : "Mission en cours"} — {missionEnCours.clientNom}</span>
+            <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(255,255,255,.2)", borderRadius: 8, padding: "4px 12px" }}>{lang === "en" ? "Resume →" : "Reprendre →"}</span>
+          </button>
         )}
         {/* Stats bar mobile */}
         {!isDesktop && (
@@ -5672,16 +5746,29 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           <div style={{ background: "#fff", padding: "18px 32px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ color: T.textHi, fontWeight: 800, fontSize: 20 }}>{tabs.find(t => t.id === tab)?.l || ""}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={() => setDarkMode(d => !d)} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{darkMode ? "☀️" : "🌙"}</button>
               {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
               <div style={{ color: T.success, fontWeight: 700, fontSize: 14 }}>{fmt(earnings)} {tr.earned}</div>
             </div>
           </div>
         )}
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined }}
-          onTouchStart={e => !isDesktop && setSwipeTouchX(e.touches[0].clientX)}
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined, paddingBottom: isDesktop ? 0 : 74 }}
+          onTouchStart={e => {
+            if (isDesktop) return;
+            setSwipeTouchX(e.touches[0].clientX);
+            // Pull-to-refresh : mémorise le départ si on est tout en haut
+            pullStart.current = e.currentTarget.scrollTop <= 2 ? e.touches[0].clientY : null;
+          }}
           onTouchEnd={e => {
             if (isDesktop) return;
+            // Pull-to-refresh : tirer vers le bas depuis le haut de page
+            if (pullStart.current != null && e.changedTouches[0].clientY - pullStart.current > 90 && !refreshing) {
+              setRefreshing(true);
+              if (navigator.vibrate) navigator.vibrate(40);
+              setTimeout(() => setRefreshing(false), 900);
+            }
+            pullStart.current = null;
             // Pas de swipe d'onglet sur la carte (le glissement sert à se déplacer dessus)
             if (e.target.closest && e.target.closest(".leaflet-container")) return;
             const dx = e.changedTouches[0].clientX - swipeTouchX;
@@ -5691,6 +5778,11 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
             if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
           }}>
+          {refreshing && (
+            <div style={{ textAlign: "center", padding: "10px 0", color: T.accent, fontSize: 12, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+              ⟳ {lang === "en" ? "Refreshing…" : "Actualisation…"}
+            </div>
+          )}
           {/* Sous-onglets Mon compte */}
           {tab === "compte_group" && (
             <div style={{ display: "flex", gap: 6, padding: "12px 14px 0", overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0 }}>
@@ -5737,6 +5829,22 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   </div>
                 </div>
 
+                {/* Résumé du jour */}
+                {rdvToday.length > 0 && (
+                  <div onClick={() => goView("calendar")} style={{ background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 14, padding: "12px 16px", marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                    {Icon.calendar(T.accent, 18)}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 13, color: T.textHi }}>
+                        {fr ? `Aujourd'hui : ${rdvToday.length} RDV` : `Today: ${rdvToday.length} appointment${rdvToday.length > 1 ? "s" : ""}`}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: T.textMid, marginTop: 1 }}>
+                        {fr ? "Prochain à" : "Next at"} {new Date(rdvToday[0].rdvDate).toLocaleTimeString(fr ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })} — {rdvToday[0].clientNom} · {rdvToday[0].adresse}
+                      </div>
+                    </div>
+                    {Icon.arrow(T.accent, 14)}
+                  </div>
+                )}
+
                 {/* Chiffres clés */}
                 <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
                   {[
@@ -5751,20 +5859,22 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   ))}
                 </div>
 
-                {/* Accès rapides — gros boutons simples */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
-                  {[
-                    { id: "carte", ic: "🗺️", l: fr ? "Carte" : "Map" },
-                    { id: "calendar", ic: "📅", l: fr ? "Calendrier" : "Calendar" },
-                    { id: "missions", ic: "📋", l: fr ? "Missions" : "Missions" },
-                    { id: "history", ic: "🕐", l: fr ? "Historique" : "History" },
-                  ].map(a => (
-                    <button key={a.id} onClick={() => goView(a.id)} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "12px 4px", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "center" }}>
-                      <div style={{ fontSize: 20 }}>{a.ic}</div>
-                      <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textMid, marginTop: 4 }}>{a.l}</div>
-                    </button>
-                  ))}
-                </div>
+                {/* Accès rapides — gros boutons SVG (desktop uniquement ; sur mobile ils sont dans la barre du bas) */}
+                {isDesktop && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+                    {[
+                      { id: "carte", ic: Icon.map, l: fr ? "Carte" : "Map" },
+                      { id: "calendar", ic: Icon.calendar, l: fr ? "Calendrier" : "Calendar" },
+                      { id: "missions", ic: Icon.list, l: fr ? "Missions" : "Missions" },
+                      { id: "history", ic: Icon.hist, l: fr ? "Historique" : "History" },
+                    ].map(a => (
+                      <button key={a.id} onClick={() => goView(a.id)} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 4px", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        {a.ic(T.accent, 20)}
+                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textMid }}>{a.l}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* 1. BONS À ACCEPTER */}
                 <Section color={T.accent} title={fr ? "🎯 Bons à accepter" : "🎯 Vouchers to accept"} count={bonsDispo.length} goTab="bons" goLabel={fr ? "Accepter →" : "Accept →"}>
@@ -5781,12 +5891,12 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 </Section>
 
                 {/* 2. MISSIONS EN COURS — affichées tant que non validées/clôturées */}
-                <Section color="#2563eb" title={fr ? "🔧 Missions en cours" : "🔧 Ongoing missions"} count={active.length} goTab="active" goLabel={fr ? "Continuer →" : "Continue →"}>
+                <Section color="#2563eb" title={fr ? "🔧 Missions en cours" : "🔧 Ongoing missions"} count={active.length} goTab="missions" goLabel={fr ? "Continuer →" : "Continue →"}>
                   {active.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune mission en cours." : "No ongoing mission."}</div>}
                   {active.map(b => {
                     const days = Math.floor((Date.now() - new Date(b.createdAt).getTime()) / 86400000);
                     return (
-                      <div key={b.id} onClick={() => goView("active")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
+                      <div key={b.id} onClick={() => { setActiveMission(b); setTab(b.statut === "en_cours" ? "active" : "missions"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.clientNom} — {(PROBLEMES.find(p => p.id === b.probleme) || {}).label || b.probleme}</div>
                           <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
@@ -5802,7 +5912,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 <Section color={T.success} title={fr ? "✅ Missions terminées" : "✅ Completed missions"} count={done.length} goTab="history">
                   {done.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune mission terminée." : "No completed mission."}</div>}
                   {doneRecent.map(b => (
-                    <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.04)" }}>
+                    <div key={b.id} onClick={() => setRecapMission(b)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{b.clientNom}</div>
                         <div style={{ fontSize: 11, color: T.textLo }}>{fmtDate(b.createdAt)}</div>
@@ -5869,6 +5979,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                           <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
+                            <button onClick={() => openItineraire(b.adresse)} title="Itinéraire GPS" style={{ padding: "10px 12px", background: "rgba(37,99,235,.08)", border: "1px solid rgba(37,99,235,.25)", borderRadius: 10, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                              {Icon.pin("#2563eb", 13)} GPS
+                            </button>
                             <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                               {Icon.chat(T.gold, 13)} Chat
                             </button>
@@ -6007,6 +6120,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <button onClick={() => openItineraire(bk?.adresse)} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer", color: "#2563eb", borderColor: "rgba(37,99,235,.3)" }}>{Icon.pin("#2563eb", 15)} GPS</button>
                     <button onClick={() => setPlatformCall({ name: activeBk?.artisan || "Artisan" })} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</button>
                     <button disabled={progress >= 0.97 && !photoAvant} onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif", opacity: (progress >= 0.97 && !photoAvant) ? .45 : 1 }}>
                       {Icon.check("#fff", 15)} {tr.closeAndInvoice}
@@ -6032,16 +6146,37 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           {view === "factu" && <FactuElecTab lang={lang} />}
           {view === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} bookings={bookings} lang={lang} />}
           {view === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />}
-          {view === "carte" && <ProLiveMap account={account} bookings={bookings} bons={bons} priorityOrder={priorityOrder} lang={lang} />}
+          {view === "carte" && <ProLiveMap account={account} bookings={bookings} bons={bons} priorityOrder={priorityOrder} lang={lang}
+            onSelect={t => {
+              if (t.type === "mission") {
+                const b = bookings.find(x => x.id === t.id);
+                if (b) { setActiveMission(b); setTab(b.statut === "en_cours" ? "active" : "missions"); }
+              } else {
+                setTab("bons");
+              }
+            }} />}
           {view === "calendar" && <CalendarScreen bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {view === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={bookings} artisanId={account.artisanId} lang={lang} /></div>}
-          {view === "history" && (
+          {view === "history" && (() => {
+            const months = [...new Set(done.map(b => (b.createdAt || "").slice(0, 7)))].sort().reverse();
+            const shown = histMonth === "all" ? done : done.filter(b => (b.createdAt || "").slice(0, 7) === histMonth);
+            const monthLabel = m => new Date(m + "-02").toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { month: "long", year: "numeric" });
+            return (
             <div style={{ padding: "14px" }}>
-              <button onClick={() => setMonthlyModal(true)} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 12, padding: "12px 16px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16, fontFamily: "'Inter',sans-serif" }}>
+              <button onClick={() => setMonthlyModal(true)} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 12, padding: "12px 16px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12, fontFamily: "'Inter',sans-serif" }}>
                 {Icon.file("#fff", 15)} {tr.downloadMonthlyReport}
               </button>
-              {done.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noCompletedMission}</div>}
-              {done.map(b => {
+              {/* Filtre par mois */}
+              {months.length > 1 && (
+                <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 14, WebkitOverflowScrolling: "touch" }}>
+                  <button onClick={() => setHistMonth("all")} style={{ flexShrink: 0, background: histMonth === "all" ? T.grad : "#fff", color: histMonth === "all" ? "#fff" : T.textMid, border: histMonth === "all" ? "none" : `1px solid ${T.border}`, borderRadius: 16, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{lang === "en" ? "All" : "Tout"}</button>
+                  {months.map(m => (
+                    <button key={m} onClick={() => setHistMonth(m)} style={{ flexShrink: 0, background: histMonth === m ? T.grad : "#fff", color: histMonth === m ? "#fff" : T.textMid, border: histMonth === m ? "none" : `1px solid ${T.border}`, borderRadius: 16, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", textTransform: "capitalize" }}>{monthLabel(m)}</button>
+                  ))}
+                </div>
+              )}
+              {shown.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noCompletedMission}</div>}
+              {shown.map(b => {
                 const isPaid = b.statutPaiement === "payé";
                 const pr = PROBLEMES.find(p => p.id === b.probleme);
                 return (
@@ -6049,13 +6184,137 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 );
               })}
             </div>
-          )}
+            );
+          })()}
         </div>
       </div>
+      {/* Barre d'accès rapide mobile — SVG propres, fixée en bas de page */}
+      {!isDesktop && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,.06)" }}>
+          {[
+            { id: "accueil", ic: Icon.home, l: lang === "en" ? "Home" : "Accueil" },
+            { id: "carte", ic: Icon.map, l: lang === "en" ? "Map" : "Carte" },
+            { id: "calendar", ic: Icon.calendar, l: lang === "en" ? "Calendar" : "Calendrier" },
+            { id: "missions", ic: Icon.list, l: "Missions" },
+            { id: "history", ic: Icon.hist, l: lang === "en" ? "History" : "Historique" },
+          ].map(a => {
+            const on = tab === a.id;
+            return (
+              <button key={a.id} onClick={() => goView(a.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 2px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "'Inter',sans-serif", borderTop: `2.5px solid ${on ? T.accent : "transparent"}`, position: "relative" }}>
+                {a.ic(on ? T.accent : T.textLo, 19)}
+                {a.id === "accueil" && bonsDispoCount > 0 && (
+                  <span style={{ position: "absolute", top: 5, right: "50%", marginRight: -18, background: T.danger, color: "#fff", borderRadius: 9, minWidth: 16, height: 16, fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", border: "1.5px solid #fff" }}>{bonsDispoCount}</span>
+                )}
+                <span style={{ fontSize: 9, fontWeight: 700, color: on ? T.accent : T.textLo }}>{a.l}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} lang={lang} />}
       {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
       {monthlyModal && <MonthlyReportModal bookings={bookings} artisanId={account.artisanId} lang={lang} onClose={() => setMonthlyModal(false)} />}
+      {recapMission && <MissionRecapModal mission={recapMission} lang={lang} onClose={() => setRecapMission(null)} />}
+      {/* Écran de bienvenue — premier lancement uniquement */}
+      {onboard && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 22, padding: "32px 26px 26px", maxWidth: 380, width: "100%", textAlign: "center", fontFamily: "'Inter',sans-serif" }}>
+            {[
+              { ic: Icon.percent, t: lang === "en" ? "Receive vouchers" : "Recevez des bons", d: lang === "en" ? "Interventions near you appear on your Home screen. Urgent ones ring and vibrate." : "Les interventions proches de vous arrivent sur votre Accueil. Les urgences sonnent et vibrent." },
+              { ic: Icon.tool, t: lang === "en" ? "Intervene" : "Intervenez", d: lang === "en" ? "Accept, call the client, GPS route, before/after photos — everything is guided." : "Acceptez, appelez le client, itinéraire GPS, photos avant/après — tout est guidé." },
+              { ic: Icon.euro, t: lang === "en" ? "Get paid automatically" : "Soyez payé automatiquement", d: lang === "en" ? "Your share is transferred directly to your bank account after each mission." : "Votre part est virée directement sur votre compte bancaire après chaque mission." },
+            ].map((st, i) => i === onboardStep && (
+              <div key={i}>
+                <div style={{ width: 74, height: 74, borderRadius: 22, background: "rgba(201,160,48,.1)", border: "1.5px solid rgba(201,160,48,.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>{st.ic(T.accent, 32)}</div>
+                <div style={{ fontWeight: 900, fontSize: 20, color: T.textHi, marginBottom: 8 }}>{st.t}</div>
+                <div style={{ fontSize: 13, color: T.textMid, lineHeight: 1.6, marginBottom: 22 }}>{st.d}</div>
+              </div>
+            ))}
+            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
+              {[0, 1, 2].map(i => <div key={i} style={{ width: i === onboardStep ? 22 : 7, height: 7, borderRadius: 4, background: i === onboardStep ? T.accent : "rgba(0,0,0,.12)", transition: "all .25s" }} />)}
+            </div>
+            <button onClick={() => {
+              if (onboardStep < 2) setOnboardStep(st => st + 1);
+              else { localStorage.setItem("lk_pro_onboarded", "1"); setOnboard(false); }
+            }} className="lk-btn" style={{ width: "100%" }}>
+              {onboardStep < 2 ? (lang === "en" ? "Next" : "Suivant") : (lang === "en" ? "Let's go!" : "C'est parti !")}
+            </button>
+            {onboardStep < 2 && (
+              <button onClick={() => { localStorage.setItem("lk_pro_onboarded", "1"); setOnboard(false); }} style={{ background: "none", border: "none", color: T.textLo, fontSize: 12, cursor: "pointer", marginTop: 12, fontFamily: "'Inter',sans-serif" }}>
+                {lang === "en" ? "Skip" : "Passer"}
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
+  );
+}
+
+/* Récap d'une mission terminée — ouvert depuis l'Accueil */
+function MissionRecapModal({ mission: b, lang = "fr", onClose }) {
+  const fr = lang !== "en";
+  const pr = PROBLEMES.find(p => p.id === b.probleme);
+  const isPaid = b.statutPaiement === "payé";
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 8500, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "22px 20px 30px", maxWidth: 480, width: "100%", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi }}>{pLabel(pr, lang)}</div>
+            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(0,0,0,.05)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 14, color: T.textMid, fontFamily: "'Inter',sans-serif" }}>✕</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <div style={{ flex: 1, background: T.bg, borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 13)}<span style={{ color: T.textMid, fontSize: 12 }}>{b.adresse}</span></div>
+        </div>
+
+        <div style={{ background: "rgba(30,158,107,.05)", border: "1px solid rgba(30,158,107,.18)", borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ color: T.textMid, fontSize: 12 }}>{fr ? "Montant total" : "Total amount"}</span>
+            <span style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{fmt(b.montantFinal ?? b.montant)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ color: T.textMid, fontSize: 12 }}>{fr ? "Votre part (40%)" : "Your share (40%)"}</span>
+            <span style={{ color: T.success, fontWeight: 800, fontSize: 15 }}>{fmt((b.montantFinal ?? b.montant) * 0.40)}</span>
+          </div>
+          <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(30,158,107,.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: T.textMid, fontSize: 12 }}>{fr ? "Statut paiement" : "Payment status"}</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: isPaid ? T.success : T.warn, background: isPaid ? "rgba(30,158,107,.1)" : "rgba(217,119,6,.1)", borderRadius: 7, padding: "3px 9px" }}>{isPaid ? (fr ? "Payé" : "Paid") : (fr ? "En attente" : "Pending")}</span>
+          </div>
+        </div>
+
+        {(b.photoAvant || b.photoApres) && (
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {b.photoAvant && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, marginBottom: 4 }}>{fr ? "AVANT" : "BEFORE"}</div>
+                <img src={b.photoAvant} alt="avant" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 10 }} />
+              </div>
+            )}
+            {b.photoApres && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, marginBottom: 4 }}>{fr ? "APRÈS" : "AFTER"}</div>
+                <img src={b.photoApres} alt="après" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 10 }} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {b.factureImg && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, marginBottom: 4 }}>{fr ? "FACTURE" : "INVOICE"}</div>
+            <img src={b.factureImg} alt="facture" style={{ width: "100%", maxHeight: 140, objectFit: "cover", borderRadius: 10 }} />
+          </div>
+        )}
+
+        <button onClick={onClose} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Fermer" : "Close"}</button>
+      </div>
+    </div>,
+    document.body
   );
 }
 
