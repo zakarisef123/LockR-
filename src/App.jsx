@@ -8358,24 +8358,46 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const commissionMois = caMois * 0.05; // commission entreprise réduite à 5%
   const conformeCount = docs.filter(d => d.statut === "validé").length;
 
+  /* Outil de gestion d'entreprise : 4 pôles clairs au lieu de 16 onglets.
+     Chaque pôle regroupe ses fonctions en sous-onglets simples. */
   const tabs = [
     { id: "dashboard", icon: Icon.home, l: tr.partnerDashboard },
-    { id: "flotte", icon: Icon.map, l: tr.fleetTab },
-    { id: "missions", icon: Icon.list, l: tr.missions },
-    { id: "bons", icon: Icon.percent, l: tr.partnerBonsTab },
-    { id: "techniciens", icon: Icon.user, l: tr.partnerTechs },
-    { id: "rh", icon: Icon.calendar, l: tr.rhTab },
-    { id: "abonnement", icon: Icon.star, l: tr.subTab },
-    { id: "marketplace_part", icon: Icon.card, l: tr.marketplace },
-    { id: "facturation", icon: Icon.euro, l: tr.partnerFacturation },
-    { id: "contrat", icon: Icon.file, l: tr.partnerContrat },
-    { id: "conformite", icon: Icon.shield, l: tr.partnerConformite },
-    { id: "documents", icon: Icon.image, l: tr.partnerDocuments },
-    { id: "statistiques", icon: Icon.chart, l: tr.partnerStats },
-    { id: "profil", icon: Icon.settings, l: tr.partnerProfil },
-    { id: "lois", icon: Icon.shield, l: lang === "en" ? "French Law" : "Lois FR" },
-    { id: "fe_part", icon: Icon.file, l: lang === "en" ? "E-Invoicing" : "Factu. Élec." },
+    { id: "ops_group", icon: Icon.list, l: lang === "en" ? "Operations" : "Opérations" },
+    { id: "gestion_group", icon: Icon.chart, l: lang === "en" ? "Management" : "Gestion" },
+    { id: "admin_group", icon: Icon.settings, l: lang === "en" ? "Administration" : "Administration" },
   ];
+  const opsSubs = [
+    { id: "missions", l: tr.missions },
+    { id: "bons", l: tr.partnerBonsTab },
+    { id: "flotte", l: tr.fleetTab },
+    { id: "marketplace_part", l: tr.marketplace },
+  ];
+  const gestionSubs = [
+    { id: "techniciens", l: tr.partnerTechs },
+    { id: "rh", l: tr.rhTab },
+    { id: "facturation", l: tr.partnerFacturation },
+    { id: "statistiques", l: tr.partnerStats },
+    { id: "documents", l: tr.partnerDocuments },
+  ];
+  const adminSubs = [
+    { id: "abonnement", l: tr.subTab },
+    { id: "contrat", l: tr.partnerContrat },
+    { id: "conformite", l: tr.partnerConformite },
+    { id: "lois", l: lang === "en" ? "French Law" : "Lois FR" },
+    { id: "fe_part", l: lang === "en" ? "E-Invoicing" : "Factu. Élec." },
+    { id: "profil", l: tr.partnerProfil },
+  ];
+  const [opsSub, setOpsSub] = useState("missions");
+  const [gestionSub, setGestionSub] = useState("techniciens");
+  const [adminSub, setAdminSub] = useState("abonnement");
+  // Vue effective (pôle → sous-onglet actif)
+  const view = tab === "ops_group" ? opsSub : tab === "gestion_group" ? gestionSub : tab === "admin_group" ? adminSub : tab;
+  const goView = (id) => {
+    if (opsSubs.some(x => x.id === id)) { setOpsSub(id); setTab("ops_group"); }
+    else if (gestionSubs.some(x => x.id === id)) { setGestionSub(id); setTab("gestion_group"); }
+    else if (adminSubs.some(x => x.id === id)) { setAdminSub(id); setTab("admin_group"); }
+    else setTab(id);
+  };
 
   const downloadInvoice = (mission) => {
     const lines = [
@@ -8505,13 +8527,32 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
 
   const renderDashboard = () => (
     <div>
-      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 20 }}>{tr.partnerDashboard}</div>
-      <div className="lk-desktop-3col" style={{ marginBottom: 24 }}>
+      <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 4 }}>{tr.partnerDashboard}</div>
+      <div style={{ color: T.textLo, fontSize: 12, marginBottom: 18 }}>{lang === "en" ? "Your entire business at a glance." : "Toute votre entreprise en un coup d'œil."}</div>
+      <div className="lk-desktop-3col" style={{ marginBottom: 20 }}>
         {kpiCards.map((k, i) => (
           <div key={i} className="lk-card" style={{ padding: "18px 20px" }}>
             <div style={{ color: k.color, fontWeight: 800, fontSize: 24 }}>{k.value}</div>
             <div style={{ color: T.textMid, fontSize: 12, marginTop: 4 }}>{k.label}</div>
           </div>
+        ))}
+      </div>
+      {/* Accès rapides — toutes les fonctions de gestion en 1 clic */}
+      <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 8, marginBottom: 22 }}>
+        {[
+          { id: "missions", ic: Icon.list, l: tr.missions },
+          { id: "bons", ic: Icon.percent, l: tr.partnerBonsTab },
+          { id: "flotte", ic: Icon.map, l: tr.fleetTab },
+          { id: "techniciens", ic: Icon.user, l: tr.partnerTechs },
+          { id: "rh", ic: Icon.calendar, l: tr.rhTab },
+          { id: "facturation", ic: Icon.euro, l: tr.partnerFacturation },
+          { id: "statistiques", ic: Icon.chart, l: tr.partnerStats },
+          { id: "marketplace_part", ic: Icon.card, l: tr.marketplace },
+        ].map(a => (
+          <button key={a.id} onClick={() => goView(a.id)} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 6px", cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            {a.ic(T.accent, 19)}
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: T.textMid }}>{a.l}</span>
+          </button>
         ))}
       </div>
       <div style={{ fontWeight: 700, fontSize: 15, color: T.textHi, marginBottom: 12 }}>{tr.lastMissions}</div>
@@ -9283,27 +9324,30 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   );
 
   const renderContent = () => {
-    if (!subscription && tab !== "abonnement" && tab !== "profil") return renderPaywall();
-    if (tab === "dashboard") return renderDashboard();
-    if (tab === "flotte") return renderFlotte();
-    if (tab === "missions") return renderMissions();
-    if (tab === "bons") return renderBons();
-    if (tab === "techniciens") return renderTechniciens();
-    if (tab === "rh") return renderRH();
-    if (tab === "abonnement") return renderAbonnement();
-    if (tab === "facturation") return renderFacturation();
-    if (tab === "contrat") return renderContrat();
-    if (tab === "conformite") return renderConformite();
-    if (tab === "documents") return renderDocuments();
-    if (tab === "statistiques") return renderStatistiques();
-    if (tab === "profil") return renderProfil();
-    if (tab === "lois") return <PartenaireLoiTab lang={lang} account={account} />;
-    if (tab === "fe_part") return <FactuElecTab lang={lang} />;
-    if (tab === "marketplace_part") return <ProMarketplace account={{ ...account, artisanId: account.id, metier: (account.secteurs && account.secteurs[0]) || "serrurier" }} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} isPartner />;
+    if (!subscription && view !== "abonnement" && view !== "profil") return renderPaywall();
+    if (view === "dashboard") return renderDashboard();
+    if (view === "flotte") return renderFlotte();
+    if (view === "missions") return renderMissions();
+    if (view === "bons") return renderBons();
+    if (view === "techniciens") return renderTechniciens();
+    if (view === "rh") return renderRH();
+    if (view === "abonnement") return renderAbonnement();
+    if (view === "facturation") return renderFacturation();
+    if (view === "contrat") return renderContrat();
+    if (view === "conformite") return renderConformite();
+    if (view === "documents") return renderDocuments();
+    if (view === "statistiques") return renderStatistiques();
+    if (view === "profil") return renderProfil();
+    if (view === "lois") return <PartenaireLoiTab lang={lang} account={account} />;
+    if (view === "fe_part") return <FactuElecTab lang={lang} />;
+    if (view === "marketplace_part") return <ProMarketplace account={{ ...account, artisanId: account.id, metier: (account.secteurs && account.secteurs[0]) || "serrurier" }} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} isPartner />;
     return null;
   };
 
-  const mobileTabs = tabs.slice(0, 5);
+  const mobileTabs = tabs;
+  const currentSubs = tab === "ops_group" ? opsSubs : tab === "gestion_group" ? gestionSubs : tab === "admin_group" ? adminSubs : null;
+  const currentSub = tab === "ops_group" ? opsSub : tab === "gestion_group" ? gestionSub : tab === "admin_group" ? adminSub : null;
+  const setCurrentSub = tab === "ops_group" ? setOpsSub : tab === "gestion_group" ? setGestionSub : setAdminSub;
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
@@ -9363,6 +9407,16 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
           }}>
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
+            {/* Sous-onglets du pôle actif */}
+            {currentSubs && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                {currentSubs.map(sb => (
+                  <button key={sb.id} onClick={() => setCurrentSub(sb.id)} style={{ flexShrink: 0, background: currentSub === sb.id ? T.grad : "#fff", color: currentSub === sb.id ? "#fff" : T.textMid, border: currentSub === sb.id ? "none" : `1px solid ${T.border}`, borderRadius: 20, padding: "8px 15px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                    {sb.l}
+                  </button>
+                ))}
+              </div>
+            )}
             {renderContent()}
           </div>
         </div>
@@ -9375,10 +9429,6 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
                 <span style={{ fontSize: 9, fontWeight: tab === t.id ? 700 : 500 }}>{t.l}</span>
               </button>
             ))}
-            <button onClick={() => setTab("profil")} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 4px", border: "none", background: "none", cursor: "pointer", color: tab === "profil" ? T.accent : T.textLo, fontFamily: "'Inter',sans-serif" }}>
-              {Icon.settings(tab === "profil" ? T.accent : T.textLo, 18)}
-              <span style={{ fontSize: 9, fontWeight: tab === "profil" ? 700 : 500 }}>{tr.moreTab}</span>
-            </button>
           </div>
         )}
       </div>
@@ -9926,11 +9976,16 @@ export default function App() {
         </div>
       )}
       {legalOpen && <LegalCenterModal lang={lang} initialTab={legalOpen} onClose={() => setLegalOpen(null)} />}
-      <div style={{ position: "fixed", bottom: 4, right: 10, zIndex: 100, display: "flex", gap: 10, fontFamily: "'Inter',sans-serif" }}>
-        {legalLinks.map(lk => (
-          <span key={lk.id} onClick={() => setLegalOpen(lk.id)} style={{ fontSize: 9.5, color: "rgba(0,0,0,.3)", cursor: "pointer" }}>{lk.l}</span>
-        ))}
-      </div>
+      {/* Liens légaux : uniquement sur les écrans de connexion/inscription —
+          jamais dans les apps connectées (ils gênaient les barres de navigation).
+          Une fois connecté, le Centre légal reste accessible depuis le profil. */}
+      {!account && (
+        <div style={{ position: "fixed", bottom: 4, right: 10, zIndex: 100, display: "flex", gap: 10, fontFamily: "'Inter',sans-serif" }}>
+          {legalLinks.map(lk => (
+            <span key={lk.id} onClick={() => setLegalOpen(lk.id)} style={{ fontSize: 9.5, color: "rgba(0,0,0,.3)", cursor: "pointer" }}>{lk.l}</span>
+          ))}
+        </div>
+      )}
     </>
   );
 
