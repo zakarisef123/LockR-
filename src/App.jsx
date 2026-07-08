@@ -160,6 +160,7 @@ const TRANS = {
     cardNumber: "Numéro de carte", cardHolder: "Titulaire", expiry: "Expiration", cvv: "CVV",
     pay: "Payer", paymentMethod: "Méthode de paiement",
     confirmWith: "Confirmer avec", confirmPayment: "Confirmer le paiement",
+    payGuarantee1: "✓ Paiement sécurisé", payGuarantee2: "✓ Devis avant travaux", payGuarantee3: "✓ Artisan vérifié et assuré", payGuarantee4: "✓ Recours possible",
     changeMethod: "Changer de méthode", processing: "Transaction en cours…",
     paymentConfirmed: "Paiement confirmé !", debited: "débité avec succès", close: "Fermer",
     invoiceInvalid: "Montant invalide", invoiceRequired: "Une photo de facture est requise",
@@ -558,6 +559,7 @@ const TRANS = {
     cardNumber: "Card number", cardHolder: "Cardholder", expiry: "Expiry", cvv: "CVV",
     pay: "Pay", paymentMethod: "Payment method",
     confirmWith: "Confirm with", confirmPayment: "Confirm payment",
+    payGuarantee1: "✓ Secure payment", payGuarantee2: "✓ Quote before work", payGuarantee3: "✓ Verified & insured craftsman", payGuarantee4: "✓ Recourse available",
     changeMethod: "Change method", processing: "Processing…",
     paymentConfirmed: "Payment confirmed!", debited: "debited successfully", close: "Close",
     invoiceInvalid: "Invalid amount", invoiceRequired: "An invoice photo is required",
@@ -1924,6 +1926,12 @@ function PayModal({ amount, onClose, onDone, lang = "fr", payLabel, payType, boo
         </div>
         {step === "method" && (
           <>
+            {/* Rappel des garanties — lève la peur au moment de payer */}
+            <div style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.18)", borderRadius: 12, padding: "10px 14px", marginBottom: 14, display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
+              {[tr.payGuarantee1 || "✓ Paiement sécurisé", tr.payGuarantee2 || "✓ Devis avant travaux", tr.payGuarantee3 || "✓ Artisan vérifié et assuré", tr.payGuarantee4 || "✓ Recours possible"].map((g, i) => (
+                <span key={i} style={{ fontSize: 10.5, color: "#1e9e6b", fontWeight: 700 }}>{g}</span>
+              ))}
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
               {PAY_METHODS.map(m => (
                 <button key={m.id} onClick={() => pick(m)} style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: "12px", cursor: "pointer", textAlign: "left", transition: "all .15s", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 10 }}>
@@ -6350,6 +6358,11 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [acompteModal, setAcompteModal] = useState(false);
   // Feature 6: satisfaction modal
   const [satisfactionBk, setSatisfactionBk] = useState(null);
+  // Mode nuit (cohérence avec le côté pro), aide/FAQ, toast de confirmation
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lk_dark") === "1");
+  useEffect(() => { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); }, [darkMode]);
+  const [helpModal, setHelpModal] = useState(false);
+  const [bookSuccess, setBookSuccess] = useState(false);
   // Position GPS réelle de l'artisan (depuis son compte pro)
   const [artisanGpsPos, setArtisanGpsPos] = useState(null);
   const raf = useRef(null);
@@ -6475,6 +6488,19 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     setTimeout(() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "en_route" } : x)), 2000);
     setScreen("tracking");
     setPendingBookData(null);
+    // Confirmation rassurante après paiement de l'acompte
+    setBookSuccess(true);
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    setTimeout(() => setBookSuccess(false), 7000);
+  };
+
+  // Re-réservation en 1 clic depuis une intervention passée
+  const rebook = (b) => {
+    const a = artOf(b);
+    const pr = PROBLEMES.find(p => p.id === b.probleme);
+    if (a) setSelMetier(a.metier || "serrurier");
+    setSelProb(pr || null);
+    setScreen("choose");
   };
 
   const stMap = { assignée: { l: tr.statusAssigned, c: T.accent }, en_route: { l: tr.statusEnRoute, c: T.accent2 }, terminée: { l: tr.statusDone, c: T.success }, en_cours: { l: tr.statusInProgress, c: T.warn } };
@@ -6485,8 +6511,61 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     if (pending && !satisfactionBk) setSatisfactionBk(pending);
   }, [myBk.length]);
 
+  const FAQ = lang === "en" ? [
+    { q: "How much does it cost?", a: "The displayed price is the guaranteed minimum. On site, the craftsman gives you a FIRM quote before any work — nothing starts without your agreement." },
+    { q: "What is the deposit for?", a: "The 50% deposit confirms your booking and is held securely by LOCKR. It is deducted from the final invoice." },
+    { q: "Can I cancel?", a: "Yes, before the craftsman starts travelling. From your interventions list, tap 'Cancel booking'. For urgent on-site work already started, cancellation is no longer possible (art. L.221-28)." },
+    { q: "Is the craftsman verified?", a: "Yes — identity, SIRET, professional insurance and qualifications are checked before any craftsman joins LOCKR." },
+    { q: "What if there is a problem?", a: "Open a dispute from the intervention ('Open dispute'). Our team responds within 48h. You can also contact the consumer mediator free of charge." },
+    { q: "How do I pay?", a: "Securely online (3-D Secure). The craftsman never handles your card. You get a receipt by email." },
+  ] : [
+    { q: "Combien ça coûte ?", a: "Le prix affiché est le minimum garanti. Sur place, l'artisan vous remet un devis FERME avant tout travaux — rien ne démarre sans votre accord." },
+    { q: "À quoi sert l'acompte ?", a: "L'acompte de 50 % confirme votre réservation et est conservé de façon sécurisée par LOCKR. Il est déduit de la facture finale." },
+    { q: "Puis-je annuler ?", a: "Oui, tant que l'artisan n'est pas en route. Depuis « Mes interventions », touchez « Annuler la réservation ». Pour un dépannage urgent déjà commencé sur place, l'annulation n'est plus possible (art. L.221-28)." },
+    { q: "L'artisan est-il vérifié ?", a: "Oui — identité, SIRET, assurance RC Pro et qualifications sont contrôlés avant qu'un artisan rejoigne LOCKR." },
+    { q: "Et s'il y a un problème ?", a: "Ouvrez un litige depuis l'intervention (« Ouvrir un litige »). Notre équipe répond sous 48 h. Vous pouvez aussi saisir gratuitement le médiateur de la consommation." },
+    { q: "Comment je paie ?", a: "En ligne de façon sécurisée (3-D Secure). L'artisan ne touche jamais votre carte. Vous recevez un reçu par email." },
+  ];
+
   const _modals = (
     <>
+      {/* Barre du bas mobile — navigation client ultra-simple */}
+      {!isDesktop && screen === "home" && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,.06)" }}>
+          {[
+            { ic: Icon.home, l: lang === "en" ? "Home" : "Accueil", on: true, act: () => { setScreen("home"); window.scrollTo({ top: 0, behavior: "smooth" }); } },
+            { ic: Icon.list, l: lang === "en" ? "Bookings" : "Interventions", act: () => { const el = document.getElementById("lk-inter"); if (el) el.scrollIntoView({ behavior: "smooth" }); } },
+            { ic: Icon.chat, l: lang === "en" ? "Help" : "Aide", act: () => setHelpModal(true) },
+            { ic: Icon.user, l: lang === "en" ? "Profile" : "Profil", act: () => setProfileModal(true) },
+          ].map((a, i) => (
+            <button key={i} onClick={a.act} style={{ flex: 1, background: "none", border: "none", padding: "10px 2px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "'Inter',sans-serif" }}>
+              {a.ic(a.on ? T.accent : T.textLo, 19)}
+              <span style={{ fontSize: 9, fontWeight: 700, color: a.on ? T.accent : T.textLo }}>{a.l}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {/* FAQ / Aide */}
+      {helpModal && createPortal(
+        <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setHelpModal(false)}>
+          <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "22px 20px 30px", maxWidth: 560, width: "100%", maxHeight: "85vh", overflowY: "auto", fontFamily: "'Inter',sans-serif" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi }}>❓ {lang === "en" ? "Frequently asked questions" : "Questions fréquentes"}</div>
+              <button onClick={() => setHelpModal(false)} style={{ background: "rgba(0,0,0,.05)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 14, color: T.textMid, fontFamily: "'Inter',sans-serif" }}>✕</button>
+            </div>
+            {FAQ.map((f, i) => (
+              <details key={i} style={{ marginBottom: 8, background: "rgba(0,0,0,.02)", borderRadius: 12, padding: "12px 14px" }}>
+                <summary style={{ fontWeight: 700, fontSize: 13, color: T.textHi, cursor: "pointer", listStyle: "none" }}>{f.q}</summary>
+                <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.6, marginTop: 8 }}>{f.a}</div>
+              </details>
+            ))}
+            <div style={{ marginTop: 14, fontSize: 11, color: T.textLo, textAlign: "center" }}>
+              {lang === "en" ? "Still need help?" : "Besoin d'aide supplémentaire ?"} <b>support@lockr.fr</b>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
       {devisModal && selArt && selProb && pendingBookData && (
         <DevisModal artisan={selArt} probleme={selProb.id} montant={pendingBookData.montant} onAccept={confirmBookAfterDevis} onCancel={() => { setDevisModal(false); setPendingBookData(null); }} lang={lang} />
       )}
@@ -6596,7 +6675,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   );
 
   if (screen === "home") return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif" }}>
+    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", paddingBottom: isDesktop ? 0 : 66 }}>
       <style>{CSS}</style>
       <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -6605,6 +6684,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* GPS tracking active silently — badge removed */}
+          <button onClick={() => setDarkMode(d => !d)} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 9px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{darkMode ? "☀️" : "🌙"}</button>
           {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
           <button onClick={() => setProfileModal(true)} style={{ background: "none", border: "1px solid rgba(201,160,48,.2)", borderRadius: 8, padding: "6px 9px", cursor: "pointer", display: "flex", alignItems: "center", color: T.accent, fontFamily: "'Inter',sans-serif" }}>{Icon.user(T.accent, 15)}</button>
           <button onClick={onLogout} className="lk-ghost" style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>
@@ -6626,10 +6706,35 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
         <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 380px", gap: 28 }}>
           {/* Colonne principale */}
           <div>
-            <div style={{ background: "linear-gradient(135deg,rgba(201,160,48,.08),rgba(168,120,32,.05))", border: "1.5px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "22px 20px", marginBottom: 22 }}>
+            {/* URGENCE — accès immédiat sans étapes */}
+            <button onClick={() => { setSelMetier("serrurier"); setSelProb(PROBLEMES.find(p => p.id === "ouverture") || null); setScreen("choose"); if (navigator.vibrate) navigator.vibrate(50); }}
+              style={{ width: "100%", background: "linear-gradient(135deg,#dc2626,#991b1b)", border: "none", borderRadius: 18, padding: "18px 20px", marginBottom: 14, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 6px 20px rgba(220,38,38,.3)" }}>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ color: "#fff", fontWeight: 900, fontSize: 17, letterSpacing: "-.3px" }}>🚨 {lang === "en" ? "Emergency — immediate help" : "Urgence — Dépannage immédiat"}</div>
+                <div style={{ color: "rgba(255,255,255,.85)", fontSize: 11.5, marginTop: 3 }}>{lang === "en" ? "Locked out? The closest craftsmen, right now." : "Porte claquée ? Les artisans les plus proches, tout de suite."}</div>
+              </div>
+              <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 12, padding: "10px 12px", flexShrink: 0 }}>{Icon.arrow("#fff", 18)}</div>
+            </button>
+
+            <div style={{ background: "linear-gradient(135deg,rgba(201,160,48,.08),rgba(168,120,32,.05))", border: "1.5px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "22px 20px", marginBottom: 14 }}>
               <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {account.nom.split(" ")[0]} 👋</div>
               <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
               <button onClick={() => setScreen("choose")} className="lk-btn" style={{ display: "flex", alignItems: "center", gap: 8 }}>{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
+            </div>
+
+            {/* PRIX TRANSPARENT — le vrai engagement, pas une fausse fourchette */}
+            <div style={{ background: "#fff", border: `1.5px solid rgba(30,158,107,.25)`, borderRadius: 18, padding: "16px 18px", marginBottom: 22 }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>{Icon.shield(T.success, 16)} {lang === "en" ? "Transparent pricing — how it works" : "Prix transparent — comment ça marche"}</div>
+              {[
+                lang === "en" ? "The displayed price is the guaranteed minimum starting price." : "Le prix affiché est le tarif minimum de départ, garanti.",
+                lang === "en" ? "On site, the craftsman diagnoses and gives you a FIRM quote BEFORE any work." : "Sur place, l'artisan diagnostique et vous remet un devis FERME AVANT tout travaux.",
+                lang === "en" ? "Nothing starts without your agreement. Once accepted, the price is locked — no surprises." : "Rien ne démarre sans votre accord. Une fois accepté, le prix est bloqué — zéro surprise.",
+              ].map((t, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 8 : 0 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(30,158,107,.1)", color: T.success, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
+                  <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.55 }}>{t}</span>
+                </div>
+              ))}
             </div>
             <div style={{ marginBottom: 22 }}>
               <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
@@ -6661,7 +6766,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
             {/* Mes interventions — mobile only dans la colonne principale */}
             {!isDesktop && myBk.length > 0 && (
               <>
-                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.myInterventions}</div>
+                <div id="lk-inter" style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.myInterventions}</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {myBk.slice(-3).reverse().map(b => {
                     const a = artOf(b), pr = PROBLEMES.find(p => p.id === b.probleme), st = stMap[b.statut] || { l: b.statut, c: T.textLo };
@@ -6689,6 +6794,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                         )}
                         {b.statut === "terminée" && hasLitige && (
                           <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0" }}>{Icon.check(T.success, 12)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>Litige ouvert</span></div>
+                        )}
+                        {b.statut === "terminée" && (
+                          <button onClick={() => rebook(b)} style={{ width: "100%", background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 8, padding: "7px", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", marginTop: 6, fontFamily: "'Inter',sans-serif" }}>↻ {lang === "en" ? "Book this craftsman again" : "Recommander cet artisan"}</button>
                         )}
                       </div>
                     );
@@ -6730,6 +6838,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                       {b.statut === "terminée" && hasLitige && (
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{Icon.check(T.success, 12)}<span style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{tr.litigeSubmitted.split("—")[0].trim()}</span></div>
                       )}
+                      {b.statut === "terminée" && (
+                        <button onClick={() => rebook(b)} style={{ width: "100%", background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 8, padding: "7px", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", marginTop: 6, fontFamily: "'Inter',sans-serif" }}>↻ {lang === "en" ? "Book this craftsman again" : "Recommander cet artisan"}</button>
+                      )}
                     </div>
                   );
                 })}
@@ -6743,11 +6854,34 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   );
 
   if (screen === "choose") return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", paddingBottom: 90 }}>
+    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", paddingBottom: 90 }}>
       <style>{CSS}</style>
       <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => { setSelProb(null); setSelMetier(null); setScreen("home"); }} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <span style={{ color: T.textHi, fontWeight: 700 }}>{tr.newRequest}</span>
+      </div>
+      {/* Barre de progression du parcours — le client sait toujours où il en est */}
+      <div style={{ background: "#fff", borderBottom: `1px solid ${T.border}`, padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+        {[
+          { n: 1, l: lang === "en" ? "Problem" : "Problème", done: !!selProb },
+          { n: 2, l: lang === "en" ? "Craftsman" : "Artisan", done: !!selArt },
+          { n: 3, l: lang === "en" ? "Confirmation" : "Confirmation", done: false },
+        ].map((st, i) => {
+          const current = (i === 0 && !selProb) || (i === 1 && selProb && !selArt) || (i === 2 && selProb && selArt);
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: st.done ? T.success : current ? T.grad : "rgba(0,0,0,.08)", color: st.done || current ? "#fff" : T.textLo, fontSize: 10.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{st.done ? "✓" : st.n}</div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: st.done ? T.success : current ? T.textHi : T.textLo }}>{st.l}</span>
+              </div>
+              {i < 2 && <div style={{ width: 22, height: 2, background: st.done ? T.success : "rgba(0,0,0,.08)", borderRadius: 1, margin: "0 3px" }} />}
+            </div>
+          );
+        })}
+      </div>
+      {/* Engagement prix */}
+      <div style={{ background: "rgba(30,158,107,.06)", padding: "8px 16px", textAlign: "center", fontSize: 11, color: T.success, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
+        ✓ {lang === "en" ? "Firm quote before any work — nothing without your agreement" : "Devis ferme avant tout travaux — rien sans votre accord"}
       </div>
       <div style={{ padding: isDesktop ? "28px 32px" : "18px 14px", maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? "0 auto" : undefined }}>
         {/* Sélection du métier */}
@@ -6883,8 +7017,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   );
 
   if (screen === "tracking") return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column" }}>
+    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column" }}>
       <style>{CSS}</style>
+      {bookSuccess && (
+        <div style={{ background: "linear-gradient(135deg,#1e9e6b,#15794f)", color: "#fff", padding: "12px 16px", fontFamily: "'Inter',sans-serif" }}>
+          <div style={{ fontWeight: 800, fontSize: 13.5 }}>✓ {lang === "en" ? "Booking confirmed — deposit paid" : "Réservation confirmée — acompte payé"}</div>
+          <div style={{ fontSize: 11.5, opacity: .9, marginTop: 2 }}>{lang === "en" ? "Your craftsman is on his way. Firm quote on site before any work." : "Votre artisan est en route. Devis ferme sur place avant tout travaux."}</div>
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)" }}>
         <button onClick={() => setScreen("home")} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
