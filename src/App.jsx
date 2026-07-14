@@ -1670,22 +1670,36 @@ function openGpsRoute({ lat, lng, adresse } = {}) {
 const fmtCard = v => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
 
+/* Monogramme LOCKR (le "O" cerclé, coupé) — utilisé comme icône compacte
+   partout où le mot complet ne rentre pas (favicon, badges carrés, avatars). */
 function LockrLogo({ size = 30 }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size * 46 / 48} viewBox="0 0 48 46" fill="none">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 100 100" fill="none">
       <defs>
-        <linearGradient id="llGold" x1="0" y1="0" x2="48" y2="46" gradientUnits="userSpaceOnUse">
+        <linearGradient id="llGold" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#f0c93a"/>
-          <stop offset="45%" stopColor="#c9a030"/>
+          <stop offset="55%" stopColor="#c9a030"/>
           <stop offset="100%" stopColor="#8a6b1a"/>
         </linearGradient>
-        <linearGradient id="llShimmer" x1="0" y1="0" x2="30" y2="46" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#fff8dc" stopOpacity="0.55"/>
-          <stop offset="60%" stopColor="#c9a030" stopOpacity="0"/>
-        </linearGradient>
       </defs>
-      <path fill="url(#llGold)" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
-      <path fill="url(#llShimmer)" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
+      <path d="M 57.90 12.83 A 38 38 0 0 1 57.90 87.17 M 42.10 87.17 A 38 38 0 0 1 42.10 12.83" stroke="url(#llGold)" strokeWidth="13" strokeLinecap="square" fill="none"/>
+    </svg>
+  );
+}
+
+/* Logotype complet "LOCKR" — remplace l'icône + le texte "LOCKR" séparé
+   dans les en-têtes, écrans de connexion et sidebars. */
+function LockrWordmark({ height = 32, color = "#c9a030" }) {
+  const w = 536, h = 140;
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={height * w / h} height={height} viewBox={`0 0 ${w} ${h}`} fill="none">
+      <g stroke={color} strokeWidth="14" strokeLinecap="square" strokeLinejoin="miter" fill="none">
+        <path d="M 8 20 L 8 120 L 62 120"/>
+        <path d="M 154.10 21.49 A 50 50 0 0 1 154.10 118.51 M 129.90 118.51 A 50 50 0 0 1 129.90 21.49"/>
+        <path d="M 307.97 35.27 A 50 50 0 1 0 307.97 104.73"/>
+        <path d="M 360 20 L 360 120 M 360 70 L 410 20 M 360 70 L 410 120"/>
+        <path d="M 448 120 L 448 20 L 494 20 L 494 70 L 448 70 M 494 70 L 502 120"/>
+      </g>
     </svg>
   );
 }
@@ -2173,10 +2187,9 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
       <style>{CSS}</style>
       {isDesktop && (
         <div style={{ width: 360, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px" }}>
-          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            <LockrLogo size={32} />
+          <div style={{ marginBottom: 20 }}>
+            <LockrWordmark height={40} color="#e8bc44" />
           </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
         </div>
       )}
@@ -2290,10 +2303,9 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
       <style>{CSS}</style>
       {isDesktop && (
         <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh" }}>
-          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            <LockrLogo size={32} />
+          <div style={{ marginBottom: 20 }}>
+            <LockrWordmark height={40} color="#e8bc44" />
           </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
         </div>
       )}
@@ -2468,10 +2480,9 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
       <style>{CSS}</style>
       {isDesktop && (
         <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh", position: "sticky", top: 0, alignSelf: "flex-start" }}>
-          <div style={{ width: 56, height: 56, background: "rgba(201,160,48,.15)", border: "1.5px solid rgba(201,160,48,.3)", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            <LockrLogo size={32} />
+          <div style={{ marginBottom: 20 }}>
+            <LockrWordmark height={40} color="#e8bc44" />
           </div>
-          <div style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: "-1.5px", marginBottom: 12 }}>LOCKR</div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.joinProLockr}</div>
         </div>
       )}
@@ -2978,14 +2989,9 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           {/* Contenu superposé */}
           <div style={{ position: "relative", padding: "48px 52px", color: "#fff" }}>
             {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 36 }}>
-              <div style={{ width: 52, height: 52, background: "rgba(201,160,48,.18)", border: "1.5px solid rgba(201,160,48,.45)", borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <LockrLogo size={30} />
-              </div>
-              <div>
-                <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-1.5px", lineHeight: 1 }}>LOCKR</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 3 }}>{tr.appTagline}</div>
-              </div>
+            <div style={{ marginBottom: 36 }}>
+              <LockrWordmark height={38} color="#e8bc44" />
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 10 }}>{tr.appTagline}</div>
             </div>
 
             {/* Qui sommes-nous */}
@@ -3041,8 +3047,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(10,10,10,.5) 0%,rgba(10,10,10,.85) 70%,rgba(10,10,10,.98) 100%)" }} />
             <div style={{ position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
-                <div style={{ width: 38, height: 38, background: "rgba(201,160,48,.18)", border: "1px solid rgba(201,160,48,.4)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={22} /></div>
-                <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", letterSpacing: "-1px" }}>LOCKR</span>
+                <LockrWordmark height={24} color="#e8bc44" />
               </div>
               <p style={{ color: "rgba(255,255,255,.7)", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", maxWidth: 340 }}>{tr.loginWhoText}</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -5641,8 +5646,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           {/* Logo */}
           <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 30, height: 30, background: "transparent", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={22} /></div>
-              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
+              <LockrWordmark height={20} />
             </div>
           </div>
           {/* Pro info */}
@@ -6718,8 +6722,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       <style>{CSS}</style>
       <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: "transparent", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={20} /></div>
-          <span style={{ fontSize: 17, fontWeight: 800, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
+          <LockrWordmark height={18} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* GPS tracking active silently — badge removed */}
@@ -9476,8 +9479,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         <div style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0, background: "#fff", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
           <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 30, height: 30, background: "transparent", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={22} /></div>
-              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi, letterSpacing: "-.5px" }}>LOCKR</span>
+              <LockrWordmark height={20} />
             </div>
           </div>
           <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}` }}>
@@ -9504,8 +9506,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         {!isDesktop && (
           <div style={{ background: "#fff", borderBottom: `1px solid ${T.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 26, height: 26, background: "transparent", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={20} /></div>
-              <span style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>LOCKR</span>
+              <LockrWordmark height={17} />
             </div>
             <div style={{ color: T.accent, fontSize: 11, fontWeight: 700 }}>{tr.partnerCertified}</div>
             <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.decoShort}</button>
