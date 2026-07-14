@@ -198,6 +198,7 @@ const TRANS = {
     locating: "Localisation en cours…",
     // ClientApp
     statusAssigned: "Assignée", statusEnRoute: "En route", statusDone: "Terminée", statusInProgress: "En cours",
+    statusCancelled: "Annulée", statusCancelledClient: "Annulée par le client",
     noIntervention: "Aucune intervention",
     payInvoiceBtn: "Payer la facture",
     selectInterventionType: "Sélectionnez un type d'intervention",
@@ -428,6 +429,7 @@ const TRANS = {
     cguLink: "Lire les CGU",
     liabClientAccept: "Je reconnais que LOCKR est un simple intermédiaire de mise en relation : le contrat de prestation est conclu directement et exclusivement avec l'artisan intervenant, seul responsable de l'exécution, de la qualité et des dommages éventuels liés à son intervention. Tout recours s'exerce contre l'artisan et son assurance RC Pro.",
     liabProAccept: "En tant que professionnel indépendant, je reconnais être seul responsable de mes interventions, de leur conformité et des dommages causés, à l'exclusion de toute responsabilité de LOCKR. Je certifie disposer d'une assurance RC Pro valide couvrant mes prestations et je m'engage à garantir et indemniser LOCKR contre toute réclamation d'un client liée à mes interventions.",
+    liabEntAccept: "En tant qu'entreprise, nous reconnaissons être seuls responsables des interventions réalisées par nos techniciens, de leur conformité et des dommages causés, à l'exclusion de toute responsabilité de LOCKR. Nous certifions disposer d'une assurance RC Pro valide couvrant nos prestations et nous engageons à garantir et indemniser LOCKR contre toute réclamation d'un client liée à nos interventions.",
     liabRequired: "Vous devez accepter cette clause de responsabilité pour continuer",
     // RGPD rights
     rgpdTitle: "Vos droits RGPD", rgpdRightsTitle: "Droits sur vos données personnelles",
@@ -597,6 +599,7 @@ const TRANS = {
     locating: "Locating…",
     // ClientApp
     statusAssigned: "Assigned", statusEnRoute: "En route", statusDone: "Done", statusInProgress: "In progress",
+    statusCancelled: "Cancelled", statusCancelledClient: "Cancelled by client",
     noIntervention: "No intervention",
     payInvoiceBtn: "Pay invoice",
     selectInterventionType: "Select an intervention type",
@@ -808,6 +811,7 @@ const TRANS = {
     cguLink: "Read T&Cs",
     liabClientAccept: "I acknowledge that LOCKR is a mere connecting intermediary: the service contract is concluded directly and exclusively with the intervening craftsman, who is solely responsible for the performance, quality and any damage related to his intervention. Any claim shall be brought against the craftsman and his professional liability insurance.",
     liabProAccept: "As an independent professional, I acknowledge that I am solely responsible for my interventions, their compliance and any damage caused, to the exclusion of any liability of LOCKR. I certify that I hold valid professional liability insurance covering my services and undertake to indemnify and hold LOCKR harmless against any client claim related to my interventions.",
+    liabEntAccept: "As a company, we acknowledge that we are solely responsible for the interventions carried out by our technicians, their compliance and any damage caused, to the exclusion of any liability of LOCKR. We certify that we hold valid professional liability insurance covering our services and undertake to indemnify and hold LOCKR harmless against any client claim related to our interventions.",
     liabRequired: "You must accept this liability clause to continue",
     // GDPR rights
     rgpdTitle: "Your GDPR rights", rgpdRightsTitle: "Your personal data rights",
@@ -1103,6 +1107,7 @@ const INIT_ACCOUNTS = [
   { id: "admin4", role: "admin", nom: "Zakari", email: "zakari@lockr.fr", pass: "zakari2024", verified: true },
   { id: "part1", role: "partenaire", nom: "BâtiPro SARL", email: "contact@batipro.fr", pass: "1234", verified: true, siret: "12345678900012", rcs: "Paris B 123 456 789", capital: "50 000 €", assurance: "AXA Pro RC n°AX-2024-001", qualibat: "8711 — Serrurerie", tva: "FR12345678900", iban: "FR76 3000 6000 0112 3456 7890 189", secteurs: ["serrurier","plombier"], ville: "Paris", logo: null, statut: "actif", dateContrat: "2024-01-15" },
   { id: "part2", role: "partenaire", nom: "Électro Services SAS", email: "info@electroservices.fr", pass: "1234", verified: true, siret: "98765432100021", rcs: "Lyon B 987 654 321", capital: "100 000 €", assurance: "Generali Pro n°GEN-2023-445", qualibat: "RGE — QualiElec", tva: "FR98765432100", iban: "FR76 1027 8060 0001 2345 6789 010", secteurs: ["electricien","chauffagiste"], ville: "Lyon", logo: null, statut: "actif", dateContrat: "2023-11-01" },
+  { id: "part_lockr", role: "partenaire", nom: "LOCKR — Équipe interne", email: "equipe@lockr.fr", pass: "lockr2024", verified: true, internalAccess: true, siret: "92345678900012", rcs: "Paris B 923 456 789", capital: "10 000 €", assurance: "AXA France IARD", qualibat: "—", tva: "FR32923456789", iban: "FR76 3000 6000 0112 3456 7890 189", secteurs: ["serrurier","plombier","electricien","chauffagiste"], ville: "Paris", logo: null, statut: "actif", dateContrat: "2024-01-01" },
 ];
 
 const INIT_BOOKINGS = [
@@ -1648,6 +1653,20 @@ const PAY_METHODS = [
   { id: "google",     label: "Google Pay",        type: "wallet", color: "#4285f4" },
   { id: "virement",   label: "Virement bancaire", type: "bank",   color: "#059669" },
 ];
+/* Adresse masquée avant acceptation : garde uniquement le quartier/la ville,
+   jamais le numéro ni le nom de rue — protection de la vie privée du client. */
+function maskAddress(adresse) {
+  if (!adresse) return "";
+  const parts = adresse.split(",").map(s => s.trim());
+  return parts.length > 1 ? parts.slice(1).join(", ") : adresse.replace(/^\d+\s*/, "");
+}
+/* Itinéraire GPS — préfère les coordonnées GPS exactes (point géographique) à
+   l'adresse texte quand elles sont disponibles ; ouvre Google Maps (Waze
+   compatible via le même schéma universel sur mobile). */
+function openGpsRoute({ lat, lng, adresse } = {}) {
+  const dest = (lat && lng) ? `${lat},${lng}` : encodeURIComponent(adresse || "");
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, "_blank");
+}
 const fmtCard = v => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
 const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
 
@@ -2874,7 +2893,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
             <div style={{ marginBottom: 14, padding: "12px 14px", background: "rgba(201,160,48,.05)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12 }}>
               <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
                 <input type="checkbox" checked={liabOk} onChange={e => { setLiabOk(e.target.checked); clr("liab"); }} style={{ marginTop: 3, accentColor: T.accent }} />
-                <span style={{ fontSize: 11, color: T.textMid, lineHeight: 1.55 }}>{tr.liabProAccept}</span>
+                <span style={{ fontSize: 11, color: T.textMid, lineHeight: 1.55 }}>{tr.liabEntAccept}</span>
               </label>
               {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
             </div>
@@ -3569,7 +3588,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
                   <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(201,160,48,.1)", border: "1px solid rgba(201,160,48,.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>{IC(T.accent, 19)}</div>
                   <div>
                     <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{bon.titre}</div>
-                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
+                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>📍 {maskAddress(bon.adresse)} <span style={{ opacity: .6 }}>· {lang === "en" ? "exact address after acceptance" : "adresse exacte après acceptation"}</span></div>
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
@@ -5229,7 +5248,7 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr", 
         const color = t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b";
         const m = L.marker([t.lat, t.lng], { icon: L.divIcon({ className: "", html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35);cursor:pointer"></div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(targetLayer.current);
         const btnId = `lkmap_${t.type}_${t.id}`;
-        m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><b style="font-size:13px">${t.label}</b><br/><span style="font-size:11px;color:#666">${t.adresse || ""}</span><br/><span style="font-size:11px">${t.km.toFixed(1)} km · ~${t.mins} min${t.montant ? ` · <b>${fr ? "À partir de" : "From"} ${Math.round(t.montant)} €</b>` : ""}</span><br/><button id="${btnId}" style="margin-top:7px;width:100%;background:linear-gradient(135deg,#c9a030,#8a6b1a);color:#fff;border:none;border-radius:8px;padding:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif">${t.type === "mission" ? (fr ? "Ouvrir la mission" : "Open mission") : (fr ? "Voir le bon" : "View voucher")}</button></div>`);
+        m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><b style="font-size:13px">${t.label}</b><br/><span style="font-size:11px;color:#666">${t.type === "mission" ? (t.adresse || "") : maskAddress(t.adresse)}</span><br/><span style="font-size:11px">${t.km.toFixed(1)} km · ~${t.mins} min${t.montant ? ` · <b>${fr ? "À partir de" : "From"} ${Math.round(t.montant)} €</b>` : ""}</span><br/><button id="${btnId}" style="margin-top:7px;width:100%;background:linear-gradient(135deg,#c9a030,#8a6b1a);color:#fff;border:none;border-radius:8px;padding:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif">${t.type === "mission" ? (fr ? "Ouvrir la mission" : "Open mission") : (fr ? "Voir le bon" : "View voucher")}</button></div>`);
         m.on("popupopen", () => {
           const btn = document.getElementById(btnId);
           if (btn) btn.onclick = () => { map.closePopup(); onSelectRef.current(t); };
@@ -5259,7 +5278,7 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr", 
         <div key={t.type + t.id} onClick={() => onSelect(t)} className="lk-card" style={{ padding: "12px 15px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b"}`, cursor: "pointer" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.urgence ? "🔴 " : ""}{t.label}</div>
-            <div style={{ fontSize: 11, color: T.textLo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.adresse}</div>
+            <div style={{ fontSize: 11, color: T.textLo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.type === "mission" ? t.adresse : maskAddress(t.adresse)}</div>
           </div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
             <div style={{ fontWeight: 800, fontSize: 14, color: T.accent }}>{t.km < 1 ? `${Math.round(t.km * 1000)} m` : `${t.km.toFixed(1)} km`}</div>
@@ -5338,7 +5357,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const [refreshing, setRefreshing] = useState(false);
   const pullStart = useRef(null);
   // Itinéraire GPS vers le client
-  const openItineraire = (adresse) => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(adresse || "")}&travelmode=driving`, "_blank");
+  const openItineraire = (booking) => openGpsRoute(typeof booking === "string" ? { adresse: booking } : { lat: booking?.lat, lng: booking?.lng, adresse: booking?.adresse });
 
   // Feature 2: payment block check (unpaid > 7 days)
   const sevenDaysAgo = Date.now() - 7 * 86400000;
@@ -5891,7 +5910,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     <div key={b.id} onClick={() => goView("bons")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.urgence ? "🔴 " : ""}{b.titre}</div>
-                        <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
+                        <div style={{ fontSize: 11, color: T.textLo }}>📍 {maskAddress(b.adresse)}</div>
                       </div>
                       <div style={{ fontWeight: 800, fontSize: 12, color: T.accent, flexShrink: 0, marginLeft: 10 }}>{fmtFrom(b.montantEstime, lang)}</div>
                     </div>
@@ -5910,7 +5929,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                           <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
                           {days >= 1 && <div style={{ fontSize: 10.5, color: T.warn, fontWeight: 700, marginTop: 2 }}>⏳ {fr ? `En attente depuis ${days} jour${days > 1 ? "s" : ""} — à clôturer` : `Pending for ${days} day${days > 1 ? "s" : ""} — to close`}</div>}
                         </div>
-                        <span style={{ fontSize: 10, fontWeight: 800, color: "#2563eb", background: "rgba(37,99,235,.08)", borderRadius: 7, padding: "4px 8px", flexShrink: 0, marginLeft: 10 }}>{(tr.statuts && tr.statuts[b.statut]) || b.statut}</span>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: "#2563eb", background: "rgba(37,99,235,.08)", borderRadius: 7, padding: "4px 8px", flexShrink: 0, marginLeft: 10 }}>{{ assignée: tr.statusAssigned, en_route: tr.statusEnRoute, en_cours: tr.statusInProgress }[b.statut] || b.statut}</span>
                       </div>
                     );
                   })}
@@ -5965,7 +5984,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       <div style={{ color: T.accent, fontWeight: 800, fontSize: 17 }}>{fmt(b.montant)}</div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <div style={{ flex: 1, background: T.bg, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 12)}<span style={{ color: T.textLo, fontSize: 12 }}>{b.adresse}</span></div>
+                      <div style={{ flex: 1, background: T.bg, borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 12)}<span style={{ color: T.textLo, fontSize: 12 }}>{b.statut === "en_cours" || b.statut === "en_route" ? b.adresse : maskAddress(b.adresse)}</span></div>
                       <div style={{ background: "rgba(62,207,142,.06)", borderRadius: 8, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.euro(T.success, 12)}<span style={{ color: T.success, fontSize: 12, fontWeight: 600 }}>{fmt(b.montant * 0.40)}</span></div>
                     </div>
                     {b.rdvDate && (
@@ -5987,13 +6006,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                           <div style={{ display: "flex", gap: 8 }}>
                             <button onClick={() => startMission(b)} className="lk-btn" style={{ flex: 1, padding: "10px 0", fontSize: 13 }}>{tr.start}</button>
-                            <button onClick={() => openItineraire(b.adresse)} title="Itinéraire GPS" style={{ padding: "10px 12px", background: "rgba(37,99,235,.08)", border: "1px solid rgba(37,99,235,.25)", borderRadius: 10, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
+                            <button onClick={() => openItineraire(b)} title="Itinéraire GPS" style={{ padding: "10px 12px", background: "rgba(37,99,235,.08)", border: "1px solid rgba(37,99,235,.25)", borderRadius: 10, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                               {Icon.pin("#2563eb", 13)} GPS
                             </button>
                             <button onClick={() => setChatMission(b)} style={{ padding: "10px 12px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                               {Icon.chat(T.gold, 13)} Chat
                             </button>
-                            <button onClick={() => setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "terminée", montantFinal: b.montant, statutPaiement: "en_attente" } : x))} className="lk-ghost" style={{ padding: "10px 16px" }}>{tr.refuse}</button>
+                            <button onClick={() => { if (window.confirm(lang === "en" ? "Decline this mission? It will be cancelled and made available to other craftsmen." : "Refuser cette mission ? Elle sera annulée et remise à disposition des autres artisans.")) setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée", annulationRaison: "refusée_pro" } : x)); }} style={{ padding: "10px 16px", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, color: T.danger, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.refuse}</button>
                           </div>
                         </div>
                       ) : (
@@ -6128,7 +6147,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     )}
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                    <button onClick={() => openItineraire(bk?.adresse)} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer", color: "#2563eb", borderColor: "rgba(37,99,235,.3)" }}>{Icon.pin("#2563eb", 15)} GPS</button>
+                    <button onClick={() => openItineraire(bk)} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer", color: "#2563eb", borderColor: "rgba(37,99,235,.3)" }}>{Icon.pin("#2563eb", 15)} GPS</button>
                     <button onClick={() => setPlatformCall({ name: activeBk?.artisan || "Artisan" })} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</button>
                     <button disabled={progress >= 0.97 && !photoAvant} onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif", opacity: (progress >= 0.97 && !photoAvant) ? .45 : 1 }}>
                       {Icon.check("#fff", 15)} {tr.closeAndInvoice}
@@ -6356,8 +6375,6 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [devisModal, setDevisModal] = useState(false);
   const [pendingBookData, setPendingBookData] = useState(null);
   const [acompteModal, setAcompteModal] = useState(false);
-  // Feature 6: satisfaction modal
-  const [satisfactionBk, setSatisfactionBk] = useState(null);
   // Mode nuit (cohérence avec le côté pro), aide/FAQ, toast de confirmation
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lk_dark") === "1");
   useEffect(() => { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); }, [darkMode]);
@@ -6503,13 +6520,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     setScreen("choose");
   };
 
-  const stMap = { assignée: { l: tr.statusAssigned, c: T.accent }, en_route: { l: tr.statusEnRoute, c: T.accent2 }, terminée: { l: tr.statusDone, c: T.success }, en_cours: { l: tr.statusInProgress, c: T.warn } };
+  const stMap = { assignée: { l: tr.statusAssigned, c: T.accent }, en_route: { l: tr.statusEnRoute, c: T.accent2 }, terminée: { l: tr.statusDone, c: T.success }, en_cours: { l: tr.statusInProgress, c: T.warn }, annulée: { l: tr.statusCancelled, c: T.danger }, annulée_client: { l: tr.statusCancelledClient, c: T.danger } };
 
-  // Feature 6: check if any booking needs satisfaction rating
-  useEffect(() => {
-    const pending = myBk.find(b => b.statut === "terminée" && !b.satisfactionDone);
-    if (pending && !satisfactionBk) setSatisfactionBk(pending);
-  }, [myBk.length]);
+  // Notation de l'artisan désactivée côté client (demande produit)
 
   const FAQ = lang === "en" ? [
     { q: "How much does it cost?", a: "The displayed price is the guaranteed minimum. On site, the craftsman gives you a FIRM quote before any work — nothing starts without your agreement." },
@@ -6571,12 +6584,6 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       )}
       {acompteModal && pendingBookData && (
         <PayModal amount={pendingBookData.montant * 0.5} onClose={() => { setAcompteModal(false); setPendingBookData(null); }} onDone={confirmBookAfterAcompte} lang={lang} />
-      )}
-      {satisfactionBk && (
-        <SatisfactionModal booking={satisfactionBk} lang={lang}
-          onSubmit={(note, comment) => { setBookings(p => p.map(b => b.id === satisfactionBk.id ? { ...b, satisfactionNote: note, satisfactionComment: comment, satisfactionDone: true } : b)); setSatisfactionBk(null); }}
-          onClose={() => { setBookings(p => p.map(b => b.id === satisfactionBk.id ? { ...b, satisfactionDone: true } : b)); setSatisfactionBk(null); }}
-        />
       )}
       {profileModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -6977,7 +6984,6 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                             </div>
                           </div>
                           <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
-                            {a.avis > 0 && <span style={{ color: T.textLo, fontSize: 11 }}>{a.note}★ · {a.avis} {tr.reviews}</span>}
                             {a.isReal && <span style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", color: T.success, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>✓ {tr.verified}</span>}
                             <span className={a.dispo ? "lk-badge-ok" : "lk-badge-off"}>{a.dispo ? tr.available : tr.unavailable}</span>
                           </div>
@@ -8341,6 +8347,11 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [focusTech, setFocusTech] = useState(null);
   const [subscription, setSubscription] = useState(null); // { plan: "mensuel"|"annuel", since, until }
+  /* Accès équipe LOCKR : les comptes internes (domaine @lockr.fr ou compte
+     explicitement marqué internalAccess) débloquent gratuitement toutes les
+     fonctionnalités partenaire, sans passer par l'abonnement payant. */
+  const isInternalTeam = account.internalAccess === true || /@lockr\.fr$/i.test(account.email || "");
+  const hasPartnerAccess = !!subscription || isInternalTeam;
   const [leaves, setLeaves] = useState([
     { id: "lv1", techId: "tech1", dates: "24–28 juin 2026", motif: "Congés payés", statut: "en_attente" },
     { id: "lv2", techId: "tech3", dates: "3 juillet 2026", motif: "RDV médical", statut: "en_attente" },
@@ -9298,7 +9309,15 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.subTitle}</div>
         <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.subSubtitle}</div>
       </div>
-      {subscription ? (
+      {isInternalTeam ? (
+        <div className="lk-card" style={{ padding: "20px 22px", marginBottom: 16, background: "rgba(201,160,48,.05)", border: `1px solid rgba(201,160,48,.25)` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontWeight: 800, fontSize: 15, color: T.accent }}>{lang === "en" ? "LOCKR team access" : "Accès équipe LOCKR"}</span>
+            <span style={{ background: T.grad, color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: 20, padding: "3px 12px" }}>{lang === "en" ? "FREE" : "GRATUIT"}</span>
+          </div>
+          <div style={{ fontSize: 13, color: T.textMid }}>{lang === "en" ? "This account has unlimited free access to all partner features (internal LOCKR account)." : "Ce compte dispose d'un accès gratuit et illimité à toutes les fonctionnalités partenaire (compte interne LOCKR)."}</div>
+        </div>
+      ) : subscription ? (
         <div className="lk-card" style={{ padding: "20px 22px", marginBottom: 16, background: "rgba(30,158,107,.04)", border: "1px solid rgba(30,158,107,.2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <span style={{ fontWeight: 800, fontSize: 15, color: T.success }}>{tr.subActive}</span>
@@ -9324,7 +9343,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   );
 
   const renderContent = () => {
-    if (!subscription && view !== "abonnement" && view !== "profil") return renderPaywall();
+    if (!hasPartnerAccess && view !== "abonnement" && view !== "profil") return renderPaywall();
     if (view === "dashboard") return renderDashboard();
     if (view === "flotte") return renderFlotte();
     if (view === "missions") return renderMissions();
