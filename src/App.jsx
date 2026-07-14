@@ -6346,7 +6346,7 @@ function MissionRecapModal({ mission: b, lang = "fr", onClose }) {
 }
 
 /* ─── CLIENT APP ─── */
-function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, interventionChats, setInterventionChats, lang = "fr", setLang }) {
+function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {} }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -6356,6 +6356,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
   const [selMetier, setSelMetier] = useState(null);
   const [activeBk, setActiveBk] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [demandePubliee, setDemandePubliee] = useState(false);
   const [payModal, setPayModal] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [showChat, setShowChat] = useState(false);
@@ -6476,6 +6477,37 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
     // Feature 3 & 4: show DevisModal before booking
     setPendingBookData({ clientLatLng, artLat, artLng, adresseClient, montant });
     setDevisModal(true);
+  };
+
+  /* Aucun artisan disponible immédiatement : la demande est publiée comme
+     un « bon » visible par tous les techniciens indépendants (côté pro)
+     ET par les entreprises partenaires (côté partenaire), qui peuvent
+     l'assigner à l'un de leurs employés. */
+  const publierDemande = async () => {
+    if (!selProb) return;
+    const clientLatLng = clientPos ?? [48.8566, 2.3522];
+    let adresseClient = clientPos ? `${clientLatLng[0].toFixed(5)}, ${clientLatLng[1].toFixed(5)}` : "Paris, France";
+    if (clientPos) {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clientLatLng[0]}&lon=${clientLatLng[1]}`);
+        const d = await r.json();
+        if (d.display_name) adresseClient = d.display_name.split(",").slice(0, 3).join(", ");
+      } catch {}
+    }
+    const region = account.ville || "Paris";
+    const montantBase = 90 + (selProb.urgence ? 40 : 0);
+    const bon = {
+      id: uid(), titre: `${pLabel(selProb, lang)} — ${account.nom}`,
+      adresse: adresseClient, probleme: selProb.id, metier: selProb.metier,
+      urgence: selProb.urgence, montantEstime: montantBase,
+      postedBy: "platform", postedByNom: "LOCKR", region,
+      lat: clientLatLng[0], lng: clientLatLng[1],
+      createdAt: ts(), techPct: 40,
+      clientId: account.id, clientNom: account.nom, openPartner: true,
+    };
+    setBons(p => [...p, bon]);
+    setDemandePubliee(true);
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
   };
 
   const confirmBookAfterDevis = () => {
@@ -6966,6 +6998,26 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                   {tr.availableCraftsmen}
                   {artisanList.length === 0 && <span style={{ color: T.textLo, fontWeight: 400, fontSize: 12, marginLeft: 8 }}>{tr.noAvailable}</span>}
                 </div>
+                {/* Aucun artisan dispo immédiatement : publier la demande pour tous (pros indépendants + partenaires) */}
+                {artisanList.filter(a => a.dispo).length === 0 && (
+                  <div style={{ background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.2)", borderRadius: 16, padding: "16px 18px", marginBottom: 16 }}>
+                    {demandePubliee ? (
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        {Icon.check(T.success, 20)}
+                        <div>
+                          <div style={{ color: T.success, fontWeight: 700, fontSize: 13 }}>{lang === "en" ? "Request published!" : "Demande publiée !"}</div>
+                          <div style={{ color: T.textMid, fontSize: 12, marginTop: 2 }}>{lang === "en" ? "All available craftsmen and partner companies nearby have been notified. You'll be contacted as soon as one accepts." : "Tous les artisans et entreprises partenaires proches ont été notifiés. Vous serez contacté dès qu'un professionnel accepte."}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ color: T.warn, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>⏳ {lang === "en" ? "No craftsman available right now" : "Aucun artisan disponible pour l'instant"}</div>
+                        <div style={{ color: T.textMid, fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{lang === "en" ? "Publish your request: it will be sent to every independent craftsman and every partner company in your area — you'll be contacted as soon as one is free." : "Publiez votre demande : elle sera envoyée à tous les artisans indépendants et à toutes les entreprises partenaires de votre secteur — vous serez contacté dès qu'un professionnel se libère."}</div>
+                        <button onClick={publierDemande} className="lk-btn" style={{ width: "100%" }}>{lang === "en" ? "Publish my request" : "Publier ma demande"} {Icon.arrow("#fff", 14)}</button>
+                      </>
+                    )}
+                  </div>
+                )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {artisanList.map(a => (
                     <div key={a.id} onClick={() => a.dispo && setSelArt(a)} style={{ background: selArt?.id === a.id ? "linear-gradient(135deg,#f5f3ff,#fdf6dc)" : "#ffffff", border: `1.5px solid ${selArt?.id === a.id ? T.accent : "rgba(201,160,48,.18)"}`, borderRadius: 16, padding: "14px 16px", cursor: a.dispo ? "pointer" : "not-allowed", opacity: a.dispo ? 1 : .5, transition: "all .15s", boxShadow: selArt?.id === a.id ? "0 4px 16px rgba(201,160,48,.2)" : "0 2px 8px rgba(201,160,48,.07)" }}>
@@ -8945,6 +8997,9 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
 
   const myRegion = account.ville || "Paris";
   const myBons = (bons || []).filter(b => b.postedBy === account.id);
+  // Demandes clients sans artisan indépendant disponible : visibles aussi
+  // côté entreprises partenaires, assignables à l'un de leurs techniciens.
+  const openClientBons = (bons || []).filter(b => b.postedBy === "platform" && b.openPartner && (!b.region || b.region === myRegion));
   const posterBon = () => {
     const b = { id: uid(), ...newBon, montantEstime: parseFloat(newBon.montantEstime) || 100, postedBy: account.id, postedByNom: account.nom, region: myRegion, lat: 48.86, lng: 2.34, createdAt: ts(), openPlatform: true };
     setBons(p => [...p, b]);
@@ -8960,6 +9015,50 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
         </div>
         <button onClick={() => setBonModal(true)} className="lk-btn" style={{ width: "auto", padding: "9px 16px", fontSize: 13 }}>{Icon.plus("#fff", 14)} {tr.postBonAll}</button>
       </div>
+      {/* Demandes clients sans artisan indépendant disponible — assignables à un technicien */}
+      {openClientBons.length > 0 && (
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 4 }}>
+            🆘 {lang === "en" ? "Client requests with no craftsman available" : "Demandes clients sans artisan disponible"} <span style={{ color: T.warn, fontWeight: 900 }}>({openClientBons.length})</span>
+          </div>
+          <div style={{ color: T.textLo, fontSize: 12, marginBottom: 12 }}>{lang === "en" ? "Assign one of your technicians to accept the intervention." : "Assignez l'un de vos techniciens pour accepter l'intervention."}</div>
+          {openClientBons.map(bon => {
+            const matching = techs.filter(t => t.statut === "actif" && (!bon.metier || t.metier === bon.metier));
+            return (
+              <div key={bon.id} className="lk-card" style={{ padding: "14px 16px", marginBottom: 10, borderLeft: `4px solid ${T.warn}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi }}>{bon.titre}</div>
+                    <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{bon.adresse}</div>
+                  </div>
+                  <div style={{ color: T.accent, fontWeight: 800, fontSize: 15 }}>{fmtFrom(bon.montantEstime, lang)}</div>
+                </div>
+                {matching.length === 0 ? (
+                  <div style={{ color: T.textLo, fontSize: 12 }}>{lang === "en" ? "No available technician for this trade." : "Aucun technicien disponible pour ce métier."}</div>
+                ) : (
+                  <select onChange={e => {
+                    const techId = e.target.value;
+                    if (!techId) return;
+                    const tech = techs.find(t => t.id === techId);
+                    const mission = {
+                      id: uid(), partenaireId: account.id, clientNom: bon.clientNom || "Client LOCKR",
+                      adresse: bon.adresse, probleme: bon.probleme, typeIntervention: bon.titre,
+                      montant: bon.montantEstime, statut: "en_attente", commission: bon.montantEstime * 0.15,
+                      netPartenaire: bon.montantEstime * 0.85, technicienId: tech.id, createdAt: ts(), note: null,
+                    };
+                    setMissions(p => [...p, mission]);
+                    setBons(p => p.filter(b => b.id !== bon.id));
+                    setTechs(p => p.map(t => t.id === tech.id ? { ...t, statut: "en_mission" } : t));
+                  }} className="lk-input" defaultValue="" style={{ width: "100%" }}>
+                    <option value="" disabled>{lang === "en" ? "Assign to a technician…" : "Assigner à un technicien…"}</option>
+                    {matching.map(t => <option key={t.id} value={t.id}>{t.prenom} {t.nom} — {t.metier}</option>)}
+                  </select>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
       {myBons.length === 0 && (
         <div style={{ textAlign: "center", padding: "48px 20px" }}>
           {Icon.percent(T.textLo, 36)}
@@ -10009,7 +10108,7 @@ export default function App() {
   );
 
   if (account) {
-    if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} />);
+    if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} bons={bons} setBons={setBons} />);
     if (account.role === "pro") return wrapper(<ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} priorityOrder={priorityOrder} />);
     if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} />);
     if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
