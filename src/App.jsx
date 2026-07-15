@@ -1672,36 +1672,19 @@ const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.lengt
 
 /* Monogramme LOCKR (le "O" cerclé, coupé) — utilisé comme icône compacte
    partout où le mot complet ne rentre pas (favicon, badges carrés, avatars). */
-function LockrLogo({ size = 30 }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <defs>
-        <linearGradient id="llGold" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#f0c93a"/>
-          <stop offset="55%" stopColor="#c9a030"/>
-          <stop offset="100%" stopColor="#8a6b1a"/>
-        </linearGradient>
-      </defs>
-      <path d="M 57.90 12.83 A 38 38 0 0 1 57.90 87.17 M 42.10 87.17 A 38 38 0 0 1 42.10 12.83" stroke="url(#llGold)" strokeWidth="13" strokeLinecap="square" fill="none"/>
-    </svg>
-  );
+/* Logo unique LOCKR — un seul fichier (public/logolockr.png), utilisé à la
+   fois comme logo dans toute l'app (via ce composant) et comme favicon
+   (référencé directement dans index.html). Ratio 1088x320 (≈3.4:1). */
+const LOGO_RATIO = 874 / 217;
+function Logo({ height = 32, style }) {
+  return <img src="/logolockr.png" alt="LOCKR" style={{ height, width: height * LOGO_RATIO, objectFit: "contain", display: "block", ...style }} />;
 }
-
-/* Logotype complet "LOCKR" — remplace l'icône + le texte "LOCKR" séparé
-   dans les en-têtes, écrans de connexion et sidebars. */
-function LockrWordmark({ height = 32, color = "#c9a030" }) {
-  const w = 536, h = 140;
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={height * w / h} height={height} viewBox={`0 0 ${w} ${h}`} fill="none">
-      <g stroke={color} strokeWidth="14" strokeLinecap="square" strokeLinejoin="miter" fill="none">
-        <path d="M 8 20 L 8 120 L 62 120"/>
-        <path d="M 154.10 21.49 A 50 50 0 0 1 154.10 118.51 M 129.90 118.51 A 50 50 0 0 1 129.90 21.49"/>
-        <path d="M 307.97 35.27 A 50 50 0 1 0 307.97 104.73"/>
-        <path d="M 360 20 L 360 120 M 360 70 L 410 20 M 360 70 L 410 120"/>
-        <path d="M 448 120 L 448 20 L 494 20 L 494 70 L 448 70 M 494 70 L 502 120"/>
-      </g>
-    </svg>
-  );
+// Alias rétrocompatibles : toutes les anciennes variantes pointent vers le même fichier.
+function LockrLogo({ size = 30 }) {
+  return <img src="/logolockr.png" alt="LOCKR" style={{ height: size, width: "auto", objectFit: "contain", display: "block" }} />;
+}
+function LockrWordmark({ height = 32 }) {
+  return <Logo height={height} />;
 }
 
 function PayLogo({ id, size = 44 }) {
@@ -7089,7 +7072,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)" }}>
         <button onClick={() => setScreen("home")} className="lk-ghost" style={{ padding: "8px 11px" }}>{Icon.back()}</button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: "transparent", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center" }}><LockrLogo size={20} /></div>
+          <Logo height={18} />
           <span style={{ fontSize: 16, fontWeight: 800, color: T.textHi }}>{tr.liveTracking}</span>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", background: "rgba(240,101,101,.08)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 20, padding: "5px 10px" }}>
@@ -9436,7 +9419,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const renderPaywall = () => (
     <div>
       <div style={{ textAlign: "center", padding: "28px 16px 8px" }}>
-        <div style={{ width: 58, height: 58, borderRadius: 16, background: "rgba(201,160,48,.12)", border: "1.5px solid rgba(201,160,48,.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}><LockrLogo size={36} /></div>
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}><Logo height={36} /></div>
         <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{tr.subPaywallTitle}</div>
         <div style={{ color: T.textMid, fontSize: 13, marginTop: 6, marginBottom: 24 }}>{tr.subPaywallText}</div>
       </div>
