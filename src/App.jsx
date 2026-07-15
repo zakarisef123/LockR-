@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { db, firebaseReady } from "./firebase.js";
+import { collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
 
 /* ─── PROTECTION CODE SOURCE ─── */
 (function protect() {
@@ -44,6 +46,60 @@ const fmtFrom = (n, lang = "fr") => lang === "en" ? `From ${Math.round(Number(n)
 const fmtTime = d => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 const fmtDate = d => new Date(d).toLocaleDateString("fr-FR");
 const ts = () => new Date().toISOString();
+
+/* ─── SYNCHRONISATION MULTI-UTILISATEURS (Firestore) ───
+   Remplace useState() avec exactement la même API ([data, setData], y
+   compris les mises à jour fonctionnelles setData(prev => ...)) mais
+   persiste et synchronise en temps réel via Firebase, pour que TOUS les
+   utilisateurs connectés voient les mêmes données (bons postés, missions,
+   nouveaux comptes...) au lieu d'un état isolé par navigateur.
+   Sans Firebase configuré (src/firebase.js), bascule automatiquement en
+   mode démo local (comportement identique à avant, un seul utilisateur). */
+function useSyncedState(collectionName, initial) {
+  const [data, setData] = useState(initial);
+  const dataRef = useRef(initial);
+  dataRef.current = data;
+  const seeded = useRef(false);
+
+  useEffect(() => {
+    if (!firebaseReady || !db) return; // mode démo local, comportement inchangé
+    const unsub = onSnapshot(collection(db, collectionName), snap => {
+      if (snap.empty && !seeded.current) {
+        // Base vide au premier chargement : on y sème les données de démo
+        seeded.current = true;
+        initial.forEach(item => { if (item && item.id) setDoc(doc(db, collectionName, String(item.id)), item).catch(() => {}); });
+        return;
+      }
+      seeded.current = true;
+      const docs = snap.docs.map(d => d.data());
+      setData(docs);
+    }, () => {}); // erreurs réseau ignorées silencieusement (reste en dernier état connu)
+    return unsub;
+  }, [collectionName]);
+
+  const update = useCallback((updater) => {
+    setData(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      if (firebaseReady && db) {
+        const prevIds = new Set(prev.map(x => String(x.id)));
+        const nextIds = new Set(next.map(x => String(x.id)));
+        // Suppressions
+        prev.forEach(x => { if (!nextIds.has(String(x.id))) deleteDoc(doc(db, collectionName, String(x.id))).catch(() => {}); });
+        // Ajouts / modifications
+        next.forEach(x => {
+          if (!x || !x.id) return;
+          const before = prev.find(p => String(p.id) === String(x.id));
+          if (!before || JSON.stringify(before) !== JSON.stringify(x)) {
+            setDoc(doc(db, collectionName, String(x.id)), x).catch(() => {});
+          }
+        });
+      }
+      return next;
+    });
+  }, [collectionName]);
+
+  return [data, update];
+}
 
 function useWindowSize() {
   const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
@@ -3466,7 +3522,7 @@ function ChatRegional({ account, chatMessages, setChatMessages, lang = "fr" }) {
 }
 
 /* ─── BONS DISPONIBLES ─── */
-function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr", priorityOrder = [] }) {
+function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr", priorityOrder = [], autoOpenPost = false, onAutoOpenHandled = () => {} }) {
   const tr = TRANS[lang] || TRANS.fr;
   // Tick de re-rendu pour faire défiler le dispatch prioritaire (fenêtres de 2 min)
   const [, setDispatchTick] = useState(0);
@@ -3476,6 +3532,9 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
     return () => clearInterval(iv);
   }, [priorityOrder.length]);
   const [postModal, setPostModal] = useState(false);
+  useEffect(() => {
+    if (autoOpenPost) { setPostModal(true); onAutoOpenHandled(); }
+  }, [autoOpenPost]);
   const [rdvModal, setRdvModal] = useState(null);
   const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
   const [notif, setNotif] = useState(null);
@@ -5341,6 +5400,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   // Mode sombre (persisté)
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lk_dark") === "1");
   useEffect(() => { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); }, [darkMode]);
+  // Publier un bon pour un autre artisan (accès rapide depuis l'Accueil)
+  const [autoOpenPostBon, setAutoOpenPostBon] = useState(false);
+  const goPublierBon = () => { setAutoOpenPostBon(true); goView("bons"); };
   // Écran de bienvenue au premier lancement
   const [onboard, setOnboard] = useState(() => !localStorage.getItem("lk_pro_onboarded"));
   const [onboardStep, setOnboardStep] = useState(0);
@@ -5876,6 +5938,18 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   ))}
                 </div>
 
+                {/* Publier un bon pour un autre artisan — accès rapide mis en avant */}
+                <button onClick={goPublierBon} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 16, padding: "14px 18px", marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "'Inter',sans-serif" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {Icon.plus("#fff", 18)}
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{fr ? "Publier un bon pour un autre artisan" : "Post a voucher for another craftsman"}</div>
+                      <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, marginTop: 1 }}>{fr ? "Intervention que vous ne pouvez pas faire — visible par tous, avec votre %" : "A job you can't take — visible to all, with your commission %"}</div>
+                    </div>
+                  </div>
+                  {Icon.arrow("#fff", 16)}
+                </button>
+
                 {/* Accès rapides — gros boutons SVG (desktop uniquement ; sur mobile ils sont dans la barre du bas) */}
                 {isDesktop && (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
@@ -6157,7 +6231,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 </div>
               </div>
             </div>
-          ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} />)}
+          ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} autoOpenPost={autoOpenPostBon} onAutoOpenHandled={() => setAutoOpenPostBon(false)} />)}
           {view === "partenaires" && <div style={{ padding: "14px" }}><PartenaireScreen lang={lang} /></div>}
           {view === "auto" && <AutoEntrepriseTab account={account} bookings={bookings} artisanId={account.artisanId} lang={lang} />}
           {view === "factu" && <FactuElecTab lang={lang} />}
@@ -10025,12 +10099,14 @@ export default function App() {
     setAccount(acc);
     try { localStorage.setItem("lk_session", JSON.stringify(acc)); } catch {}
   };
-  const [bookings, setBookings] = useState(INIT_BOOKINGS);
-  const [accounts, setAccounts] = useState(INIT_ACCOUNTS);
-  const [bons, setBons] = useState(INIT_BONS);
+  // Données partagées entre TOUS les utilisateurs (synchronisées via Firebase
+  // si configuré — sinon mode démo local comme avant, un seul utilisateur)
+  const [bookings, setBookings] = useSyncedState("bookings", INIT_BOOKINGS);
+  const [accounts, setAccounts] = useSyncedState("accounts", INIT_ACCOUNTS);
+  const [bons, setBons] = useSyncedState("bons", INIT_BONS);
   const [chatMessages, setChatMessages] = useState(INIT_CHAT);
-  const [listings, setListings] = useState(INIT_LISTINGS);
-  const [sales, setSales] = useState(INIT_SALES);
+  const [listings, setListings] = useSyncedState("listings", INIT_LISTINGS);
+  const [sales, setSales] = useSyncedState("sales", INIT_SALES);
   const [interventionChats, setInterventionChats] = useState({});
   const [lang, setLang] = useState("fr");
   const [bannedList, setBannedList] = useState([]);
