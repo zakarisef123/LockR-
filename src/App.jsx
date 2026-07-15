@@ -1676,15 +1676,18 @@ const fmtExp = v => { const d = v.replace(/\D/g, "").slice(0, 4); return d.lengt
    fois comme logo dans toute l'app (via ce composant) et comme favicon
    (référencé directement dans index.html). Ratio 1088x320 (≈3.4:1). */
 const LOGO_RATIO = 874 / 217;
-function Logo({ height = 32, style }) {
-  return <img src="/logolockr.png" alt="LOCKR" style={{ height, width: height * LOGO_RATIO, objectFit: "contain", display: "block", ...style }} />;
+function Logo({ height = 32, light = false, style }) {
+  // "light" bascule le logo (noir) en blanc — pour les fonds sombres/photos
+  const filter = light ? "brightness(0) invert(1)" : undefined;
+  return <img src="/logolockr.png" alt="LOCKR" style={{ height, width: height * LOGO_RATIO, objectFit: "contain", display: "block", filter, ...style }} />;
 }
 // Alias rétrocompatibles : toutes les anciennes variantes pointent vers le même fichier.
-function LockrLogo({ size = 30 }) {
-  return <img src="/logolockr.png" alt="LOCKR" style={{ height: size, width: "auto", objectFit: "contain", display: "block" }} />;
+function LockrLogo({ size = 30, light = false }) {
+  return <Logo height={size} light={light} />;
 }
-function LockrWordmark({ height = 32 }) {
-  return <Logo height={height} />;
+function LockrWordmark({ height = 32, light = true }) {
+  // Les usages de LockrWordmark étaient tous sur fond sombre — blanc par défaut
+  return <Logo height={height} light={light} />;
 }
 
 function PayLogo({ id, size = 44 }) {
@@ -2171,7 +2174,7 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
       {isDesktop && (
         <div style={{ width: 360, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px" }}>
           <div style={{ marginBottom: 20 }}>
-            <LockrWordmark height={40} color="#e8bc44" />
+<LockrWordmark height={56} />
           </div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
         </div>
@@ -2287,7 +2290,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
       {isDesktop && (
         <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh" }}>
           <div style={{ marginBottom: 20 }}>
-            <LockrWordmark height={40} color="#e8bc44" />
+<LockrWordmark height={56} />
           </div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.appTagline}</div>
         </div>
@@ -2464,7 +2467,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
       {isDesktop && (
         <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh", position: "sticky", top: 0, alignSelf: "flex-start" }}>
           <div style={{ marginBottom: 20 }}>
-            <LockrWordmark height={40} color="#e8bc44" />
+<LockrWordmark height={56} />
           </div>
           <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.joinProLockr}</div>
         </div>
@@ -2973,8 +2976,8 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           <div style={{ position: "relative", padding: "48px 52px", color: "#fff" }}>
             {/* Logo */}
             <div style={{ marginBottom: 36 }}>
-              <LockrWordmark height={38} color="#e8bc44" />
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 10 }}>{tr.appTagline}</div>
+              <LockrWordmark height={64} />
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 14 }}>{tr.appTagline}</div>
             </div>
 
             {/* Qui sommes-nous */}
@@ -3030,7 +3033,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,rgba(10,10,10,.5) 0%,rgba(10,10,10,.85) 70%,rgba(10,10,10,.98) 100%)" }} />
             <div style={{ position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
-                <LockrWordmark height={24} color="#e8bc44" />
+                <LockrWordmark height={40} />
               </div>
               <p style={{ color: "rgba(255,255,255,.7)", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", maxWidth: 340 }}>{tr.loginWhoText}</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
