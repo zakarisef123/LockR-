@@ -1679,7 +1679,7 @@ const LOGO_RATIO = 874 / 217;
 function Logo({ height = 32, light = false, style }) {
   // "light" bascule le logo (noir) en blanc — pour les fonds sombres/photos
   const filter = light ? "brightness(0) invert(1)" : undefined;
-  return <img src="/logolockr.png" alt="LOCKR" style={{ height, width: height * LOGO_RATIO, objectFit: "contain", display: "block", filter, ...style }} />;
+  return <img src="/logolockr.png" alt="LOCKR" style={{ height, width: height * LOGO_RATIO, objectFit: "contain", display: "inline-block", filter, ...style }} />;
 }
 // Alias rétrocompatibles : toutes les anciennes variantes pointent vers le même fichier.
 function LockrLogo({ size = 30, light = false }) {
@@ -2975,9 +2975,9 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           {/* Contenu superposé */}
           <div style={{ position: "relative", padding: "48px 52px", color: "#fff" }}>
             {/* Logo */}
-            <div style={{ marginBottom: 36 }}>
-              <LockrWordmark height={64} />
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)", marginTop: 14 }}>{tr.appTagline}</div>
+            <div style={{ marginBottom: 36, textAlign: "center" }}>
+              <LockrWordmark height={110} />
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.5)", marginTop: 16 }}>{tr.appTagline}</div>
             </div>
 
             {/* Qui sommes-nous */}
