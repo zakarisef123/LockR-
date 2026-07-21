@@ -2493,7 +2493,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.connectAs}</button>
         </div>
       </div>
       </div>
@@ -2797,7 +2797,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.connectAs}</button>
         </div>
       </div>
       </div>
@@ -3053,7 +3053,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.connectAs}</button>
         </div>
       </div>
       </div>
@@ -3238,7 +3238,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           </div>
           {/* Partenaires link */}
           <div style={{ textAlign: "center", marginTop: 12 }}>
-            <button onClick={onRegister} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif" }}>
+            <button onClick={onRegister} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>
               {lang === "en" ? "Become a LOCKR partner — Join us" : "Devenir partenaire LOCKR — Rejoignez-nous"}
             </button>
           </div>
@@ -3399,7 +3399,7 @@ function MonthlyReportModal({ bookings, artisanId, lang = "fr", onClose }) {
 }
 
 /* ─── CLOTURE MODAL ─── */
-function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
+function ClotureModal({ mission, artisan, accounts, onConfirm, onCancel, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [montant, setMontant] = useState(String(mission?.montant || ""));
   const [factureImg, setFactureImg] = useState(null);
@@ -3579,6 +3579,7 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
           label={pLabel(prob, lang)}
           bookingId={mission?.id}
           clientNom={mission?.clientNom}
+          clientTel={(accounts || []).find(a => a.id === mission?.clientId)?.tel || null}
           artisanStripeId={artisan?.stripeAccountId || localStorage.getItem("lk_stripe_acct") || null}
           onClose={() => setShowSendLink(false)}
           lang={lang}
@@ -5205,7 +5206,7 @@ function AutoEntrepriseTab({ account, bookings, artisanId, lang = "fr" }) {
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontWeight: 700, fontSize: 13, color: T.danger }}>-{f.montant} €</span>
-              <button onClick={() => setFrais(p => p.filter(x => x.id !== f.id))} style={{ background: "none", border: "none", cursor: "pointer", color: T.textLo, fontSize: 14, fontFamily: "'Inter',sans-serif" }}>✕</button>
+              <button onClick={() => setFrais(p => p.filter(x => x.id !== f.id))} style={{ background: "none", border: "none", cursor: "pointer", color: T.textLo, fontSize: 14, fontFamily: "'Inter',sans-serif", padding: 12, margin: -12, minWidth: 44, minHeight: 44 }}>✕</button>
             </div>
           </div>
         ))}
@@ -6034,7 +6035,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14, borderLeft: `4px solid ${color}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>{title} <span style={{ color, fontWeight: 900 }}>({count})</span></div>
-                  {goTab && <button onClick={() => goView(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
+                  {goTab && <button onClick={() => goView(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
                 </div>
                 {children}
               </div>
@@ -6443,7 +6444,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           })}
         </div>
       )}
-      {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} onConfirm={finishMission} onCancel={() => setClotureModal(false)} lang={lang} />}
+      {clotureModal && activeMission && <ClotureModal mission={bookings.find(b => b.id === activeMission.id) || activeMission} artisan={artisan} accounts={accounts} onConfirm={finishMission} onCancel={() => setClotureModal(false)} lang={lang} />}
       {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
       {monthlyModal && <MonthlyReportModal bookings={bookings} artisanId={account.artisanId} lang={lang} onClose={() => setMonthlyModal(false)} />}
       {recapMission && <MissionRecapModal mission={recapMission} lang={lang} onClose={() => setRecapMission(null)} />}
@@ -6473,7 +6474,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               {onboardStep < 2 ? (lang === "en" ? "Next" : "Suivant") : (lang === "en" ? "Let's go!" : "C'est parti !")}
             </button>
             {onboardStep < 2 && (
-              <button onClick={() => { localStorage.setItem("lk_pro_onboarded", "1"); setOnboard(false); }} style={{ background: "none", border: "none", color: T.textLo, fontSize: 12, cursor: "pointer", marginTop: 12, fontFamily: "'Inter',sans-serif" }}>
+              <button onClick={() => { localStorage.setItem("lk_pro_onboarded", "1"); setOnboard(false); }} style={{ background: "none", border: "none", color: T.textLo, fontSize: 12, cursor: "pointer", marginTop: 12, fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>
                 {lang === "en" ? "Skip" : "Passer"}
               </button>
             )}
@@ -9711,7 +9712,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
               <LockrWordmark height={17} />
             </div>
             <div style={{ color: T.accent, fontSize: 11, fontWeight: 700 }}>{tr.partnerCertified}</div>
-            <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{tr.decoShort}</button>
+            <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.decoShort}</button>
           </div>
         )}
         <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "28px 32px" : "16px 14px 80px" }}
@@ -9966,7 +9967,7 @@ function CookieConsent({ lang = "fr" }) {
             ? <button onClick={() => save(false)} className="lk-ghost" style={{ flex: "1 1 120px", fontSize: 12 }}>{tr.cookieSavePrefs}</button>
             : <button onClick={() => setCustomize(true)} className="lk-ghost" style={{ flex: "1 1 120px", fontSize: 12 }}>{tr.cookieCustomize}</button>
           }
-          <button onClick={() => save(false)} style={{ background: "none", border: "none", color: T.textLo, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", flex: "0 0 auto", alignSelf: "center" }}>{tr.cookieRejectAll}</button>
+          <button onClick={() => save(false)} style={{ background: "none", border: "none", color: T.textLo, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", flex: "0 0 auto", alignSelf: "center", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.cookieRejectAll}</button>
         </div>
         <div style={{ marginTop: 10, fontSize: 10, color: T.textLo, textAlign: "center" }}>
           {tr.legalFooter}
