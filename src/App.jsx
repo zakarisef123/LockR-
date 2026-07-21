@@ -2493,7 +2493,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{tr.connectAs}</button>
         </div>
       </div>
       </div>
@@ -2797,7 +2797,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 
         <div style={{ textAlign: "center", marginTop: 16 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{tr.connectAs}</button>
         </div>
       </div>
       </div>
@@ -3053,7 +3053,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
 
         <div style={{ textAlign: "center", marginTop: 20 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{tr.connectAs}</button>
         </div>
       </div>
       </div>
@@ -3238,7 +3238,7 @@ function LoginScreen({ onLogin, onRegister, accounts, lang = "fr", setLang }) {
           </div>
           {/* Partenaires link */}
           <div style={{ textAlign: "center", marginTop: 12 }}>
-            <button onClick={onRegister} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>
+            <button onClick={onRegister} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>
               {lang === "en" ? "Become a LOCKR partner — Join us" : "Devenir partenaire LOCKR — Rejoignez-nous"}
             </button>
           </div>
@@ -4769,6 +4769,16 @@ function ProMarketplace({ account, listings, setListings, sales, setSales, lang,
               <span style={{ background: detail.etat === "Neuf" ? "rgba(62,207,142,.1)" : "rgba(201,160,48,.1)", border: `1px solid ${detail.etat === "Neuf" ? "rgba(62,207,142,.25)" : "rgba(201,160,48,.2)"}`, borderRadius: 20, padding: "2px 8px", fontSize: 11, color: detail.etat === "Neuf" ? T.success : T.gold, fontWeight: 600 }}>{detail.etat}</span>
             </div>
             <p style={{ color: T.textMid, fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>{detail.desc || "Aucune description."}</p>
+            <button
+              type="button"
+              onClick={() => {
+                const msg = lang === "en" ? "Report this listing to LOCKR moderation?" : "Signaler cette annonce à la modération LOCKR ?";
+                if (window.confirm(msg)) window.location.href = `mailto:signalement@lockr.fr?subject=${encodeURIComponent("Signalement annonce — " + detail.titre)}&body=${encodeURIComponent("Annonce ID : " + detail.id)}`;
+              }}
+              style={{ background: "none", border: "none", color: T.danger, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 5 }}
+            >
+              ⚑ {lang === "en" ? "Report this listing" : "Signaler cette annonce"}
+            </button>
             {/* Seller */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: `${metierColor(detail.metier)}15`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -5206,7 +5216,7 @@ function AutoEntrepriseTab({ account, bookings, artisanId, lang = "fr" }) {
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontWeight: 700, fontSize: 13, color: T.danger }}>-{f.montant} €</span>
-              <button onClick={() => setFrais(p => p.filter(x => x.id !== f.id))} style={{ background: "none", border: "none", cursor: "pointer", color: T.textLo, fontSize: 14, fontFamily: "'Inter',sans-serif", padding: 12, margin: -12, minWidth: 44, minHeight: 44 }}>✕</button>
+              <button onClick={() => setFrais(p => p.filter(x => x.id !== f.id))} style={{ background: "none", border: "none", cursor: "pointer", color: T.textLo, fontSize: 14, fontFamily: "'Inter',sans-serif", padding: 12, minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
             </div>
           </div>
         ))}
@@ -6035,7 +6045,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14, borderLeft: `4px solid ${color}` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>{title} <span style={{ color, fontWeight: 900 }}>({count})</span></div>
-                  {goTab && <button onClick={() => goView(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
+                  {goTab && <button onClick={() => goView(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
                 </div>
                 {children}
               </div>
@@ -6273,6 +6283,17 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       <div style={{ height: "100%", borderRadius: 3, background: `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
                     </div>
                   </div>
+                  {/* Information transparence — enregistrement de sécurité actif à l'arrivée sur place */}
+                  {progress >= 0.97 && (
+                    <div style={{ background: "rgba(37,99,235,.06)", border: "1px solid rgba(37,99,235,.2)", borderRadius: 10, padding: "10px 12px", marginBottom: 10, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      {Icon.shield ? Icon.shield("#2563eb", 14) : null}
+                      <div style={{ color: "#1e40af", fontSize: 11, lineHeight: 1.4 }}>
+                        {lang === "en"
+                          ? "For safety and quality purposes, this intervention may be recorded and automatically analysed for inappropriate language (see Terms art. 9). Contact dpo@lockr.fr to exercise your rights."
+                          : "Pour votre sécurité et la qualité de service, cette intervention peut être enregistrée et analysée automatiquement en cas de propos inappropriés (voir CGU art. 9). Contact : dpo@lockr.fr pour exercer vos droits."}
+                      </div>
+                    </div>
+                  )}
                   {/* Photo avant intervention — obligatoire à l'arrivée sur place */}
                   {progress >= 0.97 && (
                     <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10, border: !photoAvant ? `1.5px solid ${T.accent}` : undefined }}>
@@ -6553,7 +6574,7 @@ function MissionRecapModal({ mission: b, lang = "fr", onClose }) {
 }
 
 /* ─── CLIENT APP ─── */
-function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {} }) {
+function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setAccounts = () => {}, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {} }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -6849,7 +6870,34 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 <div key={i} style={{ fontSize: 11, color: T.textMid, marginBottom: 4, paddingLeft: 8, borderLeft: `2px solid rgba(37,99,235,.25)` }}>{r}</div>
               ))}
               <div style={{ fontSize: 10, color: T.textLo, marginTop: 8 }}>{tr.rgpdContact}</div>
-              <button onClick={() => alert(tr.rgpdRequestSent)} className="lk-ghost" style={{ marginTop: 10, fontSize: 11, width: "100%" }}>{tr.rgpdRequest}</button>
+              <button
+                onClick={() => {
+                  const myData = { compte: account, reservations: bookings.filter(b => b.clientId === account.id), exportedAt: new Date().toISOString() };
+                  const blob = new Blob([JSON.stringify(myData, null, 2)], { type: "application/json" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url; a.download = `lockr-mes-donnees-${account.id}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="lk-ghost" style={{ marginTop: 10, fontSize: 11, width: "100%" }}
+              >
+                {lang === "en" ? "Download my data (JSON)" : "Télécharger mes données (JSON)"}
+              </button>
+              <button
+                onClick={() => {
+                  const msg = lang === "en"
+                    ? "Delete your account permanently? This cannot be undone from the app."
+                    : "Supprimer définitivement votre compte ? Cette action est irréversible depuis l'application.";
+                  if (window.confirm(msg)) {
+                    setAccounts(p => p.filter(a => a.id !== account.id));
+                    onLogout();
+                  }
+                }}
+                className="lk-ghost" style={{ marginTop: 8, fontSize: 11, width: "100%", color: T.danger, borderColor: "rgba(220,38,38,.3)" }}
+              >
+                {lang === "en" ? "Delete my account" : "Supprimer mon compte"}
+              </button>
+              <button onClick={() => alert(tr.rgpdRequestSent)} className="lk-ghost" style={{ marginTop: 8, fontSize: 11, width: "100%" }}>{tr.rgpdRequest}</button>
             </div>
             <button onClick={() => setProfileModal(false)} className="lk-ghost" style={{ width: "100%", marginTop: 8 }}>{tr.cancel}</button>
           </div>
@@ -7402,6 +7450,16 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, inte
                 <div style={{ height: "100%", borderRadius: 4, background: phase === "arrived" ? T.success : `linear-gradient(90deg,${T.accent},${T.accent2})`, width: `${progress * 100}%`, transition: "width .3s" }} />
               </div>
             </div>
+            {phase === "arrived" && (
+              <div style={{ background: "rgba(37,99,235,.06)", border: "1px solid rgba(37,99,235,.2)", borderRadius: 10, padding: "10px 12px", marginBottom: 14, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                {Icon.shield ? Icon.shield("#2563eb", 14) : null}
+                <div style={{ color: "#1e40af", fontSize: 11, lineHeight: 1.4 }}>
+                  {lang === "en"
+                    ? "For safety and quality purposes, this intervention may be recorded and automatically analysed for inappropriate language (see Terms art. 9). Contact dpo@lockr.fr to exercise your rights."
+                    : "Pour votre sécurité et la qualité de service, cette intervention peut être enregistrée et analysée automatiquement en cas de propos inappropriés (voir CGU art. 9). Contact : dpo@lockr.fr pour exercer vos droits."}
+                </div>
+              </div>
+            )}
             {art && (
               <div className="lk-card" style={{ padding: "13px 14px", marginBottom: 14, display: "flex", gap: 12, alignItems: "center" }}>
                 <div style={{ width: 46, height: 46, borderRadius: 12, background: `${art.color}15`, border: `1px solid ${art.color}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -7580,7 +7638,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const proPendingPay = accounts.filter(a => a.role === "pro").map(p => ({ ...p, owed: bookings.filter(b => b.artisanId === p.artisanId && b.statut === "terminée" && !b.proPaid).reduce((s, b) => s + (b.montantFinal || 0) * 0.40, 0) })).filter(p => p.owed > 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+    <div style={{ height: "100vh", overflow: "hidden", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
 
       {/* SIDEBAR DESKTOP */}
@@ -7612,7 +7670,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
       )}
 
       {/* MAIN */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, height: "100vh", overflow: "hidden" }}>
         {/* Header mobile */}
         {!isDesktop && (
           <div style={{ background: "rgba(255,255,255,.95)", backdropFilter: "blur(20px)", padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -9712,7 +9770,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
               <LockrWordmark height={17} />
             </div>
             <div style={{ color: T.accent, fontSize: 11, fontWeight: 700 }}>{tr.partnerCertified}</div>
-            <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.decoShort}</button>
+            <button onClick={onLogout} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{tr.decoShort}</button>
           </div>
         )}
         <div style={{ flex: 1, overflowY: "auto", padding: isDesktop ? "28px 32px" : "16px 14px 80px" }}
@@ -9786,6 +9844,7 @@ const LEGAL_DOCS = {
         { h: "Article 6 — Responsabilité de la plateforme", p: "LOCKR est un intermédiaire technique de mise en relation et n'est PAS partie au contrat de prestation conclu entre le client et l'artisan. LOCKR met en œuvre tous les moyens raisonnables pour assurer la disponibilité du service et la vérification des professionnels référencés (SIRET, assurance RC Pro, qualifications), sans obligation de résultat. La responsabilité de LOCKR ne saurait être engagée au titre de l'exécution, de l'inexécution, de la mauvaise exécution ou des dommages de toute nature résultant de la prestation réalisée par l'artisan, qui en assume seul l'entière responsabilité." },
         { h: "Article 7 — Responsabilité des artisans et recours", p: "L'artisan intervient en qualité de professionnel indépendant, sous sa seule responsabilité. Il est seul responsable de la qualité, de la conformité, des délais et des dommages éventuels liés à ses interventions, couverts par son assurance RC Pro obligatoire (et garantie décennale le cas échéant). Toute réclamation, demande d'indemnisation ou action relative à une prestation doit être dirigée exclusivement contre l'artisan intervenant et son assureur, dont les coordonnées figurent sur le devis et la facture. En acceptant les présentes CGU, l'artisan s'engage à garantir et relever indemne LOCKR de toute condamnation, réclamation ou frais liés à ses interventions. Cette clause ne prive pas le consommateur de ses droits légaux à l'égard du professionnel prestataire." },
         { h: "Article 8 — Droit applicable et litiges", p: "Les présentes CGU sont soumises au droit français. En cas de litige, une solution amiable sera recherchée avant toute action judiciaire. Le consommateur peut recourir gratuitement au médiateur de la consommation (art. L.612-1 C. conso) ou à la plateforme européenne de règlement en ligne des litiges : ec.europa.eu/consumers/odr. L'acceptation des CGU lors de l'inscription est horodatée et conservée à titre de preuve (art. 1366-1367 C. civ. — écrit et signature électroniques)." },
+        { h: "Article 9 — Dispositif de sécurité et de qualité pendant l'intervention", p: "Afin de protéger la sécurité des clients et des artisans et de garantir la qualité des échanges, LOCKR peut activer, à l'arrivée de l'artisan sur le lieu d'intervention, un dispositif d'enregistrement audio et d'analyse automatisée (détection de propos inappropriés ou menaçants) associé à la mission en cours. Ce dispositif est signalé à l'écran aux deux parties dès son activation. Base légale : intérêt légitime de LOCKR et des utilisateurs à la sécurité des interventions (art. 6.1.f RGPD), en tenant compte de vos droits et libertés. Les enregistrements et transcriptions sont conservés de façon confidentielle, accessibles uniquement à l'équipe LOCKR habilitée, pour une durée strictement nécessaire au traitement d'un éventuel signalement, puis supprimés. Ils ne sont utilisés que pour l'examen de signalements de comportement inapproprié et jamais à des fins commerciales. Vous pouvez exercer vos droits d'accès, d'opposition ou d'effacement sur ces données auprès de dpo@lockr.fr, sous réserve des durées de conservation légales applicables en cas de procédure en cours." },
       ],
     },
     {
@@ -9860,6 +9919,7 @@ const LEGAL_DOCS = {
         { h: "Article 6 — Platform liability", p: "LOCKR is a technical connecting intermediary and is NOT a party to the service contract concluded between the client and the craftsman. LOCKR uses all reasonable means to ensure service availability and verification of listed professionals (SIRET, liability insurance, qualifications), without an obligation of result. LOCKR shall not be liable for the performance, non-performance, poor performance or any damage resulting from the service carried out by the craftsman, who bears sole and full responsibility." },
         { h: "Article 7 — Craftsmen's liability and recourse", p: "The craftsman acts as an independent professional under his sole responsibility. He is solely liable for the quality, compliance, deadlines and any damage related to his interventions, covered by his mandatory professional liability insurance (and 10-year guarantee where applicable). Any claim, compensation request or action relating to a service must be directed exclusively against the intervening craftsman and his insurer, whose details appear on the quote and invoice. By accepting these Terms, the craftsman undertakes to indemnify and hold LOCKR harmless against any judgment, claim or costs related to his interventions. This clause does not deprive consumers of their statutory rights against the service provider." },
         { h: "Article 8 — Governing law and disputes", p: "These Terms are governed by French law. Consumers may use the free consumer mediation service (art. L.612-1) or the EU online dispute resolution platform: ec.europa.eu/consumers/odr. Acceptance of the Terms at registration is time-stamped and stored as evidence (art. 1366-1367 French Civil Code — electronic writing and signature)." },
+        { h: "Article 9 — Safety and quality monitoring during interventions", p: "To protect the safety of clients and craftsmen and to ensure quality of service, LOCKR may activate, when the craftsman arrives on site, an audio recording and automated analysis device (detection of inappropriate or threatening language) linked to the ongoing mission. This device is disclosed on screen to both parties as soon as it is activated. Legal basis: legitimate interest of LOCKR and its users in the safety of interventions (art. 6.1.f GDPR), balanced against your rights and freedoms. Recordings and transcripts are kept confidential, accessible only to authorised LOCKR staff, for the time strictly necessary to review any report, then deleted. They are used solely to review reports of inappropriate behaviour and never for commercial purposes. You may exercise your rights of access, objection or erasure over this data at dpo@lockr.fr, subject to legal retention periods applicable to ongoing proceedings." },
       ],
     },
     {
@@ -9967,7 +10027,7 @@ function CookieConsent({ lang = "fr" }) {
             ? <button onClick={() => save(false)} className="lk-ghost" style={{ flex: "1 1 120px", fontSize: 12 }}>{tr.cookieSavePrefs}</button>
             : <button onClick={() => setCustomize(true)} className="lk-ghost" style={{ flex: "1 1 120px", fontSize: 12 }}>{tr.cookieCustomize}</button>
           }
-          <button onClick={() => save(false)} style={{ background: "none", border: "none", color: T.textLo, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", flex: "0 0 auto", alignSelf: "center", padding: "12px 6px", margin: "-12px -6px", minHeight: 44 }}>{tr.cookieRejectAll}</button>
+          <button onClick={() => save(false)} style={{ background: "none", border: "none", color: T.textLo, fontSize: 11, cursor: "pointer", fontFamily: "'Inter',sans-serif", flex: "0 0 auto", alignSelf: "center", padding: "12px 6px", minHeight: 44 }}>{tr.cookieRejectAll}</button>
         </div>
         <div style={{ marginTop: 10, fontSize: 10, color: T.textLo, textAlign: "center" }}>
           {tr.legalFooter}
@@ -10325,7 +10385,7 @@ export default function App() {
   );
 
   if (account) {
-    if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} bons={bons} setBons={setBons} />);
+    if (account.role === "client") return wrapper(<ClientApp account={account} bookings={bookings} setBookings={setBookings} onLogout={logout} allAccounts={accounts} setAccounts={setAccounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} lang={lang} setLang={setLang} bons={bons} setBons={setBons} />);
     if (account.role === "pro") return wrapper(<ProApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} onLogout={logout} lang={lang} setLang={setLang} priorityOrder={priorityOrder} />);
     if (account.role === "admin") return wrapper(<AdminApp account={account} bookings={bookings} setBookings={setBookings} accounts={accounts} setAccounts={setAccounts} bons={bons} setBons={setBons} listings={listings} sales={sales} onLogout={logout} lang={lang} setLang={setLang} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} />);
     if (account.role === "partenaire") return wrapper(<PartenaireApp account={account} setAccounts={setAccounts} bookings={bookings} setBookings={setBookings} bons={bons} setBons={setBons} onLogout={logout} lang={lang} setLang={setLang} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
