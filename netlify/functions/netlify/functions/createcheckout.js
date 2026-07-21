@@ -62,8 +62,8 @@ exports.handler = async (event) => {
         artisan_account: artisanStripeId || "",
         split: artisanStripeId ? "auto" : "manuel",
       },
-      success_url: `${origin}/?paiement=succes&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/?paiement=annule`,
+      success_url: `${origin}/?paiement=succes&session_id={CHECKOUT_SESSION_ID}&bookingId=${encodeURIComponent(bookingId || "")}`,
+      cancel_url: `${origin}/?paiement=annule&bookingId=${encodeURIComponent(bookingId || "")}`,
       // Facturation : Stripe émet le reçu ; la facture conforme est générée côté plateforme
       payment_intent_data: paymentIntentData,
     });
