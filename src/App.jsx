@@ -3425,7 +3425,8 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
     if (!factureImg) return setErr(tr.invoiceRequired);
     setErr(""); setStep("confirm");
   };
-  const isPaid = statut === "payé";
+  const verified = mission?.paiementVerifie === true;
+  const isPaid = statut === "payé" && verified;
   const montantNum = parseFloat(montant.replace(",", ".")) || 0;
 
   return (
@@ -3486,12 +3487,17 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">{tr.paymentStatus}</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <button onClick={() => setStatut("payé")} style={{ background: isPaid ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.02)", border: `1px solid ${isPaid ? "rgba(62,207,142,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
+                <button
+                  disabled={!verified}
+                  onClick={() => verified && setStatut("payé")}
+                  title={!verified ? (lang === "en" ? "Locked until Stripe confirms payment" : "Verrouillé tant que Stripe n'a pas confirmé le paiement") : ""}
+                  style={{ background: isPaid ? "rgba(62,207,142,.08)" : "rgba(255,255,255,.02)", border: `1px solid ${isPaid ? "rgba(62,207,142,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: verified ? "pointer" : "not-allowed", textAlign: "left", fontFamily: "'Inter',sans-serif", opacity: verified ? 1 : .45 }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                     <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${isPaid ? T.success : "rgba(0,0,0,.1)"}`, background: isPaid ? "rgba(62,207,142,.2)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {isPaid && Icon.check(T.success, 11)}
                     </div>
-                    <span style={{ color: isPaid ? T.success : T.textMid, fontWeight: 700, fontSize: 13 }}>{tr.paid}</span>
+                    <span style={{ color: isPaid ? T.success : T.textMid, fontWeight: 700, fontSize: 13 }}>{tr.paid}{verified ? " ✓" : ""}</span>
                   </div>
                 </button>
                 <button onClick={() => setStatut("en_attente")} style={{ background: !isPaid ? "rgba(245,166,35,.07)" : "rgba(255,255,255,.02)", border: `1px solid ${!isPaid ? "rgba(245,166,35,.3)" : "rgba(0,0,0,.06)"}`, borderRadius: 12, padding: "14px 12px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif" }}>
@@ -3503,17 +3509,37 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
                   </div>
                 </button>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
-                {Icon.info ? Icon.info(T.textLo, 13) : null}
-                <div style={{ color: T.textLo, fontSize: 11 }}>
-                  {lang === "en"
-                    ? "Off-platform cash payment is prohibited (Terms art. 4 bis)."
-                    : "Le paiement en espèces hors application est interdit (CGU art. 4 bis)."}
+
+              {!verified && (
+                <div style={{ background: "rgba(245,166,35,.07)", border: "1px solid rgba(245,166,35,.25)", borderRadius: 12, padding: "12px 14px", marginTop: 12 }}>
+                  <div style={{ color: T.warn, fontWeight: 700, fontSize: 12, marginBottom: 4 }}>
+                    {lang === "en" ? "Payment not verified yet" : "Paiement non vérifié pour l'instant"}
+                  </div>
+                  <div style={{ color: T.textLo, fontSize: 11, marginBottom: 10, lineHeight: 1.4 }}>
+                    {lang === "en"
+                      ? "You cannot declare this mission paid until Stripe confirms the payment. Cash or any other off-platform payment is prohibited (Terms art. 4 bis)."
+                      : "Vous ne pouvez pas déclarer cette mission payée tant que Stripe n'a pas confirmé le paiement. Tout règlement en espèces ou hors application est interdit (CGU art. 4 bis)."}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={montantNum <= 0}
+                    onClick={() => startStripeCheckout({ amount: montantNum, label: pLabel(prob, lang), type: "prestation", bookingId: mission?.id, artisanStripeId: artisan?.stripeAccountId || localStorage.getItem("lk_stripe_acct") || null })}
+                    style={{ width: "100%", background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 10, padding: "10px 12px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: montantNum > 0 ? "pointer" : "not-allowed", opacity: montantNum > 0 ? 1 : .5, fontFamily: "'Inter',sans-serif", marginBottom: 8 }}
+                  >
+                    {lang === "en" ? "Charge card now via LOCKR (Stripe)" : "Encaisser la carte maintenant via LOCKR (Stripe)"}
+                  </button>
+                  <button type="button" onClick={() => setShowSendLink(true)} style={{ width: "100%", background: "rgba(28,28,28,.04)", border: "1px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "10px 12px", color: T.accent, fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                    {lang === "en" ? "Send payment link (client without an account)" : "Envoyer un lien de paiement (client sans compte)"}
+                  </button>
                 </div>
-              </div>
-              <button type="button" onClick={() => setShowSendLink(true)} style={{ width: "100%", marginTop: 10, background: "rgba(28,28,28,.04)", border: "1px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "10px 12px", color: T.accent, fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                {lang === "en" ? "Send payment link (client without an account)" : "Envoyer un lien de paiement (client sans compte)"}
-              </button>
+              )}
+              {verified && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+                  <span style={{ color: T.success, fontSize: 11, fontWeight: 700 }}>
+                    {lang === "en" ? "✓ Payment confirmed by Stripe" : "✓ Paiement confirmé par Stripe"}
+                  </span>
+                </div>
+              )}
             </div>
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">{lang === "en" ? "Deposit already received (€, optional)" : "Acompte déjà perçu (€, optionnel)"}</label>
