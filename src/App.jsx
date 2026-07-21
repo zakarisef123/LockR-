@@ -57,8 +57,6 @@ const ts = () => new Date().toISOString();
    mode démo local (comportement identique à avant, un seul utilisateur). */
 function useSyncedState(collectionName, initial) {
   const [data, setData] = useState(initial);
-  const dataRef = useRef(initial);
-  dataRef.current = data;
   const seeded = useRef(false);
 
   useEffect(() => {
@@ -81,7 +79,6 @@ function useSyncedState(collectionName, initial) {
     setData(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       if (firebaseReady && db) {
-        const prevIds = new Set(prev.map(x => String(x.id)));
         const nextIds = new Set(next.map(x => String(x.id)));
         // Suppressions
         prev.forEach(x => { if (!nextIds.has(String(x.id))) deleteDoc(doc(db, collectionName, String(x.id))).catch(() => {}); });
@@ -1959,6 +1956,96 @@ async function startStripeCheckout({ amount, label, type, bookingId, email, arti
   } catch { return false; }
 }
 
+/* Génère un lien de paiement Stripe (sans redirection) — utilisé pour l'envoyer
+   par SMS/email/QR code à un client qui n'a pas de compte sur l'application. */
+async function createPaymentLink({ amount, label, type, bookingId, email, artisanStripeId }) {
+  try {
+    const res = await fetch("/.netlify/functions/create-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, label, type: type || "lien_client", bookingId, email, artisanStripeId }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && data.url ? data.url : null;
+  } catch { return null; }
+}
+
+/* Modale : générer et envoyer un lien de paiement Stripe à un client hors application
+   (SMS, email, copie du lien, ou QR code à scanner sur place). */
+function SendPaymentLinkModal({ amount, label, bookingId, clientNom, clientTel, artisanStripeId, onClose, lang = "fr" }) {
+  const fr = lang !== "en";
+  const [loading, setLoading] = useState(true);
+  const [url, setUrl] = useState(null);
+  const [err, setErr] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    createPaymentLink({ amount, label: label || "Prestation LOCKR", type: "lien_client", bookingId, artisanStripeId })
+      .then(u => { if (!alive) return; if (u) setUrl(u); else setErr(true); setLoading(false); })
+      .catch(() => { if (alive) { setErr(true); setLoading(false); } });
+    return () => { alive = false; };
+  }, []);
+
+  const smsBody = fr
+    ? `Bonjour, voici le lien pour régler votre intervention LOCKR (${amount}€) en toute sécurité par carte : ${url || ""}`
+    : `Hello, here is the link to securely pay for your LOCKR intervention (€${amount}) by card: ${url || ""}`;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", zIndex: 999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px", maxHeight: "90vh", overflowY: "auto", animation: "slideUp .3s ease" }}>
+        <div style={{ width: 36, height: 3, background: "rgba(0,0,0,.1)", borderRadius: 2, margin: "0 auto 20px" }} />
+        <div style={{ textAlign: "center", marginBottom: 18 }}>
+          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{fr ? "Lien de paiement" : "Payment link"}</div>
+          <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? `Pour ${clientNom || "le client"} · ${amount}€` : `For ${clientNom || "the client"} · €${amount}`}</div>
+        </div>
+
+        {loading && <div style={{ textAlign: "center", padding: "30px 0", color: T.textLo, fontSize: 13 }}>{fr ? "Génération du lien sécurisé…" : "Generating secure link…"}</div>}
+
+        {err && !loading && (
+          <div style={{ background: "rgba(240,101,101,.07)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "12px 14px", color: T.danger, fontSize: 13, marginBottom: 16 }}>
+            {fr ? "Paiement en ligne non configuré pour le moment. Réessayez plus tard ou contactez le support." : "Online payment not configured yet. Try again later or contact support."}
+          </div>
+        )}
+
+        {url && !loading && (
+          <>
+            <div style={{ background: "rgba(0,0,0,.02)", border: "1px solid rgba(0,0,0,.06)", borderRadius: 12, padding: "12px 14px", marginBottom: 16, wordBreak: "break-all", fontSize: 12, color: T.textMid }}>{url}</div>
+
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`}
+                alt="QR code paiement"
+                width={180} height={180}
+                style={{ borderRadius: 12, border: "1px solid rgba(0,0,0,.08)" }}
+              />
+            </div>
+            <div style={{ textAlign: "center", color: T.textLo, fontSize: 11, marginBottom: 18 }}>
+              {fr ? "Faites scanner ce QR code par le client pour payer sur place par carte." : "Have the client scan this QR code to pay on-site by card."}
+            </div>
+
+            <a href={clientTel ? `sms:${clientTel}?&body=${encodeURIComponent(smsBody)}` : `sms:?&body=${encodeURIComponent(smsBody)}`} className="lk-btn" style={{ marginBottom: 10, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              {fr ? "Envoyer par SMS" : "Send by SMS"}
+            </a>
+            <a href={`mailto:?subject=${encodeURIComponent(fr ? "Votre lien de paiement LOCKR" : "Your LOCKR payment link")}&body=${encodeURIComponent(smsBody)}`} className="lk-ghost" style={{ width: "100%", marginBottom: 10, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center" }}>
+              {fr ? "Envoyer par email" : "Send by email"}
+            </a>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }}
+              className="lk-ghost" style={{ width: "100%", marginBottom: 10 }}
+            >
+              {copied ? (fr ? "Lien copié ✓" : "Link copied ✓") : (fr ? "Copier le lien" : "Copy link")}
+            </button>
+          </>
+        )}
+
+        <button onClick={onClose} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Fermer" : "Close"}</button>
+      </div>
+    </div>
+  );
+}
+
 function PayModal({ amount, onClose, onDone, lang = "fr", payLabel, payType, bookingId, payerEmail, artisanStripeId }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [step, setStep] = useState("method");
@@ -3321,6 +3408,7 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
   const [step, setStep] = useState("form");
   const [err, setErr] = useState("");
   const [acompte, setAcompte] = useState("");
+  const [showSendLink, setShowSendLink] = useState(false);
   const fileRef = useRef(null);
   const prob = PROBLEMES.find(p => p.id === mission?.probleme);
 
@@ -3415,6 +3503,21 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
                   </div>
                 </button>
               </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}>
+                {Icon.info ? Icon.info(T.textLo, 13) : null}
+                <div style={{ color: T.textLo, fontSize: 11 }}>
+                  {lang === "en"
+                    ? "Off-platform cash payment is prohibited (Terms art. 4 bis)."
+                    : "Le paiement en espèces hors application est interdit (CGU art. 4 bis)."}
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowSendLink(true)} style={{ width: "100%", marginTop: 10, background: "rgba(28,28,28,.04)", border: "1px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "10px 12px", color: T.accent, fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+                {lang === "en" ? "Send payment link (client without an account)" : "Envoyer un lien de paiement (client sans compte)"}
+              </button>
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label className="lk-label">{lang === "en" ? "Deposit already received (€, optional)" : "Acompte déjà perçu (€, optionnel)"}</label>
+              <input type="number" className="lk-input" value={acompte} onChange={e => setAcompte(e.target.value)} placeholder="0" />
             </div>
             {err && <div style={{ background: "rgba(240,101,101,.07)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "10px 14px", color: T.danger, fontSize: 13, marginBottom: 14 }}>{err}</div>}
             <button onClick={validate} className="lk-btn" style={{ marginBottom: 10 }}>{tr.next} {Icon.arrow("#fff", 14)}</button>
@@ -3444,6 +3547,17 @@ function ClotureModal({ mission, artisan, onConfirm, onCancel, lang = "fr" }) {
           </>
         )}
       </div>
+      {showSendLink && (
+        <SendPaymentLinkModal
+          amount={montantNum}
+          label={pLabel(prob, lang)}
+          bookingId={mission?.id}
+          clientNom={mission?.clientNom}
+          artisanStripeId={artisan?.stripeAccountId || localStorage.getItem("lk_stripe_acct") || null}
+          onClose={() => setShowSendLink(false)}
+          lang={lang}
+        />
+      )}
     </div>
   );
 }
@@ -5347,6 +5461,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const isDesktop = w >= BP;
   const [tab, setTab] = useState("accueil");
   const [activeMission, setActiveMission] = useState(null);
+  const [platformCall, setPlatformCall] = useState(null);
   const [recapMission, setRecapMission] = useState(null); // récap d'une mission terminée (depuis l'Accueil)
   const [histMonth, setHistMonth] = useState("all"); // filtre historique par mois
   const [progress, setProgress] = useState(0);
@@ -6212,7 +6327,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                     <button onClick={() => openItineraire(bk)} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer", color: "#2563eb", borderColor: "rgba(37,99,235,.3)" }}>{Icon.pin("#2563eb", 15)} GPS</button>
-                    <button onClick={() => setPlatformCall({ name: activeBk?.artisan || "Artisan" })} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer" }}>{Icon.phone(T.success, 15)} {tr.callArtisan}</button>
+                    <button onClick={() => setPlatformCall({ name: bk?.clientNom || "Client" })} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", cursor: "pointer" }}>{Icon.phone(T.success, 15)} {tr.callClient}</button>
                     <button disabled={progress >= 0.97 && !photoAvant} onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif", opacity: (progress >= 0.97 && !photoAvant) ? .45 : 1 }}>
                       {Icon.check("#fff", 15)} {tr.closeAndInvoice}
                     </button>
@@ -6306,6 +6421,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
       {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
       {monthlyModal && <MonthlyReportModal bookings={bookings} artisanId={account.artisanId} lang={lang} onClose={() => setMonthlyModal(false)} />}
       {recapMission && <MissionRecapModal mission={recapMission} lang={lang} onClose={() => setRecapMission(null)} />}
+      {platformCall && <PlatformCallModal name={platformCall.name} onClose={() => setPlatformCall(null)} lang={lang} />}
       {/* Écran de bienvenue — premier lancement uniquement */}
       {onboard && createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -9638,6 +9754,7 @@ const LEGAL_DOCS = {
         { h: "Article 2 — Inscription et compte", p: "L'inscription est ouverte à toute personne majeure disposant de la capacité juridique. L'utilisateur garantit l'exactitude des informations fournies. Les professionnels doivent justifier de leur immatriculation (SIRET), de leur assurance RC Pro et de leurs qualifications. Chaque compte est personnel et non cessible." },
         { h: "Article 3 — Rôle de la plateforme", p: "LOCKR est un intermédiaire technique au sens de l'article L.111-7 du Code de la consommation. Les contrats de prestation sont conclus directement entre le client et l'artisan. LOCKR fournit un classement loyal, clair et transparent des offres (loi n°2016-1321 pour une République numérique)." },
         { h: "Article 4 — Obligations de l'utilisateur", p: "L'utilisateur s'engage à ne pas publier de contenus illicites, à ne pas contourner la plateforme pour éviter les commissions, à respecter les artisans et à fournir des informations sincères. Tout manquement peut entraîner la suspension ou la suppression du compte après mise en demeure." },
+        { h: "Article 4 bis — Paiement obligatoire via la plateforme", p: "Toute somme due au titre d'une prestation mise en relation par LOCKR (y compris avec un client non inscrit sur l'application) doit être réglée exclusivement via les moyens de paiement intégrés à la plateforme (paiement en application, lien de paiement sécurisé envoyé par SMS/email, ou QR code de paiement). Il est strictement interdit à l'artisan comme au client de convenir, solliciter ou accepter un règlement en espèces ou par tout autre moyen hors plateforme afin de contourner la commission LOCKR. Ce contournement constitue un manquement grave aux présentes CGU pouvant entraîner, après mise en demeure restée infructueuse : la suspension immédiate du compte, la résiliation définitive, le recouvrement des commissions éludées et, le cas échéant, des poursuites judiciaires. LOCKR se réserve le droit de vérifier la conformité des paiements déclarés clos sur la plateforme." },
         { h: "Article 5 — Avis et notations", p: "Les avis publiés font l'objet d'un contrôle conformément à l'article L.111-7-2 du Code de la consommation et à la norme sur les avis en ligne. Seuls les clients ayant effectivement bénéficié d'une prestation peuvent déposer un avis." },
         { h: "Article 6 — Responsabilité de la plateforme", p: "LOCKR est un intermédiaire technique de mise en relation et n'est PAS partie au contrat de prestation conclu entre le client et l'artisan. LOCKR met en œuvre tous les moyens raisonnables pour assurer la disponibilité du service et la vérification des professionnels référencés (SIRET, assurance RC Pro, qualifications), sans obligation de résultat. La responsabilité de LOCKR ne saurait être engagée au titre de l'exécution, de l'inexécution, de la mauvaise exécution ou des dommages de toute nature résultant de la prestation réalisée par l'artisan, qui en assume seul l'entière responsabilité." },
         { h: "Article 7 — Responsabilité des artisans et recours", p: "L'artisan intervient en qualité de professionnel indépendant, sous sa seule responsabilité. Il est seul responsable de la qualité, de la conformité, des délais et des dommages éventuels liés à ses interventions, couverts par son assurance RC Pro obligatoire (et garantie décennale le cas échéant). Toute réclamation, demande d'indemnisation ou action relative à une prestation doit être dirigée exclusivement contre l'artisan intervenant et son assureur, dont les coordonnées figurent sur le devis et la facture. En acceptant les présentes CGU, l'artisan s'engage à garantir et relever indemne LOCKR de toute condamnation, réclamation ou frais liés à ses interventions. Cette clause ne prive pas le consommateur de ses droits légaux à l'égard du professionnel prestataire." },
@@ -9711,6 +9828,7 @@ const LEGAL_DOCS = {
         { h: "Article 2 — Registration", p: "Registration is open to adults with legal capacity. Users guarantee the accuracy of the information provided. Professionals must prove their registration (SIRET), professional liability insurance and qualifications. Accounts are personal and non-transferable." },
         { h: "Article 3 — Role of the platform", p: "LOCKR is a technical intermediary within the meaning of article L.111-7 of the French Consumer Code. Service contracts are concluded directly between the client and the craftsman. LOCKR provides fair, clear and transparent ranking of offers." },
         { h: "Article 4 — User obligations", p: "Users undertake not to publish illegal content, not to bypass the platform to avoid commissions, to respect craftsmen and to provide truthful information. Any breach may lead to suspension or deletion of the account after formal notice." },
+        { h: "Article 4 bis — Mandatory payment via the platform", p: "Any amount owed for a service arranged via LOCKR (including with a client not registered on the app) must be paid exclusively through the platform's integrated payment methods (in-app payment, secure payment link sent by SMS/email, or payment QR code). Craftsmen and clients are strictly prohibited from agreeing to, requesting, or accepting cash payment or any other off-platform method to bypass the LOCKR commission. Such circumvention is a serious breach of these Terms and may lead, after unsuccessful formal notice, to immediate account suspension, permanent termination, recovery of evaded commissions and, where applicable, legal action. LOCKR reserves the right to verify the compliance of payments declared as completed on the platform." },
         { h: "Article 5 — Reviews", p: "Published reviews are moderated in accordance with article L.111-7-2 of the French Consumer Code. Only clients who actually received a service may post a review." },
         { h: "Article 6 — Platform liability", p: "LOCKR is a technical connecting intermediary and is NOT a party to the service contract concluded between the client and the craftsman. LOCKR uses all reasonable means to ensure service availability and verification of listed professionals (SIRET, liability insurance, qualifications), without an obligation of result. LOCKR shall not be liable for the performance, non-performance, poor performance or any damage resulting from the service carried out by the craftsman, who bears sole and full responsibility." },
         { h: "Article 7 — Craftsmen's liability and recourse", p: "The craftsman acts as an independent professional under his sole responsibility. He is solely liable for the quality, compliance, deadlines and any damage related to his interventions, covered by his mandatory professional liability insurance (and 10-year guarantee where applicable). Any claim, compensation request or action relating to a service must be directed exclusively against the intervening craftsman and his insurer, whose details appear on the quote and invoice. By accepting these Terms, the craftsman undertakes to indemnify and hold LOCKR harmless against any judgment, claim or costs related to his interventions. This clause does not deprive consumers of their statutory rights against the service provider." },
@@ -10121,9 +10239,18 @@ export default function App() {
   const [legalOpen, setLegalOpen] = useState(null); // null | id du document
   const [payReturn, setPayReturn] = useState(() => new URLSearchParams(window.location.search).get("paiement"));
 
-  // Retour de la page de paiement Stripe
+  // Retour de la page de paiement Stripe — si succès et lié à une mission,
+  // on marque le paiement comme réellement vérifié (pas juste auto-déclaré).
   useEffect(() => {
     if (payReturn) {
+      const params = new URLSearchParams(window.location.search);
+      const paidBookingId = params.get("bookingId");
+      const sessionId = params.get("session_id");
+      if (payReturn === "succes" && paidBookingId) {
+        setBookings(p => p.map(b => b.id === paidBookingId
+          ? { ...b, statutPaiement: "payé", paiementVerifie: true, stripeSessionId: sessionId || b.stripeSessionId, payeLe: ts() }
+          : b));
+      }
       window.history.replaceState({}, "", window.location.pathname);
       const t = setTimeout(() => setPayReturn(null), 6000);
       return () => clearTimeout(t);
