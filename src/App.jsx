@@ -5827,7 +5827,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   };
 
   return (
-    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+    <div className={darkMode ? "lk-dark" : ""} style={{ height: "100vh", overflow: "hidden", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
 
       {/* SIDEBAR DESKTOP */}
@@ -5900,7 +5900,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
       )}
 
       {/* MAIN CONTENT */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, height: "100vh", overflow: "hidden" }}>
         {/* Header mobile uniquement */}
         {!isDesktop && (
           <div style={{ background: "#fff", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
@@ -9674,7 +9674,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const setCurrentSub = tab === "ops_group" ? setOpsSub : tab === "gestion_group" ? setGestionSub : setAdminSub;
 
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
+    <div style={{ height: "100vh", overflow: "hidden", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
       <style>{CSS}</style>
 
       {/* SIDEBAR DESKTOP */}
@@ -9705,7 +9705,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
       )}
 
       {/* MAIN CONTENT */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, height: "100vh", overflow: "hidden" }}>
         {!isDesktop && (
           <div style={{ background: "#fff", borderBottom: `1px solid ${T.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
