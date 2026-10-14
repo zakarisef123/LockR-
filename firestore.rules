@@ -1,0 +1,106 @@
+rules_version = '2';
+
+// Règles de sécurité Firestore — LOCKR
+// ─────────────────────────────────────────────────────────────────────────────
+// À publier dans : console Firebase → Firestore Database → Règles
+// (ou `firebase deploy --only firestore:rules` si la CLI Firebase est installée).
+// Testez-les d'abord dans le « Rules Playground » de la console.
+//
+// PHASE 1 (ci-dessous, ACTIVE) — compatible avec l'application actuelle.
+//   L'application n'utilise pas encore Firebase Authentication : Firestore ne
+//   peut donc PAS savoir qui écrit. Ces règles ferment déjà la base à tout ce
+//   qui n'est pas une collection de l'application (plus de `if true` global),
+//   mais elles ne protègent pas les données d'un utilisateur contre un autre.
+//   → Voir SECURITE.md : la migration vers Firebase Authentication est la
+//     priorité n°1 avant un lancement public.
+//
+// PHASE 2 (en commentaire en bas du fichier) — après migration vers Firebase
+//   Authentication : chaque utilisateur ne lit/modifie que ses propres données,
+//   les rôles admin sont vérifiés côté serveur.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function appCollection(c) {
+      return c in ["accounts", "bookings", "bons", "chat", "listings", "sales",
+                   "messages", "banned", "settings", "techs", "factures"];
+    }
+
+    // L'identifiant stocké dans le document doit correspondre à son nom
+    // (les anciens documents sans champ `id` restent modifiables).
+    function idMatches(docId) {
+      return !("id" in request.resource.data) || string(request.resource.data.id) == docId;
+    }
+
+    // Marqueurs d'initialisation des données de démonstration
+    match /meta/{c} {
+      allow read: if appCollection(c);
+      allow create, update: if appCollection(c)
+        && request.resource.data.keys().hasOnly(["seededAt"]);
+      allow delete: if false;
+    }
+
+    match /{c}/{docId} {
+      allow read: if appCollection(c);
+      allow create, update: if appCollection(c) && idMatches(docId);
+      allow delete: if appCollection(c);
+    }
+
+    // Tout le reste est fermé
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PHASE 2 — MODÈLE CIBLE (après migration vers Firebase Authentication)
+   Prérequis : chaque compte `accounts/{uid}` porte l'uid Firebase Auth comme
+   identifiant, et le rôle admin est posé par une fonction serveur (custom
+   claim `admin: true`), jamais par l'application elle-même.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function me() { return get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data; }
+    function isPro() { return signedIn() && me().role in ["pro", "partenaire"] && me().dossierStatus == "approved"; }
+    // Champs qu'un utilisateur ne peut jamais modifier lui-même
+    function untouched(fields) { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields); }
+
+    match /accounts/{uid} {
+      allow read: if request.auth.uid == uid || isAdmin() || isPro();  // idéalement : profil public séparé
+      allow create: if request.auth.uid == uid && request.resource.data.role in ["client", "pro", "partenaire"]
+                    && !("dossierStatus" in request.resource.data && request.resource.data.dossierStatus == "approved");
+      allow update: if isAdmin() || (request.auth.uid == uid && untouched(["role", "dossierStatus", "subscription", "internalAccess"]));
+      allow delete: if isAdmin() || request.auth.uid == uid;
+    }
+
+    match /bookings/{id} {
+      allow read: if isAdmin() || resource.data.clientId == request.auth.uid
+                  || resource.data.artisanId == request.auth.uid || resource.data.partenaireId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.clientId == request.auth.uid;
+      // Statuts de paiement : écrits uniquement par le webhook Stripe (Admin SDK)
+      allow update: if isAdmin() || ((resource.data.clientId == request.auth.uid || resource.data.artisanId == request.auth.uid
+                    || resource.data.partenaireId == request.auth.uid)
+                    && untouched(["statutPaiement", "acompteClientPaye", "paiementVerifie", "proPaid"]));
+      allow delete: if isAdmin();
+    }
+
+    match /bons/{id}      { allow read: if isPro() || isAdmin(); allow write: if isPro() || isAdmin(); }
+    match /chat/{id}      { allow read, create: if isPro(); allow update, delete: if isAdmin(); }
+    match /messages/{id}  { allow read, write: if signedIn(); /* à restreindre aux participants de la mission */ }
+    match /listings/{id}  { allow read: if isPro(); allow create: if isPro() && request.resource.data.proId == request.auth.uid;
+                            allow update, delete: if isAdmin() || resource.data.proId == request.auth.uid; }
+    match /sales/{id}     { allow read: if isAdmin() || resource.data.acheteurId == request.auth.uid || resource.data.vendeurId == request.auth.uid;
+                            allow create: if isPro() && request.resource.data.acheteurId == request.auth.uid;
+                            allow update: if isAdmin(); }
+    match /techs/{id}     { allow read, write: if isAdmin() || resource.data.partenaireId == request.auth.uid
+                            || request.resource.data.partenaireId == request.auth.uid; }
+    match /banned/{id}    { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /settings/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /factures/{id}  { allow read, write: if isAdmin(); }
+    match /meta/{id}      { allow read: if signedIn(); allow write: if isAdmin(); }
+  }
+}
+───────────────────────────────────────────────────────────────────────────── */

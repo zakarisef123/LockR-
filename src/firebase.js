@@ -3,27 +3,13 @@
 // SANS CETTE CONFIGURATION, l'application reste en mode démo local : chaque
 // utilisateur a ses propres données isolées (rien n'est partagé entre eux).
 //
-// ── Pour activer la synchronisation réelle (5 minutes, gratuit) ──
-// 1. Va sur https://console.firebase.google.com → « Ajouter un projet »
-// 2. Une fois le projet créé, clique sur l'icône Web </> pour ajouter une app
-// 3. Copie les valeurs affichées (apiKey, projectId, etc.) et colle-les
-//    ci-dessous à la place des "..."
-// 4. Dans le menu de gauche → Firestore Database → Créer une base de données
-//    → démarre en mode production (les règles ci-dessous sécurisent l'accès)
-// 5. Dans Firestore → onglet Règles, colle :
-//
-//    rules_version = '2';
-//    service cloud.firestore {
-//      match /databases/{database}/documents {
-//        match /{document=**} { allow read, write: if true; }
-//      }
-//    }
-//
-//    (Ces règles sont ouvertes pour démarrer vite — à restreindre avant un
-//    vrai lancement public, ex. limiter l'écriture aux comptes authentifiés.)
+// ⚠️ SÉCURITÉ — À FAIRE AVANT UN LANCEMENT PUBLIC
+// Les règles Firestore ne doivent PAS rester ouvertes (`allow read, write: if true`) :
+// n'importe qui pourrait lire les comptes et modifier les données.
+// Voir firestore.rules (à la racine du projet) et SECURITE.md.
 
 import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD3yHJW5KV_dLehgUFHAA3WiA9w2YBUodE",
@@ -35,10 +21,23 @@ const firebaseConfig = {
   measurementId: "G-TJKB6WNX7E",
 };
 
-const isConfigured = firebaseConfig.apiKey !== "REMPLACE_MOI";
+// VITE_DISABLE_FIREBASE=1 (ex. `VITE_DISABLE_FIREBASE=1 npm run dev`) : mode démo
+// local, sans toucher à la base de production — pratique pour tester.
+const isConfigured = firebaseConfig.apiKey !== "REMPLACE_MOI" && import.meta.env.VITE_DISABLE_FIREBASE !== "1";
 
-export const db = isConfigured
-  ? getFirestore(getApps().length ? getApps()[0] : initializeApp(firebaseConfig))
-  : null;
+function createDb() {
+  if (!isConfigured) return null;
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  try {
+    // ignoreUndefinedProperties : un champ `undefined` dans un objet ne fait plus
+    // échouer l'écriture (sinon Firestore rejette TOUT le document).
+    return initializeFirestore(app, { ignoreUndefinedProperties: true });
+  } catch {
+    // Déjà initialisé (rechargement à chaud en développement)
+    return getFirestore(app);
+  }
+}
+
+export const db = createDb();
 
 export const firebaseReady = isConfigured;
