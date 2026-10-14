@@ -19,7 +19,7 @@
 
    Mode démonstration (VITE_DEMO=1) : état local, enregistré dans le
    navigateur (rien n'est partagé). */
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from "react";
 import { db, firebaseReady } from "../firebase.js";
 import { collection, onSnapshot, doc, setDoc, deleteDoc, deleteField, query, where, writeBatch } from "firebase/firestore";
 
@@ -165,27 +165,31 @@ export async function runBatch(ops) {
      [{ doc: id }]       → un document
      [{ where: [champ, opérateur, valeur] }, …] → requêtes, résultats fusionnés
    En démonstration, `sources` est ignoré : toutes les données sont locales. */
+const EMPTY = Object.freeze([]);
+
 export function useSyncedState(collectionName, initial, { sources, demo = true } = {}) {
   const live = firebaseReady && !!db;
   const srcKey = live ? JSON.stringify(sources === undefined ? [{ all: true }] : sources) : "";
-  // demo: false → liste toujours vide en démonstration (écoute réservée au mode réel)
-  const [data, setData] = useState(() => (live || !demo ? [] : loadDemo(collectionName, initial)));
-  const [ready, setReady] = useState(!live);
+  // Données + requête dont elles proviennent : quand les sources changent
+  // (connexion, changement de rôle…), les anciennes données ne sont plus
+  // montrées et l'état « prêt » repasse à faux tant que le serveur n'a pas répondu.
+  const [state, setStateRaw] = useState(() => ({ key: live ? null : "", items: live || !demo ? [] : loadDemo(collectionName, initial) }));
+  // Dernier état connu, lu par les mises à jour (plusieurs mises à jour d'affilée
+  // s'enchaînent correctement, et l'enregistrement n'a lieu qu'une seule fois)
+  const latest = useRef(state);
+  const setState = useCallback(v => { latest.current = v; setStateRaw(v); }, []);
 
   useEffect(() => {
     if (!live) return undefined;
     const srcs = JSON.parse(srcKey);
-    setData([]);
-    if (!srcs.length) { setReady(true); return undefined; }
-    setReady(false);
+    if (!srcs.length) { setState({ key: srcKey, items: [] }); return undefined; }
     let cancelled = false;
     const parts = srcs.map(() => null);
     const publish = () => {
       if (cancelled || parts.some(p => p === null)) return;
       const merged = new Map();
       parts.forEach(m => m.forEach((v, k) => merged.set(k, v)));
-      setData(sortByCreation([...merged.values()]));
-      setReady(true);
+      setState({ key: srcKey, items: sortByCreation([...merged.values()]) });
     };
     const toItem = d => { const v = d.data(); return v.id == null ? { ...v, id: d.id } : v; };
     const unsubs = srcs.map((s, i) => {
@@ -212,18 +216,21 @@ export function useSyncedState(collectionName, initial, { sources, demo = true }
       }, onErr);
     });
     return () => { cancelled = true; unsubs.forEach(u => u()); };
-  }, [collectionName, live, srcKey]);
+  }, [collectionName, live, srcKey, setState]);
 
   const update = useCallback(updater => {
-    setData(prev => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      if (!Array.isArray(next) || next === prev) return prev;
-      if (live) persistDiff(collectionName, prev, next);
-      const sorted = sortByCreation(next);
-      if (!live && demo) saveDemo(collectionName, sorted);
-      return sorted;
-    });
-  }, [collectionName, live, demo]);
+    const prev = latest.current;
+    // Données d'une ancienne requête : jamais réutilisées comme base d'écriture
+    const base = prev.key === srcKey ? prev.items : [];
+    const next = typeof updater === "function" ? updater(base) : updater;
+    if (!Array.isArray(next) || next === base) return;
+    // Enregistrement hors du rendu React : exécuté exactement une fois
+    if (live) persistDiff(collectionName, base, next);
+    const sorted = sortByCreation(next);
+    if (!live && demo) saveDemo(collectionName, sorted);
+    setState({ key: srcKey, items: sorted });
+  }, [collectionName, live, demo, srcKey, setState]);
 
-  return [data, update, ready];
+  const current = state.key === srcKey;
+  return [current ? state.items : EMPTY, update, !live || current];
 }

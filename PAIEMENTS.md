@@ -1,106 +1,89 @@
-# 💳 Activation des paiements réels (Stripe)
+# 💳 Paiements (Stripe)
 
-L'application est **prête pour les paiements réels**. Le code bascule automatiquement :
-- **Stripe configuré** → vrai paiement sécurisé (page Stripe, 3-D Secure, conforme DSP2/PCI-DSS)
-- **Stripe non configuré** → mode démo (simulation, aucun argent ne circule)
+La configuration pas à pas est dans [MISE-EN-PRODUCTION.md](MISE-EN-PRODUCTION.md)
+(étape 4). Ce document explique le fonctionnement.
 
-## Étape 1 — Créer ton compte Stripe (15 min, gratuit)
+## Principes
 
-1. Va sur https://dashboard.stripe.com/register
-2. Crée le compte au nom de **LOCKR SAS** (il te faudra : SIRET, IBAN de l'entreprise, pièce d'identité du dirigeant)
-3. **C'est ici que tu renseignes le compte bancaire où arrive l'argent** :
-   Dashboard → Paramètres → **Comptes bancaires et virements** → ajoute l'IBAN de LOCKR SAS
-   → Stripe vire automatiquement les fonds encaissés (quotidien, hebdo ou mensuel, au choix)
+- **Aucune saisie de carte dans l'application** : le client paie sur la page
+  sécurisée de Stripe (PCI-DSS, 3-D Secure / DSP2).
+- **Les montants sont calculés par le serveur** à partir de la base (devis,
+  facture, prix de l'annonce, tarif d'abonnement) — jamais à partir de ce
+  qu'envoie le navigateur.
+- **Seul le serveur enregistre un paiement** (statut payé, empreinte, abonnement…) :
+  les règles Firestore interdisent aux utilisateurs de modifier ces champs.
+  Chaque paiement Stripe n'est compté qu'une fois (registre `payments`), même
+  si le retour du client et le webhook arrivent tous les deux.
 
-## Étape 2 — Récupérer ta clé secrète
+## Le parcours d'une intervention
 
-1. Dashboard Stripe → **Développeurs → Clés API**
-2. Copie la **clé secrète** :
-   - `sk_test_...` pour tester sans argent réel
-   - `sk_live_...` pour la production (après validation du compte par Stripe)
+1. **Réservation — empreinte bancaire.** Le client accepte le devis puis
+   enregistre sa carte : le montant du devis est **réservé** sur sa carte
+   (capture différée), **rien n'est débité**.
+2. **Annulation avant le départ de l'artisan** : la réservation est simplement
+   libérée (aucun remboursement à gérer). Idem si l'artisan refuse la mission
+   (la demande est republiée pour les autres artisans).
+3. **Fin d'intervention.** L'artisan clôture (montant final + photo de la
+   facture) puis appuie sur **« Débiter la carte du client »** : le serveur
+   débite le montant final, dans la limite du montant réservé.
+4. **Si la facture dépasse la réservation**, le complément est réglé par lien
+   de paiement (SMS, e-mail ou QR code) ou depuis l'application du client.
+5. **Réservation expirée** (Stripe garde une empreinte environ 7 jours) :
+   l'application le signale et l'artisan envoie un lien de paiement.
 
-⚠️ **Ne mets JAMAIS cette clé dans le code ni sur GitHub.**
+Si le paiement en ligne est indisponible, le client peut confirmer la
+réservation sans carte : l'artisan voit « carte non enregistrée » et le
+règlement se fait à la fin, par lien de paiement.
 
-## Étape 3 — Configurer Netlify
+## Répartition de l'argent (commission LOCKR 15 %)
 
-1. Netlify → ton site → **Site configuration → Environment variables**
-2. Ajoute :
+| Cas | Artisan / entreprise | LOCKR |
+|---|---|---|
+| Intervention standard | 85 % | 15 % |
+| Entreprise partenaire (abonnée) | 95 % | 5 % |
+| Bon transmis par un professionnel | part fixée sur le bon (intervenant) + reste à l'apporteur | 15 % |
+| Marketplace | 85 % au vendeur | 15 % |
+| Missions créées avant le passage à 15 % | 40 % (taux de l'époque) | 60 % |
 
-| Variable | Valeur |
+Les taux sont définis dans `src/lib/business.js` (et `PCT_DEFAULT` dans
+`firestore.rules`) : si la commission change, modifier les deux.
+
+## Stripe Connect : versement automatique à l'artisan
+
+- L'artisan active ses **virements automatiques** (Stripe vérifie son identité
+  et son IBAN). Quand le paiement en ligne est actif, **c'est obligatoire pour
+  être proposé aux clients et prendre des bons**.
+- Pour une intervention au taux standard, Stripe partage automatiquement le
+  paiement : 85 % directement sur le compte de l'artisan, 15 % pour LOCKR. La
+  part déjà virée est déduite de la liste « Versements à effectuer » de l'admin.
+- Les autres cas (entreprises partenaires, bons à part négociée, apporteurs,
+  marketplace, anciennes missions) restent versés par l'admin depuis
+  **Finances → Comptabilité → Versements à effectuer**.
+
+Avec Connect, c'est Stripe (établissement agréé) qui détient les fonds des
+paiements partagés automatiquement. Pour les versements manuels, LOCKR encaisse
+puis reverse : à valider avec ton expert-comptable / conseil juridique
+(encaissement pour compte de tiers).
+
+## Fonctions serveur (`netlify/functions/`)
+
+| Fonction | Rôle |
 |---|---|
-| `STRIPE_SECRET_KEY` | `sk_live_...` (ta clé) |
-| `COMMISSION_PCT` | `60` (part LOCKR quand l'artisan a activé les virements automatiques — l'artisan reçoit 40 %, comme affiché dans l'application) |
+| `create-checkout` | crée la session Stripe (montant calculé par le serveur) |
+| `verify-session` | retour du client : vérifie auprès de Stripe et enregistre |
+| `stripe-webhook` | notification Stripe : enregistre même sans retour du client |
+| `capture-payment` | débite l'empreinte du montant final |
+| `cancel-hold` | libère l'empreinte (annulation, refus, admin) |
+| `connect-onboard` / `connect-status` | inscription et vérification Stripe Connect |
+| `platform-config` | indique à l'application si le paiement en ligne est actif |
+| `auth-migrate` | migration des comptes créés avant Firebase Authentication |
 
-3. Redéploie le site (Deploys → Trigger deploy)
+Code commun : `netlify/lib/` (accès Firebase Admin, Stripe, enregistrement des
+paiements) et `src/lib/business.js` (calculs partagés avec l'application).
 
-## Étape 4 — Tester
+## Tests
 
-- Avec `sk_test_...` : carte de test `4242 4242 4242 4242`, date future, CVC quelconque
-- Le paiement apparaît dans Dashboard Stripe → **Paiements**
-
-## Comment ta commission arrive sur ton compte
-
-**Modèle actuel (simple, recommandé pour démarrer)** :
-1. Le client paie 100 € → l'argent arrive sur le compte Stripe de LOCKR
-2. Stripe vire automatiquement sur **l'IBAN configuré à l'étape 1** (moins les frais Stripe ≈ 1,5 % + 0,25 €)
-3. Tu reverses à l'artisan sa part (40 € au taux standard, 95 € pour une entreprise partenaire)
-   depuis **Admin → Finances → Comptabilité → Versements à effectuer** (bouton « Marquer versé »)
-4. Le champ `commission_pct` est enregistré dans les métadonnées de chaque paiement pour ta comptabilité
-
-> ⚠️ `COMMISSION_PCT` doit rester égal à 100 − la part artisan standard de l'application
-> (`PRO_SHARE_DEFAULT` = 40 % dans `src/App.jsx`). Si tu changes l'un, change l'autre.
-
-**Modèle automatique (Stripe Connect — DÉJÀ CODÉ ✓)** :
-
-Le split automatique est intégré. Fonctionnement :
-
-1. L'artisan clique sur **« Activer les virements automatiques »** dans son profil
-   → il est redirigé vers Stripe qui vérifie son identité et son IBAN (KYC automatique)
-2. Une fois activé, chaque paiement client est **splitté automatiquement** :
-   - Part artisan (40 %) → versée **directement sur son compte bancaire**
-   - Ta commission (`COMMISSION_PCT`, 60 %) → versée **directement sur ton compte**
-3. **Tu n'as plus aucun virement à faire** pour ces missions : la part déjà virée par Stripe
-   est déduite automatiquement de la liste « Versements à effectuer » (aucun double paiement).
-4. Les missions à un autre taux (entreprises partenaires, bons à % négocié) ne sont pas
-   splittées : elles restent dans « Versements à effectuer ».
-
-Pour l'activer : Dashboard Stripe → **Connect → Commencer** → choisis « Comptes Express ».
-Aucun changement de code nécessaire — dès que Connect est activé sur ton compte Stripe,
-le bouton du profil artisan fonctionne.
-
-Avantage réglementaire important : avec Connect, c'est Stripe (agréé ACPR) qui détient
-les fonds — tu n'encaisses jamais pour le compte de tiers, donc pas de statut d'agent
-de services de paiement à demander.
-
-## ⚖️ Conformité incluse
-
-- **DSP2 / authentification forte** : 3-D Secure géré par Stripe automatiquement
-- **PCI-DSS** : aucune donnée carte ne touche nos serveurs (page hébergée Stripe)
-- **KYC/LCB-FT** : vérification d'identité gérée par Stripe (agréé ACPR en Europe)
-- Reçus de paiement envoyés automatiquement par email au client
-
-## Ce que fait l'application au retour de Stripe
-
-1. Le client revient sur `/?paiement=succes&session_id=cs_...`
-2. L'application appelle `verify-session`, qui **interroge Stripe** pour confirmer le paiement
-   (l'URL seule ne suffit pas : elle pourrait être fabriquée)
-3. Seulement si Stripe confirme, la mission / l'acompte / l'achat / l'abonnement est marqué payé.
-   L'opération est idempotente : recharger la page ne compte pas deux fois le paiement.
-
-Sans Stripe configuré : les **comptes de démonstration** peuvent simuler un paiement
-(clairement indiqué) ; un **vrai compte** voit « paiement momentanément indisponible »
-et peut continuer sans payer (la mission reste « à régler »).
-
-Amélioration recommandée : un webhook Stripe (`checkout.session.completed`) qui écrit
-le statut payé côté serveur — voir `SECURITE.md`.
-
-## Fichiers concernés
-
-- `netlify/functions/create-checkout.mjs` — création de la session de paiement (et du split Connect)
-- `netlify/functions/verify-session.mjs` — vérification serveur d'un paiement
-- `netlify/functions/connect-onboard.mjs` — inscription Stripe Connect de l'artisan
-- `netlify/lib/stripe.mjs` — code commun (CORS, clé, origine du site)
-- `src/lib/payments.js` — appels depuis l'application
-- `src/App.jsx` — `PayModal` (fenêtre de paiement) et `applyPayment` (enregistrement)
-- `netlify.toml` — configuration Netlify (dossier des fonctions, en-têtes de sécurité)
-- `package.json` — dépendance `stripe`
+- `npm run test:functions` — toutes les fonctions contre les émulateurs
+  Firebase et un faux Stripe (empreinte, débit, annulation, Connect, webhook,
+  marketplace, abonnement, migration).
+- Carte de test Stripe : `4242 4242 4242 4242`, date future, CVC quelconque.

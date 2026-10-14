@@ -1,32 +1,26 @@
-// Utilitaires communs aux fonctions serverless Netlify (Stripe).
+// Client Stripe des fonctions Netlify.
+//
+// Variables d'environnement :
+//   STRIPE_SECRET_KEY     = sk_test_… (tests) puis sk_live_… (production)
+//   STRIPE_WEBHOOK_SECRET = whsec_… (fonction stripe-webhook, recommandé)
 import Stripe from "stripe";
 
-export const headers = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+export const stripeReady = () => !!process.env.STRIPE_SECRET_KEY;
 
-export const json = (statusCode, body) => ({ statusCode, headers, body: JSON.stringify(body) });
+// « live » ou « test » selon la clé : un compte Connect créé en test n'existe pas en production
+export const stripeMode = () => ((process.env.STRIPE_SECRET_KEY || "").startsWith("sk_live") ? "live" : "test");
 
-// Préflight CORS / méthode / configuration Stripe. Renvoie une réponse si la
-// requête doit s'arrêter là, sinon null.
-export function guard(event) {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers };
-  if (event.httpMethod !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!process.env.STRIPE_SECRET_KEY) return json(503, { error: "payments_not_configured" });
-  return null;
-}
-
-export const stripeClient = () => new Stripe(process.env.STRIPE_SECRET_KEY);
-
-// Adresse publique du site : variable URL fournie par Netlify, sinon origine de la requête
-export function siteOrigin(event) {
-  const fromHeader = event.headers?.origin || "";
-  return (process.env.URL || fromHeader || "https://lockr.fr").replace(/\/$/, "");
-}
-
-export function parseBody(event) {
-  try { return JSON.parse(event.body || "{}"); } catch { return {}; }
+let client = null;
+export function stripeClient() {
+  // Tests automatisés : un faux client Stripe peut être injecté
+  if (globalThis.__lkStripe) return globalThis.__lkStripe;
+  if (client) return client;
+  const opts = {};
+  // Tests : serveur stripe-mock local (STRIPE_API_HOST=localhost:12111)
+  if (process.env.STRIPE_API_HOST) {
+    const [host, port] = process.env.STRIPE_API_HOST.split(":");
+    Object.assign(opts, { host, port: Number(port) || 80, protocol: "http" });
+  }
+  client = new Stripe(process.env.STRIPE_SECRET_KEY, opts);
+  return client;
 }

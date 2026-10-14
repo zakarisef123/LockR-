@@ -1,73 +1,41 @@
-# 🔐 Sécurité LOCKR — état actuel et actions avant lancement public
+# 🔐 Sécurité LOCKR
 
-Ce document liste honnêtement ce qui est protégé aujourd'hui, ce qui ne l'est
-pas encore, et l'ordre dans lequel corriger. **Les points 1 à 4 sont à traiter
-avant d'ouvrir l'application au public.**
-
-## Ce qui est déjà en place
+## Ce qui est en place
 
 | Sujet | Protection |
 |---|---|
-| Mots de passe | Plus jamais stockés en clair : PBKDF2-SHA256 (100 000 itérations) + sel unique par compte. Les anciens comptes en clair sont convertis automatiquement à la connexion suivante. |
-| Session | Le navigateur ne garde que l'identifiant du compte ; le compte est relu en direct depuis la base (un compte banni ou supprimé est déconnecté immédiatement). |
-| Cartes bancaires | Aucune saisie de carte dans l'application : page sécurisée Stripe (PCI-DSS, 3-D Secure / DSP2). |
-| Paiements | Au retour de Stripe, le paiement est **vérifié côté serveur** (`verify-session`) avant d'être marqué payé — l'URL de retour seule ne suffit plus. |
-| Paiement simulé | Réservé aux comptes de démonstration ; un vrai compte ne peut pas « simuler » un paiement. |
-| En-têtes HTTP | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (voir `netlify.toml`). |
-| Enregistrements cachés | Supprimés : l'ancienne « surveillance » enregistrait le son et la position des artisans à leur insu (illégal — art. 226-1 du Code pénal, RGPD). |
-| Base de données | `firestore.rules` (phase 1) ferme tout ce qui n'est pas une collection de l'application. |
+| Comptes | **Firebase Authentication** (e-mail + mot de passe) : mots de passe gérés par Google, limitation des tentatives, e-mail de confirmation, « mot de passe oublié » par e-mail. |
+| Accès aux données | **Règles Firestore** ([`firestore.rules`](firestore.rules)) : il faut être connecté ; chacun ne lit que ses données (ses interventions, ses messages, ses ventes) ; l'admin voit tout. Testées automatiquement (`npm run test:rules`, 16 scénarios). |
+| Champs sensibles | Rôle, validation du dossier, abonnement, bannissement, Stripe et **tous les statuts de paiement** ne sont modifiables que par l'admin ou par le serveur. Un client ne peut pas se déclarer payé, ni s'attribuer un rôle. |
+| Profils publics | Les clients ne voient des artisans qu'une fiche publique (nom, ville, métiers, tarif, téléphone pro) — jamais l'IBAN, les documents ou les données personnelles. |
+| Prise de bons | Opération atomique : deux artisans ne peuvent pas prendre le même bon. |
+| Paiements | Montants calculés et paiements enregistrés **par le serveur** après vérification auprès de Stripe (voir [PAIEMENTS.md](PAIEMENTS.md)). Aucune saisie de carte dans l'application. |
+| Migration | Les anciens comptes sont convertis à leur première connexion (même identifiant, données conservées). Les mots de passe par défaut des premières versions sont refusés. Anciens mots de passe effacés de la base après migration. |
+| Bannissement | Enregistré sur le compte : l'utilisateur banni est déconnecté et la base lui refuse toute écriture. |
+| Démonstration | Version séparée (`VITE_DEMO=1`), sans aucun accès à la base réelle. Plus de comptes de démo en production. |
+| En-têtes HTTP | `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (`netlify.toml`). |
+| Vie privée | Plus d'enregistrement caché (son / position) ; position de l'artisan partagée uniquement pendant le trajet vers le client. Export et suppression du compte (RGPD) depuis le profil. |
 
-## Ce qui reste à faire (par priorité)
+## À faire de ton côté
 
-### 1. Firebase Authentication + règles Firestore phase 2 — **priorité absolue**
-Aujourd'hui l'application se connecte à Firestore sans authentification : la
-clé Firebase est publique (c'est normal), donc **toute personne technique peut
-lire la collection `accounts`** (e-mails, téléphones, IBAN, documents) et
-modifier n'importe quel document, y compris se donner le rôle `admin` ou
-marquer une mission « payée ».
+Voir [MISE-EN-PRODUCTION.md](MISE-EN-PRODUCTION.md) : activer Firebase
+Authentication, clé serveur, **e-mail réel sur les comptes admin**, Stripe,
+puis **publier `firestore.rules`** juste après la mise en ligne.
 
-Les mots de passe hachés limitent les dégâts, mais pas la fuite de données
-personnelles (RGPD). La correction :
-1. Activer Firebase Authentication (e-mail + mot de passe) dans la console.
-2. Créer les comptes Auth au moment de l'inscription / de la première connexion
-   (migration transparente des comptes existants).
-3. Publier les règles « PHASE 2 » de `firestore.rules`.
-4. Donner le rôle admin via un *custom claim* posé par une fonction serveur.
+## Pistes d'amélioration
 
-Bonus : Firebase Auth apporte la **vraie vérification d'e-mail** et la
-**réinitialisation du mot de passe par e-mail** (aujourd'hui : demande au support).
-
-### 2. Webhook Stripe
-Le statut « payé » est encore écrit par le navigateur après vérification.
-Une fonction `stripe-webhook` (événement `checkout.session.completed`) qui
-écrit dans Firestore avec le SDK Admin rendrait le paiement infalsifiable et
-fonctionnerait même si le client ferme son navigateur avant le retour.
-
-### 3. Documents justificatifs → Firebase Storage
-Pièces d'identité, Kbis, attestations d'assurance et photos sont stockés en
-base64 dans les documents Firestore (compressés, limite 900 Ko par document).
-Les déplacer dans Firebase Storage avec des règles d'accès (propriétaire +
-admin) — c'est plus sûr et beaucoup plus léger.
-
-### 4. Comptes de démonstration et mots de passe d'administration
-- Les comptes de démo (`client@demo.fr`, `karim@demo.fr`, `contact@batipro.fr`…,
-  mot de passe `1234`) sont créés si la base est vide. **À supprimer en
-  production** depuis Admin → Utilisateurs (ou ne pas les injecter).
-- Les mots de passe initiaux des comptes administrateurs figurent dans le code
-  source : **changez-les immédiatement** (Profil → Mot de passe) sur chaque
-  compte admin, puis retirez-les du code.
-
-### 5. Autres pistes
-- Limiter le nombre de tentatives de connexion (Firebase Auth le fait nativement).
-- Masquer les numéros de téléphone entre client et artisan (numéro relais).
-- Journal d'audit des actions admin (validation, bannissement, remboursement).
-- Politique de conservation des données (RGPD) : purge des comptes inactifs,
-  export des données à la demande (déjà possible depuis le profil).
+1. **Documents justificatifs → Firebase Storage** : pièces d'identité, Kbis,
+   photos sont encore stockés (compressés) dans les documents Firestore.
+   Storage avec règles d'accès (propriétaire + admin) serait plus sûr et plus léger.
+2. **Double authentification** pour les comptes admin.
+3. **Numéro masqué** entre client et artisan.
+4. **Journal d'audit** des actions admin (validation, bannissement, versements).
+5. **Conservation des données** : purge automatique des comptes inactifs.
 
 ## Tester sans toucher à la production
 
 ```bash
-VITE_DISABLE_FIREBASE=1 npm run dev
+npm run dev:demo        # version de démonstration (données locales)
+npm run test:rules      # règles de sécurité (émulateur Firebase)
+npm run test:functions  # fonctions serveur (émulateurs + faux Stripe)
 ```
-L'application tourne alors avec des données locales (mode démo), sans aucune
-écriture dans la base Firestore de production.

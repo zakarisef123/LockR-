@@ -1,68 +1,107 @@
 // Création d'une session de paiement Stripe Checkout.
-// Conforme DSP2 (authentification forte 3-D Secure gérée par Stripe) et PCI-DSS
-// (aucune donnée de carte ne transite par nos serveurs ni par l'application).
+// Le montant est TOUJOURS calculé ici, à partir de la base (jamais à partir de
+// ce qu'envoie le navigateur). Conforme DSP2 (3-D Secure géré par Stripe) et
+// PCI-DSS (aucune donnée de carte ne transite par l'application).
 //
-// Variables d'environnement (Netlify > Site configuration > Environment variables) :
-//   STRIPE_SECRET_KEY = sk_live_... (ou sk_test_... pour tester)
-//   COMMISSION_PCT    = part LOCKR retenue sur une intervention quand l'artisan a
-//                       activé les virements automatiques (défaut 15, soit 85 % artisan)
-import { guard, json, stripeClient, siteOrigin, parseBody } from "../lib/stripe.mjs";
+// Types :
+//   empreinte    — le client enregistre sa carte : le montant du devis est
+//                  réservé (capture différée), débité après l'intervention
+//   prestation   — règlement du reste à payer d'une intervention terminée
+//   lien_client  — idem, lien envoyé par l'artisan au client
+//   marketplace  — achat d'un article
+//   abonnement   — abonnement Entreprise (mensuel / annuel)
+import { preflight, json, parseBody, siteOrigin } from "../lib/http.mjs";
+import { adminReady, db, requestUser, isAdmin } from "../lib/admin.mjs";
+import { stripeReady, stripeClient } from "../lib/stripe.mjs";
+import { connectDestination } from "../lib/payments.mjs";
+import { bookingTotal, resteAPayer, commissionCents, SUB_PRICES, empreinteActive } from "../../src/lib/business.js";
 
-const TYPES = ["prestation", "acompte", "marketplace", "abonnement", "lien_client"];
+const TYPES = ["empreinte", "prestation", "lien_client", "marketplace", "abonnement"];
+const isWorker = (b, uid) => b.artisanAccountId === uid || b.partenaireId === uid;
 
 export const handler = async (event) => {
-  const stop = guard(event);
+  const stop = preflight(event);
   if (stop) return stop;
+  if (!stripeReady() || !adminReady()) return json(503, { error: "payments_not_configured" });
+
+  const user = await requestUser(event);
+  if (!user?.account) return json(401, { error: "auth_required" });
+  if (user.account.banned) return json(403, { error: "forbidden" });
+
+  const { type, ref, plan } = parseBody(event);
+  if (!TYPES.includes(type)) return json(400, { error: "invalid_type" });
 
   try {
-    const { amount, label, type, bookingId, email, artisanStripeId } = parseBody(event);
-    const cents = Math.round(Number(amount) * 100);
-    if (!Number.isFinite(cents) || cents < 50 || cents > 5000000) return json(400, { error: "invalid_amount" });
-    const kind = TYPES.includes(type) ? type : "prestation";
-    const ref = String(bookingId || "").slice(0, 120);
+    let amount = 0;
+    let label = "Prestation LOCKR";
+    let refId = String(ref || "");
+    let destination = null;
+    let capture = "automatic";
 
-    const commissionPct = Math.min(95, Math.max(0, Number(process.env.COMMISSION_PCT || "15")));
-    const origin = siteOrigin(event);
-    const name = String(label || "Prestation LOCKR").slice(0, 200);
-
-    // Split automatique Stripe Connect : uniquement pour les interventions
-    // (jamais pour les abonnements ni la marketplace).
-    const paymentIntentData = {
-      description: name,
-      statement_descriptor_suffix: "LOCKR",
-      metadata: { bookingId: ref, type: kind },
-    };
-    const split = artisanStripeId && /^acct_[A-Za-z0-9]+$/.test(artisanStripeId) && ["prestation", "acompte", "lien_client"].includes(kind);
-    if (split) {
-      paymentIntentData.application_fee_amount = Math.round(cents * commissionPct / 100);
-      paymentIntentData.transfer_data = { destination: artisanStripeId };
+    if (["empreinte", "prestation", "lien_client"].includes(type)) {
+      const snap = await db().doc(`bookings/${refId}`).get();
+      if (!snap.exists) return json(404, { error: "not_found" });
+      const b = snap.data();
+      if (type === "empreinte") {
+        if (b.clientId !== user.uid && !isAdmin(user)) return json(403, { error: "forbidden" });
+        if (!["en_attente_paiement", "assignée"].includes(b.statut) || empreinteActive(b)) return json(409, { error: "invalid_state" });
+        amount = bookingTotal(b);
+        capture = "manual";
+        label = "Réservation LOCKR — montant réservé, débité après l'intervention";
+      } else {
+        const allowed = b.clientId === user.uid || isWorker(b, user.uid) || isAdmin(user);
+        if (!allowed) return json(403, { error: "forbidden" });
+        if (b.statut !== "terminée") return json(409, { error: "not_finished" });
+        amount = resteAPayer(b);
+        label = "Intervention LOCKR";
+      }
+      destination = await connectDestination(b);
+    } else if (type === "marketplace") {
+      const snap = await db().doc(`sales/${refId}`).get();
+      if (!snap.exists) return json(404, { error: "not_found" });
+      const sale = snap.data();
+      if (sale.acheteurId !== user.uid) return json(403, { error: "forbidden" });
+      if (sale.statut !== "en_attente_paiement") return json(409, { error: "invalid_state" });
+      amount = Number(sale.prix) || 0;
+      label = `Marketplace LOCKR — ${String(sale.titre || "Article").slice(0, 120)}`;
+    } else if (type === "abonnement") {
+      if (user.account.role !== "partenaire") return json(403, { error: "forbidden" });
+      if (!SUB_PRICES[plan]) return json(400, { error: "invalid_plan" });
+      amount = SUB_PRICES[plan];
+      refId = user.uid;
+      label = plan === "annuel" ? "Abonnement Entreprise LOCKR — 1 an" : "Abonnement Entreprise LOCKR — 1 mois";
     }
 
-    const stripe = stripeClient();
-    const session = await stripe.checkout.sessions.create({
+    const cents = Math.round(amount * 100);
+    if (!Number.isFinite(cents) || cents < 50) return json(409, { error: "nothing_to_pay" });
+    if (cents > 5000000) return json(400, { error: "invalid_amount" });
+
+    const fee = destination ? commissionCents(cents) : 0;
+    const metadata = {
+      type, ref: refId, uid: user.uid, ...(type === "abonnement" ? { plan } : {}),
+      split: destination ? "auto" : "manuel", fee_cents: String(fee),
+    };
+    const paymentIntentData = {
+      description: label,
+      statement_descriptor_suffix: "LOCKR",
+      metadata: { type, ref: refId },
+      ...(capture === "manual" ? { capture_method: "manual" } : {}),
+      ...(destination ? { application_fee_amount: fee, transfer_data: { destination } } : {}),
+    };
+    const origin = siteOrigin(event);
+    const session = await stripeClient().checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
-      currency: "eur",
-      customer_email: email || undefined,
-      line_items: [{
-        price_data: { currency: "eur", unit_amount: cents, product_data: { name } },
-        quantity: 1,
-      }],
-      metadata: {
-        bookingId: ref,
-        type: kind,
-        commission_pct: String(commissionPct),
-        artisan_account: split ? artisanStripeId : "",
-        split: split ? "auto" : "manuel",
-      },
-      success_url: `${origin}/?paiement=succes&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/?paiement=annule&type=${encodeURIComponent(kind)}&ref=${encodeURIComponent(ref)}`,
+      customer_email: user.email || undefined,
+      line_items: [{ price_data: { currency: "eur", unit_amount: cents, product_data: { name: label } }, quantity: 1 }],
+      metadata,
       payment_intent_data: paymentIntentData,
+      success_url: `${origin}/?paiement=succes&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/?paiement=annule`,
     });
-
     return json(200, { url: session.url, id: session.id });
   } catch (err) {
-    console.error("Stripe error:", err.message);
-    return json(500, { error: "stripe_error", message: err.message });
+    console.error("create-checkout:", err.message);
+    return json(500, { error: "stripe_error" });
   }
 };

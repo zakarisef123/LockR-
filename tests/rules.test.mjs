@@ -94,6 +94,11 @@ test("profils : lisibles par les connectés, cohérents avec le compte", async (
   await assertSucceeds(setDoc(doc(pending, "profiles", ids.pending), { id: ids.pending, artisanId: ids.pending, nom: "X", dossierStatus: "pending" }));
   await assertFails(setDoc(doc(pending, "profiles", ids.pending), { id: ids.pending, artisanId: ids.pending, nom: "X", dossierStatus: "pending", iban: "FR76..." }));
   await assertFails(setDoc(doc(as(ids.client), "profiles", ids.client), { id: ids.client, artisanId: ids.client, nom: "X" }));
+  // Mise à jour par l'artisan : ses informations oui, sa validation / Stripe non
+  await assertSucceeds(updateDoc(doc(pending, "profiles", ids.pending), { nom: "Nouveau nom", dispo: false }));
+  await assertFails(updateDoc(doc(pending, "profiles", ids.pending), { dossierStatus: "approved" }));
+  await assertFails(updateDoc(doc(as(ids.pro), "profiles", ids.pro), { stripeReady: true }));
+  await assertSucceeds(updateDoc(doc(as(ids.admin), "profiles", ids.pending), { dossierStatus: "approved" }));
 });
 
 // ── Interventions ──────────────────────────────────────────────────────────

@@ -106,7 +106,7 @@ export async function isEmailBanned(email) {
 }
 
 export async function signOutUser() {
-  try { if (auth) await signOut(auth); } catch { /* ignore */ }
+  try { if (auth) await signOut(auth); } catch (e) { console.error("[déconnexion]", e); }
 }
 
 /* Mot de passe oublié : e-mail de réinitialisation envoyé par Firebase.

@@ -5,6 +5,14 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  # SDK Admin Firebase : installé tel quel (non regroupé) dans les fonctions
+  external_node_modules = ["firebase-admin"]
+
+# Variables d'environnement nécessaires (Site configuration → Environment variables) :
+#   FIREBASE_SERVICE_ACCOUNT   clé JSON du compte de service Firebase (accès serveur)
+#   STRIPE_SECRET_KEY          sk_test_… puis sk_live_…
+#   STRIPE_WEBHOOK_SECRET      whsec_… (fonction stripe-webhook)
+# Site de démonstration (autre site Netlify, même dépôt) : VITE_DEMO = 1
 
 # Sécurité HTTP (en-têtes appliqués à toutes les pages)
 [[headers]]

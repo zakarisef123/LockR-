@@ -34,8 +34,6 @@ service cloud.firestore {
     function isActiveUser() { return hasAccount() && notBanned(); }
     function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
     function unchanged(fields) { return !changed().hasAny(fields); }
-    function newField(f, dflt) { return request.resource.data.get(f, dflt); }
-    function oldField(f, dflt) { return resource.data.get(f, dflt); }
 
     // Part de l'artisan sur une intervention standard (100 − commission LOCKR 15 %)
     function PCT_DEFAULT() { return 85; }
@@ -69,20 +67,28 @@ service cloud.firestore {
     }
 
     // ── Profils publics des artisans (liste proposée aux clients) ───────────
-    // Copie publique d'une partie du compte : le statut de validation, le
-    // bannissement et Stripe doivent correspondre au compte.
+    // Copie publique d'une partie du compte (jamais l'IBAN, les documents…).
+    function profileFields() {
+      return ['id', 'artisanId', 'nom', 'ville', 'lat', 'lng', 'photo', 'metiers', 'metier', 'tarif',
+              'dispo', 'certif', 'tel', 'dossierStatus', 'banned', 'stripeReady', 'updatedAt'];
+    }
     match /profiles/{accountId} {
       allow read: if signedIn();
-      allow create, update: if isAdmin() || (
+      // Création par l'artisan : copie cohérente avec son compte
+      allow create: if isAdmin() || (
         accountId == uid() && hasAccount() && me().role == 'pro'
         && request.resource.data.id == uid()
         && request.resource.data.artisanId == me().artisanId
         && request.resource.data.get('dossierStatus', 'approved') == me().get('dossierStatus', 'approved')
         && request.resource.data.get('banned', false) == me().get('banned', false)
         && request.resource.data.get('stripeReady', false) == me().get('stripeOnboarded', false)
-        && request.resource.data.keys().hasOnly(['id', 'artisanId', 'nom', 'ville', 'lat', 'lng', 'photo',
-              'metiers', 'metier', 'tarif', 'dispo', 'certif', 'tel', 'dossierStatus', 'banned',
-              'stripeReady', 'updatedAt']));
+        && request.resource.data.keys().hasOnly(profileFields()));
+      // Mise à jour par l'artisan : ses informations seulement. Validation,
+      // bannissement et Stripe sont recopiés par l'admin ou le serveur.
+      allow update: if isAdmin() || (
+        accountId == uid() && hasAccount() && me().role == 'pro' && notBanned()
+        && unchanged(['id', 'artisanId', 'dossierStatus', 'banned', 'stripeReady'])
+        && request.resource.data.keys().hasOnly(profileFields()));
       allow delete: if signedIn() && (accountId == uid() || isAdmin());
     }
 

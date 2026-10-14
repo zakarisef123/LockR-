@@ -4,7 +4,7 @@ import { useSyncedState, useSyncStatus, clearSyncError, cleanForFirestore, reset
 import { IS_DEMO } from "./lib/config.js";
 import {
   live, onAuthChange, signIn, signUp, cancelSignUp, createAccountDoc, isEmailBanned, signOutUser,
-  resetPassword, sendVerification, reloadUser, changePassword, confirmPassword, deleteOwnAccount,
+  resetPassword, sendVerification, reloadUser, changePassword, confirmPassword, deleteOwnAccount, currentUser,
 } from "./lib/backend.js";
 import {
   LOCKR_COMMISSION, PARTNER_COMMISSION, MARKET_COMMISSION, PCT_DEFAULT, SUB_PRICES,
@@ -88,6 +88,9 @@ const pctLabel = b => `${Math.round(proShareRate(b) * 100)} %`;
 /* Données de démonstration : visibles uniquement par les comptes de démo
    (jamais par les vrais clients / artisans). */
 const DEMO_RECORD_IDS = new Set(["b0","b1","b2","b3","b4","b5","pb1","pb2","pb3","bon1","bon2","bon3","bon4","bon5","bon6","bon7","l1","l2","l3","l4","l5","s1","s2","s3","m1","m2","m3"]);
+// Identifiants des comptes d'exemple des premières versions (présents dans la
+// base de production). Les comptes admin / équipe interne n'en font pas partie :
+// en production, ce sont de vrais comptes.
 const DEMO_ACCOUNT_IDS = new Set(["c1","c2","p1","p2","p3","p4","p5","p6","p7","p8","part1","part2"]);
 const isDemoRecord = r => !!r && (r.isDemo === true || DEMO_RECORD_IDS.has(r.id));
 const isDemoAccount = a => !!a && (a.isDemo === true || DEMO_ACCOUNT_IDS.has(a.id));
@@ -1153,13 +1156,10 @@ const INIT_ACCOUNTS = [
   { id: "p6", role: "pro", artisanId: "a8", nom: "David Petit",      email: "david@demo.fr",   ...DEMO_PASS, verified: true, photo: null, ville: "Paris", lat: 48.855, lng: 2.358, isDemo: true, dossierStatus: "approved", metiers: ["electricien"], metier: "electricien" },
   { id: "p7", role: "pro", artisanId: "a9", nom: "Pierre Rousseau",  email: "pierre@demo.fr",  ...DEMO_PASS, verified: true, photo: null, ville: "Paris", lat: 48.870, lng: 2.328, isDemo: true, dossierStatus: "approved", metiers: ["chauffagiste"], metier: "chauffagiste" },
   { id: "p8", role: "pro", artisanId: "a10", nom: "Antoine Bernard", email: "antoine@demo.fr", ...DEMO_PASS, verified: true, photo: null, ville: "Lyon",  lat: 45.760, lng: 4.840, isDemo: true, dossierStatus: "approved", metiers: ["chauffagiste"], metier: "chauffagiste" },
-  { id: "admin1", role: "admin", nom: "Admin LOCKR", email: "admin@lockr.fr", salt: "3zii6oio098pzol3", passHash: "5950d9a3221de13e1875fe9596ce29a485f72ba544b0800a18e4b465e4eef6a8", verified: true },
-  { id: "admin2", role: "admin", nom: "Soze", email: "soze@lockr.fr", salt: "tutdzszodr35o4ie", passHash: "eed42fcbd6bd6f88a7a578405919c1e1918bd517e449985f37e6b3ac3ef94bc8", verified: true },
-  { id: "admin3", role: "admin", nom: "Emma", email: "emma@lockr.fr", salt: "mux7sl2khea4jjx5", passHash: "9fc633b4287dbef5bee569b790ff61dc5c3cef97a81b30ec310070a3f1a66672", verified: true },
-  { id: "admin4", role: "admin", nom: "Zakari", email: "zakari@lockr.fr", salt: "ublehlp03lzxtaxa", passHash: "23fa0e4eecb7187e20ac6617a6b13ec08e01fce9517ef92bd12fe4ded4d45a03", verified: true },
+  { id: "admin1", role: "admin", nom: "Admin Démo", email: "admin@demo.fr", ...DEMO_PASS, isDemo: true },
   { id: "part1", role: "partenaire", nom: "BâtiPro SARL", email: "contact@batipro.fr", ...DEMO_PASS, verified: true, isDemo: true, dossierStatus: "approved", siret: "12345678900012", rcs: "Paris B 123 456 789", capital: "50 000 €", assurance: "AXA Pro RC n°AX-2024-001", qualibat: "8711 — Serrurerie", tva: "FR12345678900", iban: "FR76 3000 6000 0112 3456 7890 189", secteurs: ["serrurier","plombier"], ville: "Paris", logo: null, statut: "actif", dateContrat: "2024-01-15" },
   { id: "part2", role: "partenaire", nom: "Électro Services SAS", email: "info@electroservices.fr", ...DEMO_PASS, verified: true, isDemo: true, dossierStatus: "approved", siret: "98765432100021", rcs: "Lyon B 987 654 321", capital: "100 000 €", assurance: "Generali Pro n°GEN-2023-445", qualibat: "RGE — QualiElec", tva: "FR98765432100", iban: "FR76 1027 8060 0001 2345 6789 010", secteurs: ["electricien","chauffagiste"], ville: "Lyon", logo: null, statut: "actif", dateContrat: "2023-11-01" },
-  { id: "part_lockr", role: "partenaire", nom: "LOCKR — Équipe interne", email: "equipe@lockr.fr", salt: "1n17mgulkmqqw355", passHash: "98ab55f326fbf3996ff18dcc649d5c50f5c9b21aa6d61a86bae536d75641cfe3", verified: true, internalAccess: true, dossierStatus: "approved", siret: "92345678900012", rcs: "Paris B 923 456 789", capital: "10 000 €", assurance: "AXA France IARD", qualibat: "—", tva: "FR32923456789", iban: "FR76 3000 6000 0112 3456 7890 189", secteurs: ["serrurier","plombier","electricien","chauffagiste","fermetures"], ville: "Paris", logo: null, statut: "actif", dateContrat: "2024-01-01" },
+  { id: "part_lockr", role: "partenaire", nom: "LOCKR — Équipe interne", email: "equipe@demo.fr", ...DEMO_PASS, isDemo: true, internalAccess: true, dossierStatus: "approved", siret: "92345678900012", rcs: "Paris B 923 456 789", capital: "10 000 €", assurance: "AXA France IARD", qualibat: "—", tva: "FR32923456789", iban: "FR76 3000 6000 0112 3456 7890 189", secteurs: ["serrurier","plombier","electricien","chauffagiste","fermetures"], ville: "Paris", logo: null, statut: "actif", dateContrat: "2024-01-01" },
 ];
 
 const daysAgo = n => new Date(Date.now() - 86400000 * n).toISOString();
@@ -2630,6 +2630,7 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
     { email: "client@demo.fr", label: fr ? "Client" : "Client" },
     { email: "karim@demo.fr", label: fr ? "Artisan" : "Craftsman" },
     { email: "contact@batipro.fr", label: fr ? "Entreprise" : "Company" },
+    { email: "admin@demo.fr", label: "Admin" },
   ];
 
   const login = async (emailArg, passArg) => {
@@ -3898,6 +3899,7 @@ function PasswordChangeCard({ account, setAccounts, lang = "fr" }) {
   };
   return (
     <div className="lk-card" style={{ padding: "16px 18px", marginTop: 16 }}>
+      <EmailVerifyNotice lang={lang} />
       <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>🔑 {fr ? "Changer mon mot de passe" : "Change my password"}</div>
       <input className="lk-input" type="password" autoComplete="current-password" value={cur} onChange={e => setCur(e.target.value)} placeholder={fr ? "Mot de passe actuel" : "Current password"} style={{ marginBottom: 8 }} />
       <input className="lk-input" type="password" autoComplete="new-password" value={n1} onChange={e => setN1(e.target.value)} placeholder={fr ? `Nouveau mot de passe (${MIN_PASS} car. min.)` : `New password (${MIN_PASS}+ chars)`} style={{ marginBottom: 8 }} />
@@ -6341,7 +6343,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
 
   const modals = (
     <>
-      {toast && <div role="status" style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: T.success, color: "#fff", borderRadius: 12, padding: "12px 18px", fontSize: 13, fontWeight: 700, maxWidth: "calc(100% - 24px)", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>{toast}</div>}
+      {toast && <div role="status" style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 9999, pointerEvents: "none", background: T.success, color: "#fff", borderRadius: 12, padding: "12px 18px", fontSize: 13, fontWeight: 700, maxWidth: "calc(100% - 24px)", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>{toast}</div>}
       {!isDesktop && screen === "home" && (
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,.06)" }}>
           {[
@@ -6781,7 +6783,7 @@ ${d.type === "devis" ? `<p class="muted">Devis valable 30 jours. Bon pour accord
   w.document.close();
 }
 
-function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {}, factures = [], setFactures = () => {}, openLegal , demoTotal = 0, onCleanupDemo}) {
+function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], setSales = () => {}, onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {}, factures = [], setFactures = () => {}, openLegal , demoTotal = 0, onCleanupDemo}) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
@@ -6983,7 +6985,15 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                 {actionBtn(fr ? "Détails" : "Details", () => setDetail(b), T.textMid)}
                 {b.statut === "terminée" && b.statutPaiement !== "payé" && actionBtn(fr ? "Paiement reçu" : "Payment received", () => { if (window.confirm(fr ? "Confirmer la réception du paiement (hors Stripe) ?" : "Confirm payment received (outside Stripe)?")) updateBooking(b.id, { statutPaiement: "payé", paiementVerifie: true, payeLe: ts(), validePar: account.nom }); }, T.success)}
                 {b.statut === "terminée" && b.statutPaiement === "payé" && !b.proPaid && proOwed(b) > 0 && actionBtn(fr ? "Artisan payé" : "Craftsman paid", () => updateBooking(b.id, { proPaid: true, proPaidAt: ts() }), "#2563eb")}
-                {!["terminée", "annulée", "annulée_client"].includes(b.statut) && actionBtn(fr ? "Annuler" : "Cancel", () => { if (window.confirm(fr ? "Annuler cette mission ?" : "Cancel this mission?")) updateBooking(b.id, { statut: "annulée", annuleeLe: ts(), annulationRaison: "admin", ...(b.acompteClientPaye ? { remboursementAcompte: "à_traiter" } : {}) }); }, T.danger)}
+                {!["terminée", "annulée", "annulée_client"].includes(b.statut) && actionBtn(fr ? "Annuler" : "Cancel", async () => {
+                  if (!window.confirm(fr ? "Annuler cette mission ? La carte éventuellement réservée du client sera libérée." : "Cancel this mission? Any card hold will be released.")) return;
+                  // Empreinte bancaire : libérée par le serveur avant l'annulation
+                  if (live && empreinteActive(b)) {
+                    const r = await releaseHold(b.id, "admin");
+                    if (!r.ok) { alert(fr ? "Libération de la carte impossible pour le moment, réessayez." : "Could not release the card hold, please retry."); return; }
+                  } else if (empreinteActive(b)) applyPayment({ setBookings }, { type: "liberation", ref: b.id, demo: true });
+                  updateBooking(b.id, { statut: "annulée", annuleeLe: ts(), annulationRaison: "admin", ...(b.acompteClientPaye ? { remboursementAcompte: "à_traiter" } : {}) });
+                }, T.danger)}
               </div>
             </>,
             { key: b.id, borderLeft: `4px solid ${(CLIENT_ST[b.statut] || {}).c || T.border}` }
@@ -7288,6 +7298,9 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{fmt(x.prix)}</div>
               <div style={{ fontSize: 11, color: x.statut === "en_attente_paiement" ? T.warn : T.success, fontWeight: 600 }}>{x.statut === "en_attente_paiement" ? (fr ? "Paiement en attente" : "Awaiting payment") : `+${fmt(x.commission)} LOCKR`}</div>
+              {x.statut === "payée" && (x.vendeurPaye
+                ? <div style={{ fontSize: 10.5, color: T.success, fontWeight: 700, marginTop: 3 }}>{fr ? "Vendeur payé ✓" : "Seller paid ✓"}</div>
+                : <button onClick={() => { if (window.confirm(fr ? `Confirmer le virement de ${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))} à ${x.vendeurNom} ?` : `Confirm transfer of ${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))} to ${x.vendeurNom}?`)) setSales(p => p.map(y => y.id === x.id ? { ...y, vendeurPaye: true, vendeurPayeLe: ts() } : y)); }} style={{ marginTop: 4, background: "rgba(37,99,235,.08)", border: "1px solid rgba(37,99,235,.25)", color: "#2563eb", borderRadius: 8, padding: "4px 8px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>{fr ? `Vendeur payé (${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))})` : `Seller paid (${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))})`}</button>)}
             </div>
           </div>, { key: x.id }
         ))}
@@ -9532,6 +9545,7 @@ function publicProfile(a) {
     dossierStatus: a.dossierStatus || "approved", banned: !!a.banned, stripeReady: !!a.stripeOnboarded,
   });
 }
+const PROFILE_ADMIN_FIELDS = ["dossierStatus", "banned", "stripeReady"];
 const sameProfile = (cur, p) => !!cur && Object.keys(p).every(k => JSON.stringify(cur[k] ?? null) === JSON.stringify(p[k] ?? null));
 
 /* Messages d'erreur de connexion / inscription */
@@ -9552,17 +9566,20 @@ function authErrorText(code, lang) {
   return m[code] || (fr ? "Opération impossible pour le moment. Réessayez." : "Operation not possible right now. Please retry.");
 }
 
-/* Bandeau : confirmation de l'adresse e-mail (production) */
-function VerifyEmailBanner({ email, lang = "fr", onVerified }) {
+/* Confirmation de l'adresse e-mail (production) — affichée dans le profil,
+   jamais par-dessus l'application. */
+function EmailVerifyNotice({ lang = "fr" }) {
   const fr = lang !== "en";
+  const [user, setUser] = useState(() => currentUser());
   const [sent, setSent] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  if (hidden) return null;
+  if (!live || !user || user.emailVerified) return null;
   return (
-    <div role="status" style={{ position: "fixed", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 9000, width: "calc(100% - 24px)", maxWidth: 560, background: "#1e293b", color: "#fff", borderRadius: 12, padding: "10px 14px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", boxShadow: "0 8px 24px rgba(0,0,0,.25)" }}>
-      <span style={{ flex: 1, minWidth: 180, lineHeight: 1.4 }}>{fr ? `Confirmez votre adresse e-mail : un lien a été envoyé à ${email}.` : `Please confirm your e-mail address: a link was sent to ${email}.`}</span>
-      <button onClick={async () => { if (await sendVerification()) setSent(true); }} disabled={sent} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{sent ? (fr ? "Envoyé ✓" : "Sent ✓") : (fr ? "Renvoyer" : "Resend")}</button>
-      <button onClick={async () => { const u = await reloadUser(); if (u?.emailVerified) onVerified(); else setHidden(true); }} style={{ background: "#fff", border: "none", color: "#1e293b", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{fr ? "C'est fait" : "Done"}</button>
+    <div style={{ background: "rgba(37,99,235,.06)", border: "1px solid rgba(37,99,235,.2)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: T.textMid, lineHeight: 1.5 }}>
+      {fr ? `Adresse e-mail non confirmée : un lien a été envoyé à ${user.email}.` : `E-mail not confirmed yet: a link was sent to ${user.email}.`}
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button onClick={async () => { if (await sendVerification()) setSent(true); }} disabled={sent} className="lk-ghost" style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}>{sent ? (fr ? "Lien envoyé ✓" : "Link sent ✓") : (fr ? "Renvoyer le lien" : "Resend link")}</button>
+        <button onClick={async () => { const u = await reloadUser(); setUser(u ? { email: u.email, emailVerified: u.emailVerified } : null); }} className="lk-ghost" style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}>{fr ? "J'ai confirmé" : "I confirmed"}</button>
+      </div>
     </div>
   );
 }
@@ -9591,7 +9608,6 @@ export default function App() {
      Production : Firebase Authentication (l'identifiant du compte est celui
      de Firebase). Démonstration : session locale (identifiant seul). */
   const [authUser, setAuthUser] = useState(live ? undefined : null);
-  const [, setAuthTick] = useState(0);
   useEffect(() => onAuthChange(u => setAuthUser(u || null)), []);
   const [demoSession, setDemoSession] = useState(() => (live ? null : readSessionId()));
   const userId = live ? (authUser ? authUser.uid : null) : demoSession;
@@ -9637,7 +9653,7 @@ export default function App() {
   const [settings, setSettings] = useSyncedState("settings", [], { sources: S.settings });
   const [techs, setTechs] = useSyncedState("techs", INIT_PARTNER_TECHS, { sources: S.techs });
   const [factures, setFactures] = useSyncedState("factures", [], { sources: S.factures });
-  const [profiles, setProfiles] = useSyncedState("profiles", [], { sources: S.profiles, demo: false });
+  const [profiles, setProfiles, profilesReady] = useSyncedState("profiles", [], { sources: S.profiles, demo: false });
   const setters = { setBookings, setAccounts, setSales, setListings };
 
   // Ordre de priorité des techniciens (défini par l'admin, partagé avec tous les pros)
@@ -9694,12 +9710,17 @@ export default function App() {
      lui-même, et par l'admin pour tous (validation, bannissement…). */
   const profileTried = useRef(new Map());
   useEffect(() => {
-    if (!live || !me || registering) return;
+    // On attend d'avoir lu les profils existants (sinon on recréerait une fiche périmée)
+    if (!live || !me || registering || !profilesReady) return;
     const targets = role === "pro" && account ? [account] : isAdm && accountsReady ? accounts.filter(a => a.role === "pro") : [];
     const updates = [];
     targets.forEach(a => {
-      const p = publicProfile(a);
-      if (sameProfile(profiles.find(x => x.id === a.id), p)) return;
+      const full = publicProfile(a);
+      const cur = profiles.find(x => x.id === a.id);
+      // L'artisan ne recopie que ses propres informations ; validation,
+      // bannissement et Stripe sont tenus à jour par l'admin et le serveur.
+      const p = cur && !isAdm ? { ...cur, ...Object.fromEntries(Object.entries(full).filter(([k]) => !PROFILE_ADMIN_FIELDS.includes(k))) } : full;
+      if (sameProfile(cur, p)) return;
       const key = JSON.stringify(p);
       if (profileTried.current.get(a.id) === key) return; // déjà tenté (évite de boucler si refusé)
       profileTried.current.set(a.id, key);
@@ -9709,7 +9730,7 @@ export default function App() {
     if (updates.length || orphans.length) {
       setProfiles(prev => [...prev.filter(x => !orphans.includes(x.id) && !updates.some(u => u.id === x.id)), ...updates]);
     }
-  }, [account, accounts, accountsReady, profiles, role, isAdm, me, registering]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [account, accounts, accountsReady, profiles, profilesReady, role, isAdm, me, registering]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Anciennes données (créées avant les comptes sécurisés) : l'admin complète
      automatiquement la liste des participants, sans laquelle client et
@@ -9797,6 +9818,7 @@ export default function App() {
     }
     sendVerification();
     setRegistering(false);
+    setPayNotice({ kind: "success", text: lang === "en" ? "Account created — a confirmation e-mail has been sent to you." : "Compte créé — un e-mail de confirmation vous a été envoyé." });
     return { ok: true, acc };
   };
 
@@ -9860,9 +9882,8 @@ export default function App() {
       {children}
       <SyncBanner lang={lang} />
       <CookieConsent lang={lang} />
-      {live && authUser && !authUser.emailVerified && account && <VerifyEmailBanner email={authUser.email} lang={lang} onVerified={() => setAuthTick(t => t + 1)} />}
       {payNotice && (
-        <div role="status" style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 10000, background: payNotice.kind === "success" ? T.success : payNotice.kind === "info" ? "#2563eb" : T.danger, color: "#fff", borderRadius: 12, padding: "12px 20px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,.2)", maxWidth: "calc(100% - 24px)" }}>
+        <div role="status" style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 10000, pointerEvents: "none", background: payNotice.kind === "success" ? T.success : payNotice.kind === "info" ? "#2563eb" : T.danger, color: "#fff", borderRadius: 12, padding: "12px 20px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,.2)", maxWidth: "calc(100% - 24px)" }}>
           {payNotice.text}
         </div>
       )}

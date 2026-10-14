@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:demo": "VITE_DEMO=1 vite",
     "build": "vite build",
+    "build:demo": "VITE_DEMO=1 vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:rules": "npx -y firebase-tools@14 emulators:exec --project demo-lockr --only firestore \"node --test tests/rules.test.mjs\"",
+    "test:functions": "npx -y firebase-tools@14 emulators:exec --project demo-lockr --only auth,firestore \"node --test --test-concurrency=1 tests/functions.test.mjs\"",
+    "test": "npm run test:rules && npm run test:functions"
   },
   "dependencies": {
     "firebase": "^11.10.0",

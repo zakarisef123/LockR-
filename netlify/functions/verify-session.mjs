@@ -1,34 +1,26 @@
-// Vérifie auprès de Stripe qu'une session de paiement a bien été payée.
-// L'application ne marque plus une mission « payée » sur la seule base de
-// l'URL de retour (falsifiable) : elle interroge Stripe via cette fonction.
-import { guard, json, stripeClient, parseBody } from "../lib/stripe.mjs";
+// Retour du client après le paiement : vérifie la session auprès de Stripe et
+// enregistre le paiement dans la base (une seule fois, voir applyCheckoutSession).
+// L'adresse de retour seule ne prouve rien : seule la réponse de Stripe compte.
+// Pas besoin d'être connecté (lien de paiement ouvert par un client non inscrit) :
+// l'identifiant de session Stripe est impossible à deviner.
+import { preflight, json, parseBody } from "../lib/http.mjs";
+import { adminReady } from "../lib/admin.mjs";
+import { stripeReady, stripeClient } from "../lib/stripe.mjs";
+import { applyCheckoutSession } from "../lib/payments.mjs";
 
 export const handler = async (event) => {
-  const stop = guard(event);
+  const stop = preflight(event);
   if (stop) return stop;
+  if (!stripeReady() || !adminReady()) return json(503, { error: "payments_not_configured" });
 
+  const { sessionId } = parseBody(event);
+  if (!sessionId || !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) return json(400, { error: "invalid_session" });
   try {
-    const { sessionId } = parseBody(event);
-    if (!sessionId || !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) return json(400, { error: "invalid_session" });
-    const stripe = stripeClient();
-    const s = await stripe.checkout.sessions.retrieve(sessionId);
-    // Part virée automatiquement à l'artisan (Stripe Connect), pour que
-    // l'administration ne la verse pas une seconde fois.
-    const cents = s.amount_total || 0;
-    const pct = Number(s.metadata?.commission_pct);
-    const transferred = s.metadata?.split === "auto" && Number.isFinite(pct)
-      ? (cents - Math.round(cents * pct / 100)) / 100
-      : 0;
-    return json(200, {
-      paid: s.payment_status === "paid",
-      amount: cents / 100,
-      transferred,
-      type: s.metadata?.type || "",
-      ref: s.metadata?.bookingId || "",
-      email: s.customer_details?.email || s.customer_email || "",
-    });
+    const session = await stripeClient().checkout.sessions.retrieve(sessionId, { expand: ["payment_intent"] });
+    const r = await applyCheckoutSession(session);
+    return json(200, { paid: r.paid, authorized: r.authorized, type: r.type, ref: r.ref });
   } catch (err) {
-    console.error("Stripe verify error:", err.message);
+    console.error("verify-session:", err.message);
     return json(500, { error: "stripe_error" });
   }
 };
