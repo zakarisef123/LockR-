@@ -5,7 +5,7 @@
 // Variables d'environnement (Netlify > Site configuration > Environment variables) :
 //   STRIPE_SECRET_KEY = sk_live_... (ou sk_test_... pour tester)
 //   COMMISSION_PCT    = part LOCKR retenue sur une intervention quand l'artisan a
-//                       activé les virements automatiques (défaut 60, soit 40 % artisan)
+//                       activé les virements automatiques (défaut 15, soit 85 % artisan)
 import { guard, json, stripeClient, siteOrigin, parseBody } from "../lib/stripe.mjs";
 
 const TYPES = ["prestation", "acompte", "marketplace", "abonnement", "lien_client"];
@@ -21,7 +21,7 @@ export const handler = async (event) => {
     const kind = TYPES.includes(type) ? type : "prestation";
     const ref = String(bookingId || "").slice(0, 120);
 
-    const commissionPct = Math.min(95, Math.max(0, Number(process.env.COMMISSION_PCT || "60")));
+    const commissionPct = Math.min(95, Math.max(0, Number(process.env.COMMISSION_PCT || "15")));
     const origin = siteOrigin(event);
     const name = String(label || "Prestation LOCKR").slice(0, 200);
 

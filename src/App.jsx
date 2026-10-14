@@ -1,9 +1,20 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useSyncedState, useSyncStatus, clearSyncError } from "./lib/sync.js";
+import { useSyncedState, useSyncStatus, clearSyncError, cleanForFirestore, resetDemoData, runBatch } from "./lib/sync.js";
+import { IS_DEMO } from "./lib/config.js";
+import {
+  live, onAuthChange, signIn, signUp, cancelSignUp, createAccountDoc, isEmailBanned, signOutUser,
+  resetPassword, sendVerification, reloadUser, changePassword, confirmPassword, deleteOwnAccount,
+} from "./lib/backend.js";
+import {
+  LOCKR_COMMISSION, PARTNER_COMMISSION, MARKET_COMMISSION, PCT_DEFAULT, SUB_PRICES,
+  proShareRate, posterPctFor, bookingTotal, proShare, posterShare, lockrShare,
+  posterOwed, proAutoPaid, proOwed, acomptePaid, resteAPayer, marketCommission,
+  bookingParticipants, empreinteActive, empreinteMontant, montantEncaisse,
+} from "./lib/business.js";
 import { compressImage, readImageInput } from "./lib/images.js";
 import { randomId, passwordFields, checkPassword, normEmail, readSessionId, writeSessionId } from "./lib/auth.js";
-import { startStripeCheckout, createCheckout, verifyCheckout, startConnectOnboarding } from "./lib/payments.js";
+import { startStripeCheckout, createCheckout, verifyCheckout, startConnectOnboarding, refreshConnectStatus, captureHold, releaseHold, getPlatformConfig } from "./lib/payments.js";
 
 /* ─── PROTECTION CODE SOURCE ───
    Clic droit et raccourcis DevTools bloqués sur ordinateur. La copie de texte
@@ -38,11 +49,8 @@ const ts = () => new Date().toISOString();
 const initial = s => (String(s || "").trim().charAt(0) || "?").toUpperCase();
 const firstName = s => String(s || "").trim().split(" ")[0] || "";
 
-/* ─── MODÈLE ÉCONOMIQUE (un seul endroit à modifier) ───
-   Part artisan par défaut sur une intervention : 40 % (LOCKR 60 %).
-   Un bon peut fixer sa propre part (techPct) : elle est alors utilisée. */
-const PRO_SHARE_DEFAULT = 0.40;
-const MARKET_COMMISSION = 0.15;   // marketplace : commission LOCKR sur chaque vente
+/* Modèle économique (commissions, reste à payer…) : src/lib/business.js,
+   partagé avec les fonctions serveur. */
 
 /* Identité de la société (factures, devis). ⚠️ À COMPLÉTER avec les
    informations officielles (Kbis) avant toute émission de facture réelle. */
@@ -53,19 +61,28 @@ const COMPANY = {
   tva: "N° TVA intracommunautaire à compléter",
   email: "contact@lockr.fr",
 };
-const PARTNER_COMMISSION = 0.05;  // entreprises partenaires abonnées
+/* Micro-entrepreneur — artisans (prestations de services artisanales, BIC).
+   Barème 2026 (Urssaf / impots.gouv.fr) : à vérifier chaque 1er janvier. */
+const AE = {
+  cotisations: 0.212,         // cotisations sociales
+  formation: 0.003,           // contribution à la formation professionnelle (artisans)
+  versementLiberatoire: 0.017, // option impôt sur le revenu prélevé avec les cotisations
+  seuilTva: 37500,            // franchise en base de TVA : seuil (CA de l'année précédente)
+  seuilTvaMajore: 41250,      // dépassé en cours d'année → TVA due dès le jour du dépassement
+  plafondMicro: 83600,        // plafond de CA du régime micro (2026-2028)
+};
 const URGENCE_SUPPLEMENT = 40;    // majoration affichée pour une urgence
-const proShareRate = b => (b && Number(b.techPct) > 0 ? Number(b.techPct) / 100 : b?.partenaireId ? 1 - PARTNER_COMMISSION : PRO_SHARE_DEFAULT);
-const bookingTotal = b => Number(b?.montantFinal ?? b?.montant ?? 0) || 0;
-const proShare = b => bookingTotal(b) * proShareRate(b);
-const lockrShare = b => bookingTotal(b) - proShare(b);
-/* Part déjà virée automatiquement à l'artisan par Stripe Connect (split) */
-const proAutoPaid = b => Number(b?.proVerseAuto) || 0;
-const proOwed = b => Math.max(0, Math.round((proShare(b) - proAutoPaid(b)) * 100) / 100);
-/* Virement automatique Stripe Connect : uniquement au taux standard, car la
-   part LOCKR prélevée par Stripe (COMMISSION_PCT côté serveur, 60 %) est fixe.
-   Les autres taux (entreprise partenaire, bon à % négocié) sont versés par l'admin. */
-const connectDestination = (b, acc) => (acc?.stripeOnboarded && acc.stripeAccountId && Math.abs(proShareRate(b) - PRO_SHARE_DEFAULT) < 1e-9 ? acc.stripeAccountId : null);
+/* État de l'empreinte bancaire d'une intervention, en clair */
+const EMPREINTE_TXT = (b, lang = "fr") => {
+  const fr = lang !== "en";
+  const e = b?.empreinte;
+  if (!e) return "";
+  if (e.statut === "autorisée") return fr ? `💳 ${fmt(e.montant)} réservés sur la carte — débités après l'intervention` : `💳 ${fmt(e.montant)} held on the card — charged after the intervention`;
+  if (e.statut === "débitée") return fr ? `💳 Carte débitée de ${fmt(e.debite)} ✓` : `💳 Card charged ${fmt(e.debite)} ✓`;
+  if (e.statut === "libérée") return fr ? "💳 Réservation sur la carte libérée" : "💳 Card hold released";
+  if (e.statut === "expirée") return fr ? "💳 Réservation expirée — paiement par lien" : "💳 Hold expired — payment by link";
+  return "";
+};
 const pctLabel = b => `${Math.round(proShareRate(b) * 100)} %`;
 
 /* Données de démonstration : visibles uniquement par les comptes de démo
@@ -75,7 +92,9 @@ const DEMO_ACCOUNT_IDS = new Set(["c1","c2","p1","p2","p3","p4","p5","p6","p7","
 const isDemoRecord = r => !!r && (r.isDemo === true || DEMO_RECORD_IDS.has(r.id));
 const isDemoAccount = a => !!a && (a.isDemo === true || DEMO_ACCOUNT_IDS.has(a.id));
 /* Un compte réel ne voit que les données réelles ; un compte de démo voit tout. */
-const visibleFor = (account, list) => (isDemoAccount(account) ? list : list.filter(r => !isDemoRecord(r)));
+// Version de démonstration : tout est visible. Production : les données de
+// démo éventuellement restantes ne sont jamais montrées aux vrais comptes.
+const visibleFor = (account, list) => (IS_DEMO || isDemoAccount(account) ? list : list.filter(r => !isDemoRecord(r)));
 
 function useWindowSize() {
   const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
@@ -128,7 +147,7 @@ const TRANS = {
     aeCaMois: "CA ce mois", aeCaAn: "CA annuel", aeSeuilMois: "Seuil mensuel", aeSeuilAn: "Seuil annuel",
     aeCotisations: "Cotisations URSSAF", aeCotisRate: "Cotisations sociales (21,2 %)",
     aeCotisCalc: "Cotisations estimées", aeCotisAlert: "Pensez à déclarer avant le",
-    aeSeuilAlert: "Attention : seuil de franchise TVA bientôt atteint (37 500 €)", aeSeuilOk: "Sous le seuil TVA",
+    aeSeuilAlert: "Attention : seuil de franchise TVA bientôt atteint", aeSeuilOk: "Sous le seuil TVA",
     aeCharges: "Charges sociales estimées", aeDeclaration: "Déclaration URSSAF",
     aeDeclare: "Déclarer ce mois", aeDeclareTitle: "Déclarer le CA du mois",
     aeCaSaisie: "CA à déclarer (€)", aeConfirmDecl: "Confirmer la déclaration", aeDeclDone: "Déclaration enregistrée",
@@ -530,7 +549,7 @@ const TRANS = {
     aeCaMois: "Revenue this month", aeCaAn: "Annual revenue", aeSeuilMois: "Monthly threshold", aeSeuilAn: "Annual threshold",
     aeCotisations: "Social contributions", aeCotisRate: "Social contributions (21.2%)",
     aeCotisCalc: "Estimated contributions", aeCotisAlert: "Remember to file before",
-    aeSeuilAlert: "Warning: VAT exemption threshold approaching (€37,500)", aeSeuilOk: "Below VAT threshold",
+    aeSeuilAlert: "Warning: VAT exemption threshold approaching", aeSeuilOk: "Below VAT threshold",
     aeCharges: "Estimated social charges", aeDeclaration: "URSSAF declaration",
     aeDeclare: "File this month", aeDeclareTitle: "File monthly revenue",
     aeCaSaisie: "Revenue to declare (€)", aeConfirmDecl: "Confirm filing", aeDeclDone: "Filing recorded",
@@ -539,7 +558,7 @@ const TRANS = {
     aeFraisCats: "Fuel,Tools,Training,Supplies,Travel,Phone,Insurance,Other",
     aeRecap: "Tax summary", aeNetEstime: "Estimated net income",
     aeTvaFranchise: "VAT exemption (franchise en base)", aeRegimeMicro: "Micro-entrepreneur scheme",
-    aeFormation: "VTC (vocational training contribution)", aeFormationRate: "0.30% of revenue",
+    aeFormation: "Training contribution (CFP)", aeFormationRate: "0.30% of revenue",
     aeCFE: "CFE (local business tax)", aeRappelCFE: "Due in December",
     aeMemo: "Tax memo", aeMemoPlaceholder: "Notes, reminders, deadlines…",
     feTitle: "Electronic Invoicing — 2026 Reform", feIntro: "The 2024 finance law makes electronic invoicing mandatory for B2B transactions in France. Progressive rollout from September 2026.",
@@ -1155,7 +1174,7 @@ const INIT_BOOKINGS = [
   { id: "pb1", isDemo: true, partenaireId: "part1", partenaireNom: "BâtiPro SARL", clientId: "ext", clientNom: "Jean Lefebvre", adresse: "34 rue du Faubourg, Paris 10", probleme: "serrure", typeIntervention: "Remplacement serrure 3 points", montant: 280, montantFinal: 280, statut: "terminée", statutPaiement: "payé", technicienId: "tech1", createdAt: daysAgo(3), bonType: "partner" },
   { id: "pb2", isDemo: true, partenaireId: "part1", partenaireNom: "BâtiPro SARL", clientId: "ext", clientNom: "Marie Dubois", adresse: "8 avenue de la République, Paris 11", probleme: "blindage", typeIntervention: "Blindage porte palière", montant: 450, statut: "en_cours", technicienId: "tech2", createdAt: daysAgo(1), bonType: "partner" },
   { id: "pb3", isDemo: true, partenaireId: "part1", partenaireNom: "BâtiPro SARL", clientId: "ext", clientNom: "Pierre Martin", adresse: "22 bd Voltaire, Paris 11", probleme: "ouverture", typeIntervention: "Ouverture porte claquée", montant: 160, statut: "en_attente", technicienId: null, createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), bonType: "partner" },
-];
+].map(b => (b.partenaireId || b.techPct ? b : { ...b, techPct: PCT_DEFAULT }));
 
 const INIT_BONS = [
   { id: "bon1", isDemo: true, titre: "Porte claquée urgence", adresse: "15 rue Lepic, Paris 18", probleme: "ouverture", urgence: true, montantEstime: 140, postedBy: "platform", postedByNom: "LOCKR", region: "Paris", lat: 48.884, lng: 2.337, createdAt: new Date(Date.now() - 3600000).toISOString(), techPct: 40 },
@@ -1685,30 +1704,44 @@ function bonVisibleForPro(bon, artisanId, priorityOrder) {
   return st.open || st.current === artisanId;
 }
 
-/* Virements automatiques (Stripe Connect Express) — l'artisan connecte son IBAN,
-   ensuite chaque paiement client est splitté automatiquement : part artisan versée
-   directement, commission LOCKR retenue. L'identifiant Stripe est enregistré sur
-   le compte (et non plus dans le navigateur) : il suit l'artisan sur tous ses appareils. */
-function StripeConnectCard({ lang = "fr", account, setAccounts }) {
+/* Virements automatiques (Stripe Connect Express) — l'artisan connecte son IBAN
+   chez Stripe ; ensuite chaque paiement client est partagé automatiquement :
+   sa part (85 %) lui est versée directement, la commission LOCKR est retenue.
+   C'est le serveur qui crée le compte Stripe et vérifie son activation. */
+function StripeConnectCard({ lang = "fr", account, compact = false }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const fr = lang !== "en";
-  const done = !!(account?.stripeAccountId && account?.stripeOnboarded);
+  const done = !!account?.stripeOnboarded;
 
   const activate = async () => {
     setLoading(true); setErr("");
-    const r = await startConnectOnboarding({ email: account.email, nom: account.nom, accountId: account.stripeAccountId || null });
-    if (r?.url) {
-      if (r.accountId && r.accountId !== account.stripeAccountId) {
-        setAccounts(p => p.map(a => a.id === account.id ? { ...a, stripeAccountId: r.accountId } : a));
-      }
-      setTimeout(() => { window.location.href = r.url; }, 300);
-      return;
-    }
-    setErr(fr ? "Les virements automatiques ne sont pas encore activés sur la plateforme. Votre part vous est versée par virement LOCKR." : "Automatic payouts are not enabled on the platform yet. Your share is paid by LOCKR bank transfer.");
+    const r = live ? await startConnectOnboarding() : null;
+    if (r?.url) { window.location.href = r.url; return; }
+    setErr(live
+      ? (fr ? "Les virements automatiques ne sont pas encore disponibles sur la plateforme. Votre part vous est versée par virement LOCKR." : "Automatic payouts are not available on the platform yet. Your share is paid by LOCKR bank transfer.")
+      : (fr ? "Version de démonstration : l'inscription Stripe n'est pas disponible." : "Demo version: Stripe registration is not available."));
+    setLoading(false);
+  };
+  const recheck = async () => {
+    setLoading(true); setErr("");
+    const r = await refreshConnectStatus();
+    if (!r?.onboarded) setErr(fr ? "Inscription Stripe pas encore terminée (identité ou IBAN à compléter)." : "Stripe registration not finished yet (identity or IBAN missing).");
     setLoading(false);
   };
 
+  const actions = !done && (
+    <>
+      <button onClick={activate} disabled={loading} className="lk-btn" style={{ fontSize: 12 }}>
+        {loading ? (fr ? "Ouverture…" : "Opening…") : (account?.stripeAccountId ? (fr ? "Terminer l'activation" : "Finish activation") : (fr ? "Activer les virements automatiques" : "Enable automatic payouts"))}
+      </button>
+      {live && account?.stripeAccountId && (
+        <button onClick={recheck} disabled={loading} className="lk-ghost" style={{ width: "100%", fontSize: 12, marginTop: 8 }}>{fr ? "J'ai terminé — vérifier" : "I'm done — check"}</button>
+      )}
+      {err && <div style={{ color: T.warn, fontSize: 11, marginTop: 8, lineHeight: 1.5 }}>{err}</div>}
+    </>
+  );
+  if (compact) return actions || null;
   return (
     <div className="lk-card" style={{ padding: "18px 20px", marginTop: 20, borderLeft: `4px solid ${done ? T.success : T.accent}` }}>
       <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 6 }}>💶 {fr ? "Virements automatiques" : "Automatic payouts"}</div>
@@ -1717,19 +1750,14 @@ function StripeConnectCard({ lang = "fr", account, setAccounts }) {
           ? (fr ? "Vos virements automatiques sont activés ✓ — votre part de chaque intervention est versée directement sur votre compte bancaire." : "Automatic payouts enabled ✓ — your share of each intervention is paid directly to your bank account.")
           : (fr ? "Connectez votre IBAN de façon sécurisée (Stripe) pour recevoir automatiquement votre part de chaque intervention." : "Securely connect your IBAN (Stripe) to automatically receive your share of each intervention.")}
       </div>
-      {!done && (
-        <button onClick={activate} disabled={loading} className="lk-btn" style={{ fontSize: 12 }}>
-          {loading ? (fr ? "Ouverture…" : "Opening…") : (account?.stripeAccountId ? (fr ? "Terminer l'activation" : "Finish activation") : (fr ? "Activer les virements automatiques" : "Enable automatic payouts"))}
-        </button>
-      )}
-      {err && <div style={{ color: T.warn, fontSize: 11, marginTop: 8, lineHeight: 1.5 }}>{err}</div>}
+      {actions}
     </div>
   );
 }
 
 /* Modale : générer et envoyer un lien de paiement Stripe à un client
    (SMS, e-mail, copie du lien, ou QR code à scanner sur place). */
-function SendPaymentLinkModal({ amount, label, bookingId, clientNom, clientTel, artisanStripeId, onClose, lang = "fr" }) {
+function SendPaymentLinkModal({ amount, bookingId, clientNom, clientTel, onClose, lang = "fr" }) {
   const fr = lang !== "en";
   const [loading, setLoading] = useState(true);
   const [url, setUrl] = useState(null);
@@ -1737,7 +1765,8 @@ function SendPaymentLinkModal({ amount, label, bookingId, clientNom, clientTel, 
 
   useEffect(() => {
     let alive = true;
-    createCheckout({ amount, label: label || "Prestation LOCKR", type: "lien_client", ref: bookingId, artisanStripeId })
+    // Le montant est recalculé par le serveur (reste à payer de l'intervention)
+    (live ? createCheckout({ type: "lien_client", ref: bookingId }) : Promise.resolve(null))
       .then(u => { if (alive) { setUrl(u); setLoading(false); } });
     return () => { alive = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1757,7 +1786,9 @@ function SendPaymentLinkModal({ amount, label, bookingId, clientNom, clientTel, 
         {loading && <div style={{ textAlign: "center", padding: "30px 0", color: T.textLo, fontSize: 13 }}>{fr ? "Génération du lien sécurisé…" : "Generating secure link…"}</div>}
         {!loading && !url && (
           <div style={{ background: "rgba(240,101,101,.07)", border: "1px solid rgba(240,101,101,.2)", borderRadius: 10, padding: "12px 14px", color: T.danger, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-            {fr ? "Paiement en ligne non configuré pour le moment (clé Stripe absente). Contactez l'administrateur LOCKR." : "Online payment not configured yet (Stripe key missing). Contact the LOCKR administrator."}
+            {live
+              ? (fr ? "Paiement en ligne non configuré pour le moment. Contactez l'administrateur LOCKR." : "Online payment not configured yet. Contact the LOCKR administrator.")
+              : (fr ? "Version de démonstration : les liens de paiement ne sont pas disponibles." : "Demo version: payment links are not available.")}
           </div>
         )}
         {url && !loading && (
@@ -1814,7 +1845,7 @@ function ibanValid(v) {
 const emailTaken = (accounts, email) => accounts.some(a => normEmail(a.email) === normEmail(email));
 /* Création d'un compte : e-mail normalisé, mot de passe haché */
 async function buildAccount(fields, password) {
-  return { id: uid(), createdAt: ts(), verified: true, ...fields, email: normEmail(fields.email), ...(await passwordFields(password)) };
+  return { id: uid(), createdAt: ts(), ...fields, email: normEmail(fields.email), ...(await passwordFields(password)) };
 }
 
 /* Case à cocher CGU avec lien réellement cliquable vers le Centre légal */
@@ -1849,6 +1880,16 @@ function Field({ label, value, onChange, placeholder, type = "text", err, autoCo
       {err && <div style={{ color: T.danger, fontSize: 11, marginTop: 5 }}>{err}</div>}
     </div>
   );
+}
+
+
+/* Résultat d'une inscription refusée → erreurs du formulaire */
+function registerErrors(code, lang) {
+  const msg = authErrorText(code, lang);
+  return ["email_used", "invalid_email", "banned"].includes(code) ? { email: msg } : code === "weak_password" ? { pass: msg } : { form: msg };
+}
+function FormError({ err }) {
+  return err ? <div role="alert" style={{ color: T.danger, fontSize: 12.5, marginBottom: 12, lineHeight: 1.5 }}>{err}</div> : null;
 }
 
 /* ─── REGISTER CHOICE ─── */
@@ -1925,7 +1966,7 @@ function RegisterChoiceScreen({ onChoice, onBack, lang = "fr" }) {
 }
 
 /* ─── REGISTER CLIENT ─── */
-function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr", openLegal }) {
+function RegisterClientScreen({ onBack, onRegister, lang = "fr", openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -1948,7 +1989,6 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
     if (!prenom.trim()) e.prenom = tr.firstnameRequired;
     if (!nom.trim()) e.nom = tr.lastnameRequired;
     if (!EMAIL_RE.test(email.trim())) e.email = tr.invalidEmail;
-    else if (emailTaken(accounts, email)) e.email = tr.emailUsed;
     if (!tel || tel.replace(/\D/g, "").length < 9) e.tel = tr.invalidPhone;
     if (pass.length < MIN_PASS) e.pass = tr.minChars;
     if (pass !== confirm) e.confirm = tr.passMismatch;
@@ -1961,9 +2001,8 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
     const e = validate();
     if (Object.keys(e).length) { setErrs(e); return; }
     setSaving(true);
-    const acc = await buildAccount({ role: "client", nom: `${prenom.trim()} ${nom.trim()}`, email, photo: null, ville: ville.trim(), tel, cguAcceptedAt: ts(), liabAcceptedAt: ts() }, pass);
-    setAccounts(p => [...p, acc]);
-    onSuccess(acc);
+    const r = await onRegister({ role: "client", nom: `${prenom.trim()} ${nom.trim()}`, email, photo: null, ville: ville.trim(), tel, cguAcceptedAt: ts(), liabAcceptedAt: ts() }, pass);
+    if (!r.ok) { setSaving(false); setErrs(registerErrors(r.error, lang)); }
   };
 
   return (
@@ -2019,6 +2058,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
             </label>
             {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
           </div>
+          <FormError err={errs.form} />
           <button onClick={submit} disabled={saving} className="lk-btn">{saving ? "…" : <>{tr.createMyAccount} {Icon.arrow("#fff", 14)}</>}</button>
         </div>
         <div style={{ textAlign: "center", marginTop: 16 }}>
@@ -2032,7 +2072,7 @@ function RegisterClientScreen({ onBack, onSuccess, accounts, setAccounts, lang =
 }
 
 /* ─── REGISTER PRO ─── */
-function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr", openLegal }) {
+function RegisterProScreen({ onBack, onRegister, lang = "fr", openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -2077,7 +2117,6 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
     if (!prenom.trim()) e.prenom = tr.firstnameRequired;
     if (!nom.trim()) e.nom = tr.lastnameRequired;
     if (!EMAIL_RE.test(email.trim())) e.email = tr.invalidEmail;
-    else if (emailTaken(accounts, email)) e.email = tr.emailUsed;
     if (!tel || tel.replace(/\D/g, "").length < 9) e.tel = tr.invalidPhone;
     if (!ville.trim()) e.ville = lang === "en" ? "City required (used to show you nearby jobs)" : "Ville requise (sert à vous proposer les interventions proches)";
     if (pass.length < MIN_PASS) e.pass = tr.minChars;
@@ -2106,8 +2145,8 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
     if (!validateStep2()) return;
     setSaving(true);
     const geo = await geocodeAddress(ville.trim());
-    const acc = await buildAccount({
-      role: "pro", artisanId: "a" + uid(),
+    const r = await onRegister({
+      role: "pro",
       nom: `${prenom.trim()} ${nom.trim()}`, email,
       photo: null, ville: ville.trim(), tel, transport, metier: metiers[0], metiers, siret: siret.replace(/\s/g, ""), iban: iban.replace(/\s/g, ""), certif,
       ...(geo ? { lat: geo[0], lng: geo[1] } : {}),
@@ -2116,8 +2155,12 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
       dossierStatus: "pending", dispo: true,
       cguAcceptedAt: ts(), liabAcceptedAt: ts(),
     }, pass);
-    setAccounts(p => [...p, acc]);
-    onSuccess(acc);
+    if (!r.ok) {
+      setSaving(false);
+      const e = registerErrors(r.error, lang);
+      setErrs(e);
+      if (e.email || e.pass) setStep(1);
+    }
   };
 
   return (
@@ -2303,6 +2346,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
               </label>
               {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
             </div>
+            <FormError err={errs.form} />
             <button onClick={submit} disabled={saving} className="lk-btn">{saving ? "…" : <>{tr.submitDossier} {Icon.check("#fff", 14)}</>}</button>
           </div>
         )}
@@ -2318,7 +2362,7 @@ function RegisterProScreen({ onBack, onSuccess, accounts, setAccounts, lang = "f
 }
 
 /* ─── REGISTER ENTREPRISE ─── */
-function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, lang = "fr", openLegal }) {
+function RegisterEntrepriseScreen({ onBack, onRegister, lang = "fr", openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -2368,7 +2412,6 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
     if (!raisonSociale.trim()) e.rs = lang === "en" ? "Company name required" : "Raison sociale requise";
     if (!siretValid(siret)) e.siret = tr.siretInvalid;
     if (!EMAIL_RE.test(email.trim())) e.email = tr.invalidEmail;
-    else if (emailTaken(accounts, email)) e.email = tr.emailUsed;
     if (!tel || tel.replace(/\D/g, "").length < 9) e.tel = tr.invalidPhone;
     if (!ville.trim()) e.ville = lang === "en" ? "City required" : "Ville requise";
     if (pass.length < MIN_PASS) e.pass = tr.minChars;
@@ -2391,7 +2434,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
   const submit = async () => {
     if (!validateStep2()) return;
     setSaving(true);
-    const acc = await buildAccount({
+    const r = await onRegister({
       role: "partenaire",
       nom: raisonSociale.trim(), email,
       forme, siret: siret.replace(/\s/g, ""), capital, rcs, tva, iban: iban.replace(/\s/g, ""), ville: ville.trim(), tel,
@@ -2403,8 +2446,12 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
       dossierStatus: "pending",
       cguAcceptedAt: ts(), liabAcceptedAt: ts(),
     }, pass);
-    setAccounts(p => [...p, acc]);
-    onSuccess(acc);
+    if (!r.ok) {
+      setSaving(false);
+      const e = registerErrors(r.error, lang);
+      setErrs(e);
+      if (e.email || e.pass) setStep(1);
+    }
   };
 
   return (
@@ -2546,6 +2593,7 @@ function RegisterEntrepriseScreen({ onBack, onSuccess, accounts, setAccounts, la
             </div>
 
             <div style={{ background: "rgba(30,158,107,.05)", border: "1px solid rgba(30,158,107,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: T.textMid }}>{tr.entPending}</div>
+            <FormError err={errs.form} />
             <button onClick={submit} disabled={saving} className="lk-btn">{saving ? "…" : <>{tr.entSubmit} {Icon.check("#fff", 14)}</>}</button>
           </div>
         )}
@@ -2570,6 +2618,9 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
   const [busy, setBusy] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
   const [forgot, setForgot] = useState(false);
+  const [resetState, setResetState] = useState(null); // null | "busy" | "sent" | message d'erreur
+  // Ancien compte avec un mot de passe trop court : nouveau mot de passe demandé
+  const [newPass, setNewPass] = useState(null);
   const w = useWindowSize();
   const isDesktop = w >= BP;
 
@@ -2585,6 +2636,21 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
     const em = normEmail(emailArg ?? email);
     const pw = passArg ?? pass;
     if (!em || !pw) { setErr(tr.wrongCredentials); return; }
+    if (live) {
+      let np;
+      if (newPass) {
+        if (newPass.p1.length < MIN_PASS) { setErr(authErrorText("weak_password", lang)); return; }
+        if (newPass.p1 !== newPass.p2) { setErr(tr.passMismatch); return; }
+        np = newPass.p1;
+      }
+      setBusy(true);
+      const r = await signIn(em, pw, np);
+      setBusy(false);
+      if (r.ok) return; // la session s'ouvre automatiquement
+      if (r.error === "new_password_required") { setNewPass({ p1: "", p2: "" }); setErr(""); return; }
+      setErr(authErrorText(r.error, lang));
+      return;
+    }
     if (!accountsReady) { setErr(fr ? "Connexion au serveur en cours, réessayez dans un instant." : "Connecting to server, please retry in a moment."); return; }
     setBusy(true);
     const acc = accounts.find(a => normEmail(a.email) === em);
@@ -2712,17 +2778,24 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
                 <label className="lk-label" htmlFor="lk-login-pass">{tr.password}</label>
                 <input id="lk-login-pass" className="lk-input" type="password" value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} placeholder="••••••••" autoComplete="current-password" />
               </div>
+              {newPass && (
+                <div style={{ background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.3)", borderRadius: 12, padding: "12px", marginBottom: 12 }}>
+                  <div style={{ fontSize: 12.5, color: T.textMid, lineHeight: 1.5, marginBottom: 10 }}>{fr ? `Pour sécuriser votre compte, choisissez un nouveau mot de passe (${MIN_PASS} caractères minimum).` : `To secure your account, choose a new password (min. ${MIN_PASS} characters).`}</div>
+                  <input className="lk-input" type="password" autoComplete="new-password" value={newPass.p1} onChange={e => { setNewPass(p => ({ ...p, p1: e.target.value })); setErr(""); }} placeholder={fr ? "Nouveau mot de passe" : "New password"} style={{ marginBottom: 8 }} />
+                  <input className="lk-input" type="password" autoComplete="new-password" value={newPass.p2} onChange={e => { setNewPass(p => ({ ...p, p2: e.target.value })); setErr(""); }} placeholder={fr ? "Confirmer le nouveau mot de passe" : "Confirm new password"} />
+                </div>
+              )}
               {err && <div role="alert" style={{ color: T.danger, fontSize: 12, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>{Icon.x(T.danger, 13)} {err}</div>}
               <div style={{ textAlign: "right", marginBottom: 14 }}>
                 <button type="button" onClick={() => setForgot(true)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "6px 0", fontFamily: "'Inter',sans-serif" }}>{tr.forgotPass}</button>
               </div>
               <button type="submit" disabled={busy} className="lk-btn">
-                {busy ? (fr ? "Connexion…" : "Signing in…") : <>{tr.connectAs} {Icon.arrow("#fff", 15)}</>}
+                {busy ? (fr ? "Connexion…" : "Signing in…") : newPass ? (fr ? "Valider et me connecter" : "Save and sign in") : <>{tr.connectAs} {Icon.arrow("#fff", 15)}</>}
               </button>
             </form>
           </div>
-          {/* Comptes de démonstration (discrets) */}
-          <div style={{ textAlign: "center", marginBottom: 14 }}>
+          {/* Comptes de démonstration (version de démonstration uniquement) */}
+          {IS_DEMO && <div style={{ textAlign: "center", marginBottom: 14 }}>
             <button onClick={() => setShowDemo(v => !v)} style={{ background: "none", border: "none", color: T.textLo, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "8px 6px" }}>
               {showDemo ? "▾" : "▸"} {fr ? "Essayer avec un compte de démonstration" : "Try with a demo account"}
             </button>
@@ -2735,7 +2808,7 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
                 ))}
               </div>
             )}
-          </div>
+          </div>}
           <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
             {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
           </div>
@@ -2752,14 +2825,36 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
             </button>
           </div>
           {forgot && createPortal(
-            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9990, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setForgot(false)}>
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9990, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => { setForgot(false); setResetState(null); }}>
               <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, padding: "24px 22px", maxWidth: 400, width: "100%", fontFamily: "'Inter',sans-serif" }}>
                 <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 8 }}>{tr.forgotPass}</div>
-                <div style={{ fontSize: 13, color: T.textMid, lineHeight: 1.6, marginBottom: 16 }}>
-                  {fr ? "Écrivez-nous depuis l'adresse e-mail de votre compte : notre équipe vous envoie un lien de réinitialisation sous 24 h." : "Write to us from your account e-mail address: our team will send you a reset link within 24 hours."}
-                </div>
-                <a href={`mailto:support@lockr.fr?subject=${encodeURIComponent(fr ? "Réinitialisation de mot de passe" : "Password reset")}&body=${encodeURIComponent((fr ? "Bonjour, je souhaite réinitialiser le mot de passe du compte : " : "Hello, I would like to reset the password of the account: ") + (email || ""))}`} className="lk-btn" style={{ textDecoration: "none", marginBottom: 10 }}>{fr ? "Contacter le support" : "Contact support"}</a>
-                <button onClick={() => setForgot(false)} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Fermer" : "Close"}</button>
+                {live ? (
+                  resetState === "sent" ? (
+                    <div role="status" style={{ fontSize: 13, color: T.success, lineHeight: 1.6, marginBottom: 16 }}>
+                      {fr ? "Si un compte existe pour cette adresse, un e-mail de réinitialisation vient d'être envoyé. Pensez à vérifier vos courriers indésirables." : "If an account exists for this address, a reset e-mail has just been sent. Check your spam folder too."}
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, color: T.textMid, lineHeight: 1.6, marginBottom: 12 }}>
+                        {fr ? "Indiquez l'adresse e-mail de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe." : "Enter your account e-mail address: you will receive a link to choose a new password."}
+                      </div>
+                      <input className="lk-input" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemple.fr" style={{ marginBottom: 10 }} />
+                      {resetState && resetState !== "busy" && <div role="alert" style={{ color: T.danger, fontSize: 12, marginBottom: 10 }}>{resetState}</div>}
+                      <button disabled={resetState === "busy" || !EMAIL_RE.test(email.trim())} onClick={async () => {
+                        setResetState("busy");
+                        const r = await resetPassword(email);
+                        setResetState(r.ok ? "sent" : authErrorText(r.error, lang));
+                      }} className="lk-btn" style={{ marginBottom: 10 }}>{resetState === "busy" ? "…" : (fr ? "Recevoir le lien" : "Send me the link")}</button>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, color: T.textMid, lineHeight: 1.6, marginBottom: 16 }}>
+                      {fr ? "Version de démonstration : utilisez un des comptes de démonstration (mot de passe 1234)." : "Demo version: use one of the demo accounts (password 1234)."}
+                    </div>
+                  </>
+                )}
+                <button onClick={() => { setForgot(false); setResetState(null); }} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Fermer" : "Close"}</button>
               </div>
             </div>, document.body
           )}
@@ -2774,7 +2869,7 @@ function DevisModal({ artisan, probleme, montant, adresse, onAccept, onCancel, l
   const tr = TRANS[lang] || TRANS.fr;
   const [accepted, setAccepted] = useState(false);
   const [err, setErr] = useState("");
-  const acompte = Math.round(montant * 0.5 * 100) / 100;
+  const fr = lang !== "en";
   const prob = PROBLEMES.find(p => p.id === probleme);
   return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 9000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -2804,9 +2899,10 @@ function DevisModal({ artisan, probleme, montant, adresse, onAccept, onCancel, l
               <span style={{ color: T.textLo, fontSize: 13 }}>{tr.devisTotal}</span>
               <span style={{ color: T.textHi, fontWeight: 800, fontSize: 16 }}>{fmt(montant)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: T.textMid, fontSize: 13 }}>{tr.devisDeposit}</span>
-              <span style={{ color: T.accent2, fontWeight: 700, fontSize: 14 }}>{fmt(acompte)}</span>
+            <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5, marginTop: 8 }}>
+              💳 {fr
+                ? "Rien n'est débité maintenant : ce montant est seulement réservé sur votre carte (empreinte bancaire). Après l'intervention, seul le montant final de la facture est prélevé. Annulation gratuite avant le départ de l'artisan."
+                : "Nothing is charged now: this amount is only held on your card. After the intervention, only the final invoice amount is charged. Free cancellation before the craftsman leaves."}
             </div>
           </div>
         </div>
@@ -2818,7 +2914,7 @@ function DevisModal({ artisan, probleme, montant, adresse, onAccept, onCancel, l
         </div>
         {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 12 }}>{err}</div>}
         <button onClick={() => { if (!accepted) return setErr(tr.devisAcceptRequired); onAccept(); }} className="lk-btn" style={{ marginBottom: 10 }}>
-          {tr.depositPayment} — {fmt(acompte)} {Icon.arrow("#fff", 14)}
+          {fr ? "Réserver avec ma carte" : "Book with my card"} {Icon.arrow("#fff", 14)}
         </button>
         <button onClick={onCancel} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
       </div>
@@ -2894,10 +2990,8 @@ function MonthlyReportModal({ bookings, artisanId, lang = "fr", onClose }) {
       lien de paiement envoyé au client, ou paiement depuis l'appli client.
    L'artisan ne peut plus se déclarer « payé » lui-même : seul Stripe (ou
    l'administrateur) confirme un paiement. */
-const acomptePaid = b => (b?.acompteClientPaye ? Number(b.acompte) || 0 : 0);
-const resteAPayer = b => Math.max(0, bookingTotal(b) - acomptePaid(b));
 
-function ClotureModal({ mission, artisan, accounts, onConfirm, onCancel, lang = "fr" }) {
+function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const [montant, setMontant] = useState(String(mission?.montantFinal || mission?.montant || ""));
@@ -2911,8 +3005,11 @@ function ClotureModal({ mission, artisan, accounts, onConfirm, onCancel, lang = 
   const montantNum = parseFloat(String(montant).replace(",", ".")) || 0;
   const closed = { ...mission, montantFinal: montantNum };
   const reste = resteAPayer(closed);
-  const artisanStripeId = connectDestination(closed, artisan);
-  const clientTel = (accounts || []).find(a => a.id === mission?.clientId)?.tel || null;
+  const clientTel = mission?.clientTel || null;
+  // Empreinte bancaire du client : débitée du montant final (dans la limite réservée)
+  const hold = empreinteMontant(mission);
+  const aDebiter = Math.min(reste, hold);
+  const [captured, setCaptured] = useState(null);
 
   const handleFile = async e => {
     const data = await readImageInput(e, { maxSize: 1400, quality: 0.72 });
@@ -2925,9 +3022,23 @@ function ClotureModal({ mission, artisan, accounts, onConfirm, onCancel, lang = 
     onConfirm(montantNum, factureImg);
     setStep("paiement");
   };
+  const capture = async () => {
+    setPaying(true); setErr("");
+    if (!live) {
+      applyPayment({ setBookings }, { type: "capture", ref: mission.id, amount: aDebiter, demo: true });
+      setCaptured(aDebiter); setPaying(false);
+      return;
+    }
+    const r = await captureHold(mission.id);
+    setPaying(false);
+    if (r.ok) { setCaptured(r.captured); return; }
+    setErr(r.error === "expired"
+      ? (fr ? "La réservation sur la carte a expiré : envoyez un lien de paiement au client." : "The card hold expired: send the client a payment link.")
+      : (fr ? "Débit impossible pour le moment. Réessayez dans un instant ou envoyez un lien de paiement." : "Charge not possible right now. Retry in a moment or send a payment link."));
+  };
   const chargeNow = async () => {
     setPaying(true);
-    const ok = await startStripeCheckout({ amount: reste, label: pLabel(prob, lang) || "Prestation LOCKR", type: "prestation", ref: mission.id, artisanStripeId });
+    const ok = await startStripeCheckout({ type: "prestation", ref: mission.id });
     if (!ok) { setPaying(false); setErr(fr ? "Paiement par carte indisponible pour le moment. Envoyez un lien de paiement ou laissez le client payer depuis son application." : "Card payment unavailable right now. Send a payment link or let the client pay from their app."); }
   };
 
@@ -3001,7 +3112,21 @@ function ClotureModal({ mission, artisan, accounts, onConfirm, onCancel, lang = 
                 {reste > 0 ? (fr ? <>Reste à encaisser : <b>{fmt(reste)}</b></> : <>Remaining to collect: <b>{fmt(reste)}</b></>) : (fr ? "Rien à encaisser : la prestation est déjà réglée." : "Nothing to collect: already paid.")}
               </div>
             </div>
-            {reste > 0 && mission?.statutPaiement !== "payé" && (
+            {captured != null && (
+              <div role="status" style={{ background: "rgba(30,158,107,.07)", border: "1px solid rgba(30,158,107,.25)", borderRadius: 12, padding: "10px 12px", color: T.success, fontWeight: 700, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+                {fr ? `Carte du client débitée de ${fmt(captured)} ✓` : `Client card charged ${fmt(captured)} ✓`}
+              </div>
+            )}
+            {reste > 0 && hold > 0 && captured == null && (
+              <>
+                <div style={{ fontSize: 12, color: T.textMid, textAlign: "center", marginBottom: 10, lineHeight: 1.5 }}>
+                  {fr ? `💳 Le client a enregistré sa carte (${fmt(hold)} réservés).` : `💳 The client registered a card (${fmt(hold)} held).`}
+                </div>
+                <button onClick={capture} disabled={paying} className="lk-btn" style={{ marginBottom: 10 }}>{paying ? "…" : (fr ? `Débiter la carte du client — ${fmt(aDebiter)}` : `Charge the client's card — ${fmt(aDebiter)}`)}</button>
+                {reste > hold && <div style={{ fontSize: 11.5, color: T.warn, textAlign: "center", marginBottom: 10 }}>{fr ? `Le montant final dépasse la réservation : ${fmt(reste - hold)} resteront à régler par lien de paiement.` : `The final amount exceeds the hold: ${fmt(reste - hold)} will remain to be paid by link.`}</div>}
+              </>
+            )}
+            {reste > 0 && hold === 0 && mission?.statutPaiement !== "payé" && (
               <>
                 <button onClick={chargeNow} disabled={paying} className="lk-btn" style={{ marginBottom: 10 }}>{paying ? "…" : (fr ? "Faire payer le client maintenant (carte)" : "Charge the client now (card)")}</button>
                 <button onClick={() => setShowSendLink(true)} className="lk-ghost" style={{ width: "100%", marginBottom: 10 }}>{fr ? "Envoyer un lien de paiement" : "Send a payment link"}</button>
@@ -3016,7 +3141,7 @@ function ClotureModal({ mission, artisan, accounts, onConfirm, onCancel, lang = 
         )}
       </div>
       {showSendLink && (
-        <SendPaymentLinkModal amount={reste} label={pLabel(prob, lang)} bookingId={mission?.id} clientNom={mission?.clientNom} clientTel={clientTel} artisanStripeId={artisanStripeId} onClose={() => setShowSendLink(false)} lang={lang} />
+        <SendPaymentLinkModal amount={reste} bookingId={mission?.id} clientNom={mission?.clientNom} clientTel={clientTel} onClose={() => setShowSendLink(false)} lang={lang} />
       )}
     </div>,
     document.body
@@ -3121,7 +3246,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
     if (autoOpenPost) { setPostModal(true); onAutoOpenHandled(); }
   }, [autoOpenPost]); // eslint-disable-line react-hooks/exhaustive-deps
   const [rdvModal, setRdvModal] = useState(null);
-  const emptyBon = { titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 };
+  const emptyBon = { titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 70 };
   const [newBon, setNewBon] = useState(emptyBon);
   const [postErr, setPostErr] = useState("");
   const [posting, setPosting] = useState(false);
@@ -3147,32 +3272,44 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
     ? visibleFor(account, bons).filter(b => sameCity(b.region, myRegion) && b.postedBy !== account.id && bonVisibleForPro(b, account.artisanId, priorityOrder) && metierOf(b) && !myTrades.includes(metierOf(b))).length
     : 0;
 
-  const confirmRdv = (bon, rdvOpts) => {
+  const tooLate = () => {
+    setRdvModal(null);
+    setNotif({ ok: false, text: fr ? "Trop tard : ce bon vient d'être pris par un autre professionnel." : "Too late: this job was just taken by another professional." });
+    setTimeout(() => setNotif(null), 4000);
+  };
+  const confirmRdv = async (bon, rdvOpts) => {
     // Protection : un autre artisan a peut-être déjà pris ce bon
-    if (!bons.some(b => b.id === bon.id)) {
-      setRdvModal(null);
-      setNotif({ ok: false, text: fr ? "Trop tard : ce bon vient d'être pris par un autre professionnel." : "Too late: this job was just taken by another professional." });
-      setTimeout(() => setNotif(null), 4000);
-      return;
-    }
+    if (!bons.some(b => b.id === bon.id)) { tooLate(); return; }
     const bk = {
-      id: uid(), artisanId: account.artisanId, artisanNom: account.nom,
+      // Identifiant lié au bon : deux artisans ne peuvent pas prendre le même bon
+      id: "bon_" + bon.id, artisanId: account.artisanId, artisanAccountId: account.id, artisanNom: account.nom, artisanTel: account.tel || "",
       // La demande du client lui reste rattachée : il voit son intervention en direct
-      clientId: bon.clientId || "ext", clientNom: bon.clientNom || (fr ? "Client LOCKR" : "LOCKR client"),
+      clientId: bon.clientId || "ext", clientNom: bon.clientNom || (fr ? "Client LOCKR" : "LOCKR client"), clientTel: bon.clientTel || "",
       adresse: bon.adresse, probleme: bon.probleme, metier: metierOf(bon),
       montant: bon.montantEstime, statut: "assignée", createdAt: ts(),
       bonType: bon.postedBy === "platform" ? "platform" : "partner",
-      bonId: bon.id, techPct: bon.techPct, postedBy: bon.postedBy, postedByNom: bon.postedByNom,
+      bonId: bon.id, techPct: Number(bon.techPct) || PCT_DEFAULT, postedBy: bon.postedBy, postedByNom: bon.postedByNom,
+      ...(bon.postedBy && bon.postedBy !== "platform" ? { posterPct: posterPctFor(bon.techPct) } : {}),
       rdvDate: rdvOpts.rdvDate, paymentDate: rdvOpts.paymentDate,
       rdv2Date: rdvOpts.rdv2Date, urgence: !!bon.urgence, region: bon.region,
-      // Acompte déjà payé par le client (demande republiée après un refus)
-      ...(bon.acompte ? { acompte: bon.acompte, acompteClientPaye: !!bon.acompteClientPaye } : {}),
       ...(bon.fromBookingId ? { fromBookingId: bon.fromBookingId } : {}),
       ...(bon.lat && bon.lng ? { lat: bon.lat, lng: bon.lng, clientPos: [bon.lat, bon.lng] } : {}),
       ...(bon.isDemo ? { isDemo: true } : {}),
     };
-    setBookings(p => [...p, bk]);
-    setBons(p => p.filter(b => b.id !== bon.id));
+    bk.participants = bookingParticipants(bk);
+    if (live) {
+      // Création de l'intervention + suppression du bon en une seule opération
+      try {
+        await runBatch([{ collection: "bookings", id: bk.id, data: bk }, { type: "delete", collection: "bons", id: bon.id }]);
+      } catch (e) {
+        console.error("[bon]", e);
+        tooLate();
+        return;
+      }
+    } else {
+      setBookings(p => [...p, bk]);
+      setBons(p => p.filter(b => b.id !== bon.id));
+    }
     setRdvModal(null);
     if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
     const suffix = rdvOpts.rdvDate ? ` — ${tr.rdvScheduled}` : "";
@@ -3296,7 +3433,8 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" inputMode="decimal" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">{tr.technicianShare} : {newBon.techPct}%</label>
-              <input type="range" min={20} max={70} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
+              <input type="range" min={20} max={PCT_DEFAULT} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
+              <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>{fr ? `Vous recevez ${posterPctFor(newBon.techPct)} % comme apporteur · LOCKR ${Math.round(LOCKR_COMMISSION * 100)} %` : `You receive ${posterPctFor(newBon.techPct)}% as referrer · LOCKR ${Math.round(LOCKR_COMMISSION * 100)}%`}</div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
@@ -3314,7 +3452,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
 }
 
 /* ─── EARNINGS CHART ─── */
-function EarningsChart({ bookings, artisanId, lang = "fr" }) {
+function EarningsChart({ bookings, artisanId, apports = [], lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
   const MONTH_LABELS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
   const done = bookings.filter(b => b.artisanId === artisanId && b.statut === "terminée");
@@ -3395,6 +3533,21 @@ function EarningsChart({ bookings, artisanId, lang = "fr" }) {
           <div key={i} style={{ flex: 1, textAlign: "center", color: selIdx === i ? (i === lastMonthIdx ? T.success : T.accent) : T.textLo, fontSize: 11, fontWeight: selIdx === i ? 700 : 400 }}>{d.label}</div>
         ))}
       </div>
+      {/* Apports : bons transmis à d'autres professionnels */}
+      {apports.length > 0 && (
+        <div className="lk-card" style={{ padding: "14px", marginTop: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{lang === "en" ? "Referral earnings (jobs passed on)" : "Apports (bons transmis)"}</div>
+            <div style={{ color: "#7c3aed", fontWeight: 800, fontSize: 15 }}>{fmt(apports.reduce((s, b) => s + posterShare(b), 0))}</div>
+          </div>
+          {apports.slice().reverse().map(b => (
+            <div key={b.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", borderTop: "1px solid rgba(0,0,0,.05)", fontSize: 12 }}>
+              <span style={{ color: T.textMid }}>{fmtDate(b.termineeLe || b.createdAt)} · {b.artisanNom || "—"} · {fmt(bookingTotal(b))}</span>
+              <span style={{ fontWeight: 700, color: b.posterPaid ? T.success : T.warn }}>{fmt(posterShare(b))} {b.posterPaid ? "✓" : (lang === "en" ? "(pending)" : "(à venir)")}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3622,8 +3775,9 @@ function RdvAcceptModal({ bon, onConfirm, onCancel, lang = "fr" }) {
 }
 
 /* ─── CHAT INTERVENTION (pro ↔ client) ─── */
-function ChatIntervention({ bookingId, account, interventionChats, setInterventionChats, otherNom, onClose, lang = "fr" }) {
+function ChatIntervention({ booking, account, interventionChats, setInterventionChats, otherNom, onClose, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
+  const bookingId = booking?.id;
   const [msg, setMsg] = useState("");
   const bottomRef = useRef(null);
   // Messages partagés en temps réel entre le client et l'artisan (collection « messages »)
@@ -3633,7 +3787,9 @@ function ChatIntervention({ bookingId, account, interventionChats, setInterventi
 
   const send = () => {
     if (!msg.trim()) return;
-    const m = { id: uid(), bookingId, auteurId: account.id, auteurNom: account.nom, texte: msg.trim(), createdAt: ts() };
+    // Les participants de la mission sont copiés : eux seuls peuvent lire le message
+    const participants = Array.isArray(booking?.participants) ? booking.participants : bookingParticipants(booking || {});
+    const m = { id: uid(), bookingId, participants, auteurId: account.id, auteurNom: account.nom, texte: msg.trim(), createdAt: ts() };
     setInterventionChats(p => [...p, m]);
     setMsg("");
   };
@@ -3723,13 +3879,21 @@ function PasswordChangeCard({ account, setAccounts, lang = "fr" }) {
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     setMsg(null);
-    if (!(await checkPassword(account, cur))) return setMsg({ ok: false, t: fr ? "Mot de passe actuel incorrect." : "Current password is incorrect." });
     if (n1.length < MIN_PASS) return setMsg({ ok: false, t: fr ? `${MIN_PASS} caractères minimum.` : `${MIN_PASS} characters minimum.` });
     if (n1 !== n2) return setMsg({ ok: false, t: fr ? "Les deux mots de passe ne correspondent pas." : "Passwords do not match." });
     setBusy(true);
-    const fields = await passwordFields(n1);
-    setAccounts(p => p.map(a => a.id === account.id ? { ...a, ...fields, passChangedAt: ts() } : a));
-    setBusy(false); setCur(""); setN1(""); setN2("");
+    if (live) {
+      // Firebase Authentication : vérifie le mot de passe actuel puis le remplace
+      const r = await changePassword(cur, n1);
+      setBusy(false);
+      if (r.error) return setMsg({ ok: false, t: authErrorText(r.error, lang) });
+    } else {
+      if (!(await checkPassword(account, cur))) { setBusy(false); return setMsg({ ok: false, t: authErrorText("bad_current", lang) }); }
+      const fields = await passwordFields(n1);
+      setAccounts(p => p.map(a => a.id === account.id ? { ...a, ...fields, passChangedAt: ts() } : a));
+      setBusy(false);
+    }
+    setCur(""); setN1(""); setN2("");
     setMsg({ ok: true, t: fr ? "Mot de passe modifié ✓" : "Password changed ✓" });
   };
   return (
@@ -3757,10 +3921,26 @@ function RgpdCard({ account, setAccounts, bookings = [], openLegal, lang = "fr" 
     a.href = url; a.download = `lockr-mes-donnees-${account.id}.json`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const deleteAccount = () => {
+  const [delOpen, setDelOpen] = useState(false);
+  const [delPass, setDelPass] = useState("");
+  const [delErr, setDelErr] = useState("");
+  const [delBusy, setDelBusy] = useState(false);
+  const deleteAccount = async () => {
     const msg = fr ? "Supprimer définitivement votre compte ? Vos factures sont conservées 10 ans (obligation légale), le reste est effacé." : "Permanently delete your account? Invoices are kept for 10 years (legal obligation), everything else is erased.";
-    if (!window.confirm(msg)) return;
-    setAccounts(p => p.filter(a => a.id !== account.id)); // la déconnexion est automatique
+    if (!live) {
+      if (!window.confirm(msg)) return;
+      setAccounts(p => p.filter(a => a.id !== account.id)); // la déconnexion est automatique
+      return;
+    }
+    // Production : mot de passe exigé avant une action irréversible
+    if (!delOpen) { setDelOpen(true); return; }
+    if (!delPass) return;
+    setDelBusy(true); setDelErr("");
+    const ok = await confirmPassword(delPass);
+    if (ok.error) { setDelBusy(false); setDelErr(authErrorText(ok.error, lang)); return; }
+    if (!window.confirm(msg)) { setDelBusy(false); return; }
+    const r = await deleteOwnAccount();
+    if (r.error) { setDelBusy(false); setDelErr(authErrorText(r.error, lang)); }
   };
   return (
     <div className="lk-card" style={{ padding: "18px 20px", marginTop: 16, borderLeft: "4px solid #2563eb" }}>
@@ -3772,8 +3952,14 @@ function RgpdCard({ account, setAccounts, bookings = [], openLegal, lang = "fr" 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
         <button onClick={exportData} className="lk-ghost" style={{ fontSize: 12, flex: "1 1 160px" }}>{fr ? "Télécharger mes données" : "Download my data"}</button>
         {openLegal && <button onClick={() => openLegal("privacy")} className="lk-ghost" style={{ fontSize: 12, flex: "1 1 160px" }}>{fr ? "Centre légal" : "Legal center"}</button>}
-        <button onClick={deleteAccount} className="lk-ghost" style={{ fontSize: 12, flex: "1 1 160px", color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{fr ? "Supprimer mon compte" : "Delete my account"}</button>
+        <button onClick={deleteAccount} disabled={delBusy} className="lk-ghost" style={{ fontSize: 12, flex: "1 1 160px", color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{delBusy ? "…" : delOpen ? (fr ? "Confirmer la suppression" : "Confirm deletion") : (fr ? "Supprimer mon compte" : "Delete my account")}</button>
       </div>
+      {delOpen && (
+        <div style={{ marginTop: 10 }}>
+          <input className="lk-input" type="password" autoComplete="current-password" value={delPass} onChange={e => { setDelPass(e.target.value); setDelErr(""); }} placeholder={fr ? "Votre mot de passe, pour confirmer" : "Your password, to confirm"} />
+          {delErr && <div role="alert" style={{ color: T.danger, fontSize: 12, marginTop: 6 }}>{delErr}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -3914,7 +4100,7 @@ function ProProfileTab({ account, setAccounts, bookings, lang = "fr", openLegal 
       {err && <div role="alert" style={{ color: T.danger, fontSize: 12, marginBottom: 10 }}>{err}</div>}
       <button onClick={save} className="lk-btn">{Icon.check("#fff", 15)} {tr.saveProfile}</button>
 
-      <StripeConnectCard lang={lang} account={account} setAccounts={setAccounts} />
+      <StripeConnectCard lang={lang} account={account} />
       <PasswordChangeCard account={account} setAccounts={setAccounts} lang={lang} />
       <RgpdCard account={account} setAccounts={setAccounts} bookings={bookings} openLegal={openLegal} lang={lang} />
     </div>
@@ -4346,8 +4532,8 @@ function ProMarketplace({ account, listings, setListings, setSales, lang, isPart
               {detail.proId === account.id && !detail.sold && (
                 <button onClick={() => {
                   if (!window.confirm(fr ? `Déclarer cet article vendu ? La commission LOCKR de ${MARKET_COMMISSION * 100} % (${fmt(detail.prix * MARKET_COMMISSION)}) sera due.` : `Mark as sold? The ${MARKET_COMMISSION * 100}% LOCKR commission (${fmt(detail.prix * MARKET_COMMISSION)}) will be due.`)) return;
-                  const commission = Math.round(detail.prix * MARKET_COMMISSION * 100) / 100;
-                  setSales && setSales(p => [...p, { id: uid(), listingId: detail.id, vendeurId: account.id, vendeurNom: account.nom, acheteurNom: "—", metier: detail.metier, titre: detail.titre, prix: detail.prix, commission, statut: "declaree_vendeur", createdAt: ts() }]);
+                  const commission = marketCommission(detail.prix);
+                  setSales && setSales(p => [...p, { id: uid(), listingId: detail.id, vendeurId: account.id, vendeurNom: account.nom, acheteurId: null, acheteurNom: "—", participants: [account.id], metier: detail.metier, titre: detail.titre, prix: detail.prix, commission, statut: "declaree_vendeur", createdAt: ts() }]);
                   setListings(p => p.map(l => l.id === detail.id ? { ...l, sold: true } : l));
                   setDetailId(null);
                 }} style={{ flex: 2, background: "linear-gradient(135deg,#3ecf8e,#2aaf77)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
@@ -4370,8 +4556,6 @@ function ProMarketplace({ account, listings, setListings, setSales, lang, isPart
           label={`${fr ? "Achat" : "Purchase"} — ${detail.titre}`}
           type="marketplace"
           payRef={pendingSale.id}
-          email={account.email}
-          demo={isDemoAccount(account)}
           lang={lang}
           onSimulated={() => { applyPayment({ setSales, setListings }, { type: "marketplace", ref: pendingSale.id, demo: true }); setBuyStep(3); }}
           onClose={() => {
@@ -4439,7 +4623,7 @@ function ProMarketplace({ account, listings, setListings, setSales, lang, isPart
                     if (detail.sold) return setBuyError(fr ? "Cet article vient d'être vendu." : "This item has just been sold.");
                     setBuyError("");
                     // Commande enregistrée AVANT le paiement : rien n'est perdu pendant la redirection Stripe
-                    const sale = { id: uid(), listingId: detail.id, vendeurId: detail.proId, vendeurNom: detail.proNom, acheteurId: account.id, acheteurNom: buyForm.nom.trim(), acheteurTel: buyForm.tel, livraison: { adresse: buyForm.adresse.trim(), ville: buyForm.ville.trim(), zip: buyForm.zip.trim() }, acheteurVille: buyForm.ville.trim(), metier: detail.metier, titre: detail.titre, prix: detail.prix, commission: Math.round(detail.prix * MARKET_COMMISSION * 100) / 100, statut: "en_attente_paiement", createdAt: ts() };
+                    const sale = { id: uid(), listingId: detail.id, vendeurId: detail.proId, vendeurNom: detail.proNom, acheteurId: account.id, participants: [account.id, detail.proId], acheteurNom: buyForm.nom.trim(), acheteurTel: buyForm.tel, livraison: { adresse: buyForm.adresse.trim(), ville: buyForm.ville.trim(), zip: buyForm.zip.trim() }, acheteurVille: buyForm.ville.trim(), metier: detail.metier, titre: detail.titre, prix: detail.prix, commission: marketCommission(detail.prix), statut: "en_attente_paiement", createdAt: ts() };
                     setSales(p => [...p, sale]);
                     setPendingSale(sale);
                     setBuyStep(2);
@@ -4468,12 +4652,24 @@ function ProMarketplace({ account, listings, setListings, setSales, lang, isPart
 /* ─── HISTORY CARD (pro) ───
    Le pro peut corriger le montant final tant que la mission n'est pas payée
    et envoyer un lien de paiement ; il ne peut plus se déclarer « payé ». */
-function HistoryCard({ b, isPaid, pr, tr, setBookings, lang, artisanStripeId = null }) {
+function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
   const fr = lang !== "en";
   const [totalInput, setTotalInput] = useState(String(b.montantFinal || b.montant || ""));
   const [showForm, setShowForm] = useState(false);
   const [showLink, setShowLink] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
   const total = parseFloat(totalInput) || 0;
+  // Carte du client encore réservée : débit du montant final
+  const hold = empreinteMontant(b);
+  const aDebiter = Math.min(resteAPayer(b), hold);
+  const capture = async () => {
+    setBusy(true); setMsg("");
+    if (!live) { applyPayment({ setBookings }, { type: "capture", ref: b.id, amount: aDebiter, demo: true }); setBusy(false); return; }
+    const r = await captureHold(b.id);
+    setBusy(false);
+    if (!r.ok) setMsg(r.error === "expired" ? (fr ? "Réservation expirée : envoyez un lien de paiement." : "Hold expired: send a payment link.") : (fr ? "Débit impossible pour le moment." : "Charge not possible right now."));
+  };
   return (
     <div className="lk-card" style={{ padding: "14px", marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -4486,6 +4682,10 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang, artisanStripeId = n
           <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? tr.paid : (fr ? `À encaisser : ${fmt(resteAPayer(b))}` : `To collect: ${fmt(resteAPayer(b))}`)}</div>
         </div>
       </div>
+      {!isPaid && hold > 0 && (
+        <button onClick={capture} disabled={busy} className="lk-btn" style={{ marginTop: 10, fontSize: 12 }}>{busy ? "…" : (fr ? `Débiter la carte du client — ${fmt(aDebiter)}` : `Charge the client's card — ${fmt(aDebiter)}`)}</button>
+      )}
+      {msg && <div role="alert" style={{ color: T.danger, fontSize: 12, marginTop: 6 }}>{msg}</div>}
       {!isPaid && (
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button onClick={() => setShowLink(true)} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "9px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
@@ -4505,7 +4705,7 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang, artisanStripeId = n
           <button disabled={!(total > 0)} onClick={() => { setBookings(p => p.map(x => x.id === b.id ? { ...x, montantFinal: total } : x)); setShowForm(false); }} className="lk-btn" style={{ width: "auto", padding: "12px 16px", fontSize: 13 }}>{fr ? "Valider" : "Save"}</button>
         </div>
       )}
-      {showLink && <SendPaymentLinkModal amount={resteAPayer(b)} label={pLabel(pr, lang)} bookingId={b.id} clientNom={b.clientNom} artisanStripeId={artisanStripeId} onClose={() => setShowLink(false)} lang={lang} />}
+      {showLink && <SendPaymentLinkModal amount={resteAPayer(b)} bookingId={b.id} clientNom={b.clientNom} clientTel={b.clientTel || ""} onClose={() => setShowLink(false)} lang={lang} />}
     </div>
   );
 }
@@ -4519,16 +4719,18 @@ function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "
   // Chiffre d'affaires de l'artisan = sa part des missions (ce qu'il facture réellement)
   const caMonth = done.filter(b => { const d = new Date(b.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((s, b) => s + proShare(b), 0);
   const caYear = done.filter(b => new Date(b.createdAt).getFullYear() === now.getFullYear()).reduce((s, b) => s + proShare(b), 0);
-  const SEUIL_TVA = 37500; // franchise en base de TVA — prestations de services (à vérifier chaque année)
-  const COTIS_AE = 0.212;  // cotisations micro-entrepreneur — prestations de services artisanales (BIC)
-  const cotis = caMonth * COTIS_AE;
-  const formation = caMonth * 0.003;
-  const net = caMonth - cotis - formation;
+  const ae = account.ae || {};
+  const vl = !!ae.versementLiberatoire;
+  const cotis = caMonth * AE.cotisations;
+  const formation = caMonth * AE.formation;
+  const impot = vl ? caMonth * AE.versementLiberatoire : 0;
+  const net = caMonth - cotis - formation - impot;
+  const tauxTotal = AE.cotisations + AE.formation + (vl ? AE.versementLiberatoire : 0);
+  const pctFr = x => `${(x * 100).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %`;
   const nextDecl = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString("fr-FR");
 
   // Frais, déclarations et mémo enregistrés sur le compte (plus de données fictives,
   // plus de perte au rechargement, accessibles depuis tous les appareils)
-  const ae = account.ae || {};
   const saveAe = patch => setAccounts(p => p.map(a => a.id === account.id ? { ...a, ae: { ...(a.ae || {}), ...patch } } : a));
   const frais = ae.frais || [];
   const setFrais = fn => saveAe({ frais: typeof fn === "function" ? fn(frais) : fn });
@@ -4541,7 +4743,15 @@ function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "
   const [memo, setMemo] = useState(ae.memo || "");
   const totalFrais = frais.reduce((s, f) => s + (Number(f.montant) || 0), 0);
   const fraisCats = (lang === "en" ? tr.aeFraisCats : tr.aeFraisCats).split(",");
-  const nearSeuil = caYear > SEUIL_TVA * 0.8;
+  // Alertes : seuil majoré dépassé (TVA due immédiatement), seuil de base, plafond micro
+  const overMajore = caYear > AE.seuilTvaMajore;
+  const overSeuil = caYear > AE.seuilTva;
+  const nearSeuil = caYear > AE.seuilTva * 0.8;
+  const tvaMsg = overMajore
+    ? (lang === "en" ? `VAT due since exceeding €${AE.seuilTvaMajore.toLocaleString("en-GB")} — invoice with VAT now and contact your accountant.` : `Seuil majoré de ${AE.seuilTvaMajore.toLocaleString("fr-FR")} € dépassé : la TVA est due dès maintenant — facturez avec TVA et contactez votre comptable.`)
+    : overSeuil
+      ? (lang === "en" ? `Over €${AE.seuilTva.toLocaleString("en-GB")}: VAT will be due from 1 January next year (immediately above €${AE.seuilTvaMajore.toLocaleString("en-GB")}).` : `Seuil de ${AE.seuilTva.toLocaleString("fr-FR")} € dépassé : TVA due au 1er janvier prochain (immédiatement au-delà de ${AE.seuilTvaMajore.toLocaleString("fr-FR")} €).`)
+      : nearSeuil ? tr.aeSeuilAlert : tr.aeSeuilOk;
 
   return (
     <div style={{ padding: "14px 14px 80px" }}>
@@ -4551,13 +4761,13 @@ function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "
       {/* KPI CA */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
         {[
-          { label: tr.aeCaMois, val: `${Math.round(caMonth).toLocaleString("fr-FR")} €`, sub: `Seuil : ${SEUIL_TVA.toLocaleString("fr-FR")} €/an`, col: T.accent },
-          { label: tr.aeCaAn, val: `${Math.round(caYear).toLocaleString("fr-FR")} €`, sub: nearSeuil ? tr.aeSeuilAlert : tr.aeSeuilOk, col: nearSeuil ? T.warn : T.success },
+          { label: tr.aeCaMois, val: `${Math.round(caMonth).toLocaleString("fr-FR")} €`, sub: `${lang === "en" ? "Micro cap" : "Plafond micro"} : ${AE.plafondMicro.toLocaleString("fr-FR")} €/an`, col: T.accent },
+          { label: tr.aeCaAn, val: `${Math.round(caYear).toLocaleString("fr-FR")} €`, sub: tvaMsg, col: overSeuil ? T.danger : nearSeuil ? T.warn : T.success },
         ].map((k, i) => (
           <div key={i} className="lk-card" style={{ padding: "14px 16px" }}>
             <div style={{ fontWeight: 900, fontSize: 22, color: k.col }}>{k.val}</div>
             <div style={{ fontSize: 11, color: T.textMid, marginTop: 2 }}>{k.label}</div>
-            <div style={{ fontSize: 10, color: nearSeuil && i === 1 ? T.warn : T.textLo, marginTop: 4, fontWeight: nearSeuil && i === 1 ? 700 : 400 }}>{k.sub}</div>
+            <div style={{ fontSize: 10, color: nearSeuil && i === 1 ? (overSeuil ? T.danger : T.warn) : T.textLo, marginTop: 4, fontWeight: nearSeuil && i === 1 ? 700 : 400 }}>{k.sub}</div>
           </div>
         ))}
       </div>
@@ -4566,15 +4776,21 @@ function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "
       <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>{tr.aeCotisations}</div>
         {[
-          [tr.aeCotisRate, `${Math.round(cotis)} €`],
-          [tr.aeFormation + ` (${tr.aeFormationRate})`, `${Math.round(formation)} €`],
+          [`${lang === "en" ? "Social contributions" : "Cotisations sociales"} (${pctFr(AE.cotisations)})`, `${Math.round(cotis)} €`],
+          [`${tr.aeFormation} (${pctFr(AE.formation)})`, `${Math.round(formation)} €`],
+          ...(vl ? [[`${lang === "en" ? "Income tax (flat-rate option)" : "Impôt — versement libératoire"} (${pctFr(AE.versementLiberatoire)})`, `${Math.round(impot)} €`]] : []),
           [tr.aeNetEstime, `${Math.round(net)} €`],
-        ].map(([l, v], i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", paddingBottom: i < 2 ? 8 : 0, borderBottom: i < 2 ? "1px solid rgba(0,0,0,.05)" : "none", marginBottom: i < 2 ? 8 : 0 }}>
+        ].map(([l, v], i, arr) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", paddingBottom: i < arr.length - 1 ? 8 : 0, borderBottom: i < arr.length - 1 ? "1px solid rgba(0,0,0,.05)" : "none", marginBottom: i < arr.length - 1 ? 8 : 0 }}>
             <span style={{ fontSize: 13, color: T.textMid }}>{l}</span>
-            <span style={{ fontWeight: 700, fontSize: 13, color: i === 2 ? T.success : T.textHi }}>{v}</span>
+            <span style={{ fontWeight: 700, fontSize: 13, color: i === arr.length - 1 ? T.success : T.textHi }}>{v}</span>
           </div>
         ))}
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 12.5, color: T.textMid, cursor: "pointer" }}>
+          <input type="checkbox" checked={vl} onChange={e => saveAe({ versementLiberatoire: e.target.checked })} style={{ accentColor: T.accent }} />
+          {lang === "en" ? `I opted for the flat-rate income tax (+${pctFr(AE.versementLiberatoire)})` : `J'ai opté pour le versement libératoire de l'impôt (+${pctFr(AE.versementLiberatoire)})`}
+        </label>
+        <div style={{ fontSize: 11, color: T.textLo, marginTop: 6 }}>{lang === "en" ? `Total rate: ${pctFr(tauxTotal)} of revenue. Indicative 2026 rates for craft services — check with Urssaf.` : `Taux total : ${pctFr(tauxTotal)} du chiffre d'affaires. Barème 2026 indicatif (prestations artisanales) — à vérifier sur urssaf.fr.`}</div>
         <div style={{ marginTop: 10, background: "rgba(201,160,48,.06)", borderRadius: 8, padding: "8px 12px", fontSize: 12, color: T.accent, fontWeight: 600 }}>
           ⏰ {tr.aeCotisAlert} {nextDecl}
         </div>
@@ -4649,8 +4865,9 @@ function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "
         </div>
         <div className="lk-card" style={{ padding: "14px 16px" }}>
           <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, marginBottom: 8 }}>{tr.aeTvaFranchise}</div>
-          <div style={{ fontSize: 12, color: T.textMid }}>Seuil : {SEUIL_TVA.toLocaleString("fr-FR")} €/an (services)</div>
-          <div style={{ fontSize: 11, color: nearSeuil ? T.warn : T.success, marginTop: 4, fontWeight: 600 }}>{nearSeuil ? "⚠️ " + tr.aeSeuilAlert : "✓ " + tr.aeSeuilOk}</div>
+          <div style={{ fontSize: 12, color: T.textMid }}>{lang === "en" ? "Threshold" : "Seuil"} : {AE.seuilTva.toLocaleString("fr-FR")} €/an · {lang === "en" ? "upper" : "majoré"} {AE.seuilTvaMajore.toLocaleString("fr-FR")} €</div>
+          <div style={{ fontSize: 11, color: overSeuil ? T.danger : nearSeuil ? T.warn : T.success, marginTop: 4, fontWeight: 600 }}>{nearSeuil ? "⚠️ " + tvaMsg : "✓ " + tr.aeSeuilOk}</div>
+          <div style={{ fontSize: 11, color: caYear > AE.plafondMicro * 0.9 ? T.warn : T.textLo, marginTop: 6 }}>{lang === "en" ? "Micro-enterprise cap" : "Plafond micro-entreprise"} : {Math.round(caYear).toLocaleString("fr-FR")} / {AE.plafondMicro.toLocaleString("fr-FR")} €</div>
         </div>
       </div>
       <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14 }}>
@@ -4670,7 +4887,7 @@ function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "
               if (!declCa) return;
               const ca = parseFloat(declCa);
               const mois = now.toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { month: "long", year: "numeric" });
-              setDeclarations(p => [{ id: uid(), mois: mois.charAt(0).toUpperCase() + mois.slice(1), ca, cotis: Math.round(ca * COTIS_AE), statut: "à payer", createdAt: ts() }, ...p]);
+              setDeclarations(p => [{ id: uid(), mois: mois.charAt(0).toUpperCase() + mois.slice(1), ca, cotis: Math.round(ca * tauxTotal), statut: "à payer", createdAt: ts() }, ...p]);
               setDeclModal(false); setDeclCa("");
             }} className="lk-btn" style={{ marginBottom: 10 }}>{tr.aeConfirmDecl}</button>
             <button onClick={() => setDeclModal(false)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
@@ -4909,7 +5126,7 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr", 
   );
 }
 
-function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [], openLegal }) {
+function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [], stripeRequired = false, openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
@@ -4939,7 +5156,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const activeMission = activeMissionId ? (myM.find(b => b.id === activeMissionId) || null) : null;
   const setActiveMission = b => setActiveMissionId(b ? b.id : null);
   const updateMission = (id, patch) => setBookings(p => p.map(x => x.id === id ? { ...x, ...(typeof patch === "function" ? patch(x) : patch) } : x));
-  const clientTelOf = b => (accounts || []).find(a => a.id === b?.clientId)?.tel || b?.clientTel || "";
+  const clientTelOf = b => b?.clientTel || (accounts || []).find(a => a.id === b?.clientId)?.tel || "";
+  // Paiement en ligne actif : l'artisan doit avoir activé ses virements Stripe pour recevoir des missions
+  const needsConnect = stripeRequired && !account.stripeOnboarded;
   const earnings = done.reduce((s, b) => s + proShare(b), 0);
 
   // Bons disponibles pour moi : ma ville, mes métiers, dispatch prioritaire respecté
@@ -4972,7 +5191,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
 
   // Feature 2: payment block check (unpaid > 7 days)
   const sevenDaysAgo = Date.now() - 7 * 86400000;
-  const hasPaymentBlock = done.some(b => b.statutPaiement === "en_attente" && new Date(b.createdAt).getTime() < sevenDaysAgo);
+  const hasPaymentBlock = done.some(b => b.statutPaiement !== "payé" && resteAPayer(b) > 0 && new Date(b.termineeLe || b.createdAt).getTime() < sevenDaysAgo);
 
   // ── ALERTE INTERVENTION < 25 KM : notification téléphone + vibration + jingle LOCKR ──
   const NOTIF_RADIUS_KM = 25;
@@ -5085,24 +5304,26 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   };
   const finishMission = (montantFinal, factureImg) => {
     if (!activeMission) return;
-    updateMission(activeMission.id, x => ({
-      statut: "terminée", termineeLe: ts(), montantFinal, factureImg,
-      statutPaiement: x.statutPaiement === "payé" ? "payé" : "en_attente",
-    }));
+    updateMission(activeMission.id, { statut: "terminée", termineeLe: ts(), montantFinal, factureImg });
   };
-  /* Refus : la mission est annulée pour ce pro et la demande du client est
-     republiée automatiquement pour les autres artisans (acompte conservé). */
-  const refuseMission = b => {
+  /* Refus : la mission est annulée pour ce pro (l'empreinte bancaire du
+     client est libérée) et sa demande est republiée pour les autres artisans. */
+  const refuseMission = async b => {
     if (!window.confirm(fr ? "Refuser cette mission ? Elle sera proposée à d'autres artisans." : "Decline this mission? It will be offered to other craftsmen.")) return;
-    updateMission(b.id, { statut: "annulée", annulationRaison: "refusée_pro", annuleeLe: ts() });
+    if (live && empreinteActive(b)) {
+      const r = await releaseHold(b.id, "refus_pro");
+      if (!r.ok) { alert(fr ? "Refus impossible pour le moment, réessayez dans un instant." : "Cannot decline right now, please retry in a moment."); return; }
+    } else {
+      updateMission(b.id, { statut: "annulée", annulationRaison: "refusée_pro", annuleeLe: ts() });
+      if (empreinteActive(b)) applyPayment({ setBookings }, { type: "liberation", ref: b.id, demo: true });
+    }
     if (b.clientId && b.clientId !== "ext") {
       setBons(p => [...p, {
         id: uid(), titre: `${pLabel(PROBLEMES.find(x => x.id === b.probleme), "fr") || "Intervention"} — ${b.clientNom}`,
         adresse: b.adresse, probleme: b.probleme, metier: metierOf(b), urgence: !!b.urgence,
         montantEstime: Number(b.montant) || 0, postedBy: "platform", postedByNom: "LOCKR",
-        region: b.region || account.ville || "Paris", createdAt: ts(), techPct: b.techPct || Math.round(PRO_SHARE_DEFAULT * 100),
-        clientId: b.clientId, clientNom: b.clientNom, openPartner: true, fromBookingId: b.id,
-        acompte: b.acompte || 0, acompteClientPaye: !!b.acompteClientPaye,
+        region: b.region || account.ville || "Paris", createdAt: ts(), techPct: b.techPct || PCT_DEFAULT,
+        clientId: b.clientId, clientNom: b.clientNom, clientTel: b.clientTel || "", openPartner: true, fromBookingId: b.id,
         ...(b.lat && b.lng ? { lat: b.lat, lng: b.lng } : b.clientPos ? { lat: b.clientPos[0], lng: b.clientPos[1] } : {}),
         ...(b.isDemo ? { isDemo: true } : {}),
       }]);
@@ -5375,6 +5596,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 </div>
 
                 {!approved && <PendingApprovalCard account={account} lang={lang} />}
+                {needsConnect && approved && (
+                  <div style={{ background: "rgba(99,91,255,.07)", border: "1px solid rgba(99,91,255,.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 4 }}>💶 {fr ? "Activez vos virements pour recevoir des missions" : "Enable payouts to receive jobs"}</div>
+                    <div style={{ fontSize: 12.5, color: T.textMid, lineHeight: 1.5, marginBottom: 10 }}>{fr ? "Les clients paient par carte sur LOCKR : votre part (85 %) est versée directement sur votre compte bancaire. Tant que ce n'est pas activé, vous n'apparaissez pas aux clients." : "Clients pay by card on LOCKR: your share (85%) is paid directly to your bank account. Until this is enabled, clients cannot see you."}</div>
+                    <StripeConnectCard lang={lang} account={account} compact />
+                  </div>
+                )}
                 {/* Résumé du jour */}
                 {rdvToday.length > 0 && (
                   <div onClick={() => goView("calendar")} style={{ background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 14, padding: "12px 16px", marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
@@ -5650,6 +5878,11 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
             </div>
           ) : !approved ? (
             <div style={{ padding: "14px" }}><PendingApprovalCard account={account} lang={lang} /></div>
+          ) : needsConnect ? (
+            <div style={{ padding: "14px" }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi, marginBottom: 6 }}>💶 {fr ? "Activez vos virements pour prendre des bons" : "Enable payouts to take jobs"}</div>
+              <StripeConnectCard lang={lang} account={account} />
+            </div>
           ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} autoOpenPost={autoOpenPostBon} onAutoOpenHandled={() => setAutoOpenPostBon(false)} />)}
           {view === "chat" && <div style={{ height: "calc(100vh - 230px)", minHeight: 380, display: "flex", flexDirection: "column" }}><ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} lang={lang} /></div>}
           {view === "auto" && <AutoEntrepriseTab account={account} setAccounts={setAccounts} bookings={myM} artisanId={account.artisanId} lang={lang} />}
@@ -5666,7 +5899,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               }
             }} />}
           {view === "calendar" && <CalendarScreen bookings={myM} artisanId={account.artisanId} lang={lang} />}
-          {view === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={myM} artisanId={account.artisanId} lang={lang} /></div>}
+          {view === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={myM} artisanId={account.artisanId} apports={visibleFor(account, bookings).filter(b => b.postedBy === account.id && b.statut === "terminée" && posterShare(b) > 0)} lang={lang} /></div>}
           {view === "history" && (() => {
             const months = [...new Set(done.map(b => (b.createdAt || "").slice(0, 7)))].sort().reverse();
             const shown = histMonth === "all" ? done : done.filter(b => (b.createdAt || "").slice(0, 7) === histMonth);
@@ -5690,7 +5923,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                 const isPaid = b.statutPaiement === "payé";
                 const pr = PROBLEMES.find(p => p.id === b.probleme);
                 return (
-                  <HistoryCard key={b.id} b={b} isPaid={isPaid} pr={pr} tr={tr} setBookings={setBookings} lang={lang} artisanStripeId={connectDestination(b, account)} />
+                  <HistoryCard key={b.id} b={b} isPaid={isPaid} pr={pr} tr={tr} setBookings={setBookings} lang={lang} />
                 );
               })}
             </div>
@@ -5721,8 +5954,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           })}
         </div>
       )}
-      {clotureModal && activeMission && <ClotureModal mission={activeMission} artisan={account} accounts={accounts} onConfirm={finishMission} onCancel={() => { setClotureModal(false); if (activeMission?.statut === "terminée") { setActiveMissionId(null); setTab("accueil"); } }} lang={lang} />}
-      {chatMission && <ChatIntervention bookingId={chatMission.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
+      {clotureModal && activeMission && <ClotureModal mission={activeMission} setBookings={setBookings} onConfirm={finishMission} onCancel={() => { setClotureModal(false); if (activeMission?.statut === "terminée") { setActiveMissionId(null); setTab("accueil"); } }} lang={lang} />}
+      {chatMission && <ChatIntervention booking={chatMission} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
       {monthlyModal && <MonthlyReportModal bookings={myM} artisanId={account.artisanId} lang={lang} onClose={() => setMonthlyModal(false)} />}
       {recapMission && <MissionRecapModal mission={recapMission} lang={lang} onClose={() => setRecapMission(null)} />}
       {/* Écran de bienvenue — premier lancement uniquement */}
@@ -5829,10 +6062,10 @@ function MissionRecapModal({ mission: b, lang = "fr", onClose }) {
 }
 
 /* ─── CLIENT APP ───
-   Parcours simplifié : 1) besoin  2) adresse + artisan  3) devis + acompte
+   Parcours simplifié : 1) besoin  2) adresse + artisan  3) devis + carte (empreinte)
    → suivi en direct (position réelle partagée par l'artisan) → facture. */
 const CLIENT_ST = {
-  en_attente_paiement: { fr: "Acompte à régler", en: "Deposit due", c: T.warn },
+  en_attente_paiement: { fr: "Carte à enregistrer", en: "Card required", c: T.warn },
   assignée: { fr: "Confirmée", en: "Confirmed", c: T.accent },
   en_route: { fr: "Artisan en route", en: "On the way", c: "#2563eb" },
   en_cours: { fr: "En cours", en: "In progress", c: "#2563eb" },
@@ -5841,12 +6074,12 @@ const CLIENT_ST = {
   annulée_client: { fr: "Annulée", en: "Cancelled", c: T.danger },
 };
 
-function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setAccounts = () => {}, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {}, bannedList = [], setters, openLegal }) {
+function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripeRequired = false, setAccounts = () => {}, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {}, setters, openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
   const isDesktop = w >= BP;
-  const demoMode = isDemoAccount(account);
+  const demoMode = IS_DEMO || isDemoAccount(account);
   const [screen, setScreen] = useState("home");
   const [selProb, setSelProb] = useState(null);
   const [selArt, setSelArt] = useState(null);
@@ -5857,7 +6090,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
   const [locating, setLocating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [devis, setDevis] = useState(null);       // { montant, adresse, lat, lng }
-  const [payFor, setPayFor] = useState(null);     // { booking, kind: "acompte" | "facture" }
+  const [payFor, setPayFor] = useState(null);     // { booking, kind: "empreinte" | "facture" }
   const [showChat, setShowChat] = useState(null); // booking
   const [litigeModal, setLitigeModal] = useState(null);
   const [litigeText, setLitigeText] = useState("");
@@ -5880,16 +6113,16 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   const myDemandes = visibleFor(account, bons).filter(b => b.clientId === account.id);
   const liveBk = myBk.find(b => ["assignée", "en_route", "en_cours"].includes(b.statut));
-  const isBannedAcc = a => bannedList.some(b => (b.accountId && b.accountId === a.id) || (b.email && normEmail(b.email) === normEmail(a.email)));
 
-  /* Artisans proposés : uniquement des pros VALIDÉS par LOCKR, non bannis,
-     disponibles, de la ville du client et du bon métier. Les artisans de
-     démonstration ne sont montrés qu'aux comptes de démonstration. */
-  const accountOfArtisan = id => (id ? allAccounts.find(a => a.role === "pro" && (a.artisanId || a.id) === id) : undefined);
+  /* Artisans proposés (profils publics) : uniquement des pros VALIDÉS par
+     LOCKR, non bannis, de la ville du client et du bon métier — et, quand le
+     paiement en ligne est actif, ayant activé leurs virements Stripe. Les
+     artisans de démonstration ne sont montrés qu'en démonstration. */
+  const proOf = id => (id ? pros.find(p => (p.artisanId || p.id) === id) : undefined);
   const artisanList = (() => {
     const region = (account.ville || "").trim().toLowerCase();
-    const real = allAccounts
-      .filter(a => a.role === "pro" && (a.dossierStatus || "approved") === "approved" && !isBannedAcc(a) && (demoMode || !isDemoAccount(a)))
+    const real = pros
+      .filter(a => (a.dossierStatus || "approved") === "approved" && !a.banned && (demoMode || !isDemoAccount(a)) && (!stripeRequired || a.stripeReady))
       .filter(a => !region || sameCity(a.ville, region))
       .map(a => {
         const demo = DEMO_ARTISANS.find(d => d.id === a.artisanId);
@@ -5899,16 +6132,15 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
           certif: demo?.certif || (a.certif && a.certif !== "aucune" ? String(a.certif).toUpperCase() : (fr ? "Pro vérifié LOCKR" : "LOCKR verified pro")),
           color: demo?.color || "#5b8def", ville: a.ville || "", photo: a.photo || null,
           lat: a.lat ?? demo?.lat, lng: a.lng ?? demo?.lng, metiers: proMetiers(a).length ? proMetiers(a) : (demo ? [demo.metier] : []),
-          stripeAccountId: a.stripeOnboarded ? a.stripeAccountId : null,
         };
       });
     return real.filter(a => !selProb || !a.metiers.length || a.metiers.includes(selProb.metier));
   })();
   const artisanOf = b => {
-    const acc = accountOfArtisan(b?.artisanId);
+    const acc = proOf(b?.artisanId);
     const demo = DEMO_ARTISANS.find(d => d.id === b?.artisanId);
-    if (!acc && !demo) return b?.artisanNom ? { nom: b.artisanNom, color: T.accent } : null;
-    return { nom: acc?.nom || demo?.nom || b?.artisanNom, tel: acc?.tel || demo?.tel || "", color: demo?.color || T.accent, certif: demo?.certif || (fr ? "Pro vérifié LOCKR" : "LOCKR verified pro"), photo: acc?.photo || null };
+    if (!acc && !demo) return b?.artisanNom ? { nom: b.artisanNom, tel: b.artisanTel || "", color: T.accent } : null;
+    return { nom: acc?.nom || demo?.nom || b?.artisanNom, tel: acc?.tel || b?.artisanTel || demo?.tel || "", color: demo?.color || T.accent, certif: demo?.certif || (fr ? "Pro vérifié LOCKR" : "LOCKR verified pro"), photo: acc?.photo || null };
   };
 
   // Adresse : saisie (obligatoire) ou position GPS convertie en adresse
@@ -5943,22 +6175,23 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
     setDevis({ ...ad, montant: selArt.tarif + (selProb.urgence ? URGENCE_SUPPLEMENT : 0) });
   };
 
-  /* Devis accepté : la réservation est enregistrée AVANT le paiement de
-     l'acompte (rien n'est perdu pendant la redirection vers Stripe). */
+  /* Devis accepté : la réservation est enregistrée AVANT l'empreinte
+     bancaire (rien n'est perdu pendant la redirection vers Stripe). */
   const confirmDevis = () => {
     if (!devis || !selArt || !selProb) return;
     const b = {
       id: uid(), clientId: account.id, clientNom: account.nom, clientTel: account.tel || "",
-      artisanId: selArt.id, artisanNom: selArt.nom,
+      artisanId: selArt.id, artisanAccountId: selArt.accountId, artisanNom: selArt.nom, artisanTel: selArt.tel || "",
       adresse: devis.adresse, probleme: selProb.id, metier: selProb.metier, urgence: !!selProb.urgence,
-      montant: devis.montant, acompte: Math.round(devis.montant * 0.5 * 100) / 100, acompteClientPaye: false,
+      montant: devis.montant, techPct: PCT_DEFAULT,
       statut: "en_attente_paiement", createdAt: ts(), rdvDate: ts(), region: account.ville || "Paris",
       ...(devis.lat != null ? { lat: devis.lat, lng: devis.lng, clientPos: [devis.lat, devis.lng] } : {}),
       bonType: "platform", ...(demoMode ? { isDemo: true } : {}),
     };
+    b.participants = bookingParticipants(b);
     setBookings(p => [...p, b]);
     setDevis(null);
-    setPayFor({ booking: b, kind: "acompte", artisanStripeId: connectDestination(b, allAccounts.find(a => a.id === selArt.accountId)) });
+    setPayFor({ booking: b, kind: "empreinte" });
   };
 
   /* Aucun artisan disponible : la demande est publiée comme un « bon »
@@ -5975,8 +6208,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
       urgence: !!selProb.urgence, montantEstime: 90 + (selProb.urgence ? URGENCE_SUPPLEMENT : 0),
       postedBy: "platform", postedByNom: "LOCKR", region: account.ville || "Paris",
       ...(ad.lat != null ? { lat: ad.lat, lng: ad.lng } : {}),
-      createdAt: ts(), techPct: Math.round(PRO_SHARE_DEFAULT * 100),
-      clientId: account.id, clientNom: account.nom, openPartner: true, ...(demoMode ? { isDemo: true } : {}),
+      createdAt: ts(), techPct: PCT_DEFAULT,
+      clientId: account.id, clientNom: account.nom, clientTel: account.tel || "", openPartner: true, ...(demoMode ? { isDemo: true } : {}),
     };
     setBons(p => [...p, bon]);
     if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
@@ -5984,10 +6217,23 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
     showToast(fr ? "Demande publiée : vous serez prévenu dès qu'un professionnel accepte." : "Request published: you'll be notified as soon as a professional accepts.");
   };
 
-  const cancelBooking = b => {
+  const cancelBooking = async b => {
     if (!window.confirm(fr ? "Annuler cette intervention ?" : "Cancel this booking?")) return;
-    setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée_client", annuleeLe: ts(), ...(x.acompteClientPaye ? { remboursementAcompte: "à_traiter" } : {}) } : x));
-    if (b.acompteClientPaye) showToast(fr ? "Intervention annulée. Votre acompte vous sera remboursé sous 5 jours ouvrés." : "Booking cancelled. Your deposit will be refunded within 5 business days.");
+    // Empreinte bancaire : le serveur libère le montant réservé et annule la mission
+    if (live && empreinteActive(b)) {
+      const r = await releaseHold(b.id, "annulation_client");
+      showToast(r.ok
+        ? (fr ? "Intervention annulée — le montant réservé sur votre carte est libéré." : "Booking cancelled — the amount held on your card is released.")
+        : (fr ? "Annulation impossible pour le moment, réessayez dans un instant." : "Cannot cancel right now, please retry in a moment."));
+      return;
+    }
+    setBookings(p => p.map(x => x.id === b.id ? {
+      ...x, statut: "annulée_client", annuleeLe: ts(),
+      ...(x.acompteClientPaye ? { remboursementAcompte: "à_traiter" } : {}),
+    } : x));
+    if (!live && empreinteActive(b)) applyPayment(setters || { setBookings }, { type: "liberation", ref: b.id, demo: true });
+    if (empreinteActive(b)) showToast(fr ? "Intervention annulée — le montant réservé sur votre carte est libéré." : "Booking cancelled — the amount held on your card is released.");
+    else if (b.acompteClientPaye) showToast(fr ? "Intervention annulée. Votre acompte vous sera remboursé sous 5 jours ouvrés." : "Booking cancelled. Your deposit will be refunded within 5 business days.");
   };
 
   const rebook = b => {
@@ -6006,14 +6252,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
 
   const FAQ = fr ? [
     { q: "Combien ça coûte ?", a: "Le prix affiché est le tarif de départ. Sur place, l'artisan vous remet un devis FERME avant tout travaux — rien ne démarre sans votre accord." },
-    { q: "À quoi sert l'acompte ?", a: "L'acompte de 50 % confirme votre réservation. Il est payé en ligne de façon sécurisée et déduit de la facture finale. En cas d'annulation avant le départ de l'artisan, il est remboursé." },
+    { q: "Pourquoi enregistrer ma carte ?", a: "À la réservation, le montant du devis est seulement réservé sur votre carte (empreinte bancaire) : rien n'est débité. Après l'intervention, seul le montant final de la facture est prélevé. Si vous annulez avant le départ de l'artisan, la réservation est simplement libérée." },
     { q: "Puis-je annuler ?", a: "Oui, tant que l'artisan n'est pas en route, depuis « Mes interventions ». Pour un dépannage urgent déjà commencé, l'annulation n'est plus possible (art. L.221-28 du Code de la consommation)." },
     { q: "L'artisan est-il vérifié ?", a: "Oui — identité, SIRET, assurance RC Pro et qualifications sont contrôlés par LOCKR avant qu'un artisan puisse recevoir des missions." },
     { q: "Et s'il y a un problème ?", a: "Touchez « Signaler un problème » sur l'intervention. Notre équipe répond sous 48 h. Vous pouvez aussi saisir gratuitement le médiateur de la consommation." },
     { q: "Comment je paie ?", a: "En ligne, par carte, sur la page sécurisée de notre prestataire Stripe (3-D Secure). L'artisan ne manipule jamais votre carte. Vous recevez un reçu par e-mail." },
   ] : [
     { q: "How much does it cost?", a: "The displayed price is the starting price. On site, the craftsman gives you a FIRM quote before any work — nothing starts without your agreement." },
-    { q: "What is the deposit for?", a: "The 50% deposit confirms your booking. It is paid securely online and deducted from the final invoice. If you cancel before the craftsman leaves, it is refunded." },
+    { q: "Why register my card?", a: "When booking, the quote amount is only held on your card: nothing is charged. After the intervention, only the final invoice amount is charged. If you cancel before the craftsman leaves, the hold is simply released." },
     { q: "Can I cancel?", a: "Yes, as long as the craftsman is not on the way, from \"My bookings\". Urgent work already started cannot be cancelled (art. L.221-28 Consumer Code)." },
     { q: "Is the craftsman verified?", a: "Yes — identity, SIRET, professional insurance and qualifications are checked by LOCKR before a craftsman can receive jobs." },
     { q: "What if there is a problem?", a: "Tap \"Report a problem\" on the booking. Our team replies within 48h. You can also contact the consumer mediator free of charge." },
@@ -6044,10 +6290,11 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
         </div>
         {b.litige && <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: b.litige.statut === "résolu" ? T.success : T.warn }}>{b.litige.statut === "résolu" ? (fr ? `Litige résolu${b.litige.reponse ? ` — ${b.litige.reponse}` : ""}` : `Dispute resolved${b.litige.reponse ? ` — ${b.litige.reponse}` : ""}`) : (fr ? "Litige en cours de traitement" : "Dispute being handled")}</div>}
         {b.remboursementAcompte && <div style={{ marginTop: 6, fontSize: 11, color: T.textMid }}>{b.remboursementAcompte === "remboursé" ? (fr ? "Acompte remboursé ✓" : "Deposit refunded ✓") : (fr ? "Remboursement de l'acompte en cours" : "Deposit refund in progress")}</div>}
+        {b.empreinte && <div style={{ marginTop: 6, fontSize: 11, color: T.textMid }}>{EMPREINTE_TXT(b, lang)}</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-          {b.statut === "en_attente_paiement" && btn(fr ? `Payer l'acompte (${fmt(b.acompte)})` : `Pay deposit (${fmt(b.acompte)})`, () => setPayFor({ booking: b, kind: "acompte", artisanStripeId: connectDestination(b, accountOfArtisan(b.artisanId)) }), "main")}
+          {b.statut === "en_attente_paiement" && btn(fr ? "Confirmer avec ma carte" : "Confirm with my card", () => setPayFor({ booking: b, kind: "empreinte" }), "main")}
           {["assignée", "en_route", "en_cours"].includes(b.statut) && btn(fr ? "Suivre en direct" : "Live tracking", () => { setTrackingId(b.id); setScreen("tracking"); }, "main")}
-          {unpaid && btn(fr ? `Régler la facture (${fmt(reste)})` : `Pay invoice (${fmt(reste)})`, () => setPayFor({ booking: b, kind: "facture", artisanStripeId: connectDestination(b, accountOfArtisan(b.artisanId)) }), "main")}
+          {unpaid && !empreinteActive(b) && btn(fr ? `Régler la facture (${fmt(reste)})` : `Pay invoice (${fmt(reste)})`, () => setPayFor({ booking: b, kind: "facture" }), "main")}
           {b.statut === "terminée" && b.factureImg && btn(fr ? "Voir la facture" : "View invoice", () => setFactureView(b))}
           {["en_attente_paiement", "assignée"].includes(b.statut) && btn(tr.cancelBooking, () => cancelBooking(b), "danger")}
           {b.statut === "terminée" && !b.litige && btn(fr ? "Signaler un problème" : "Report a problem", () => { setLitigeModal(b); setLitigeText(""); })}
@@ -6135,24 +6382,23 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
       )}
       {payFor && (
         <PayModal
-          amount={payFor.kind === "acompte" ? payFor.booking.acompte : resteAPayer(payFor.booking)}
-          label={payFor.kind === "acompte" ? (fr ? `Acompte — ${pLabel(PROBLEMES.find(p => p.id === payFor.booking.probleme), lang)}` : `Deposit — ${pLabel(PROBLEMES.find(p => p.id === payFor.booking.probleme), lang)}`) : (fr ? "Règlement de l'intervention" : "Intervention payment")}
-          type={payFor.kind === "acompte" ? "acompte" : "prestation"}
+          amount={payFor.kind === "empreinte" ? bookingTotal(payFor.booking) : resteAPayer(payFor.booking)}
+          label={payFor.kind === "empreinte"
+            ? (fr ? `Réservation — ${pLabel(PROBLEMES.find(p => p.id === payFor.booking.probleme), lang)}` : `Booking — ${pLabel(PROBLEMES.find(p => p.id === payFor.booking.probleme), lang)}`)
+            : (fr ? "Règlement de l'intervention" : "Intervention payment")}
+          type={payFor.kind === "empreinte" ? "empreinte" : "prestation"}
           payRef={payFor.booking.id}
-          email={account.email}
-          artisanStripeId={payFor.artisanStripeId}
-          demo={demoMode}
           lang={lang}
           onSimulated={() => {
             const kind = payFor.kind, id = payFor.booking.id;
-            applyPayment(setters || { setBookings }, { type: kind === "acompte" ? "acompte" : "prestation", ref: id, demo: true });
+            applyPayment(setters || { setBookings }, { type: kind === "empreinte" ? "empreinte" : "prestation", ref: id, demo: true });
             setPayFor(null);
-            if (kind === "acompte") { setTrackingId(id); setScreen("tracking"); showToast(fr ? "Réservation confirmée — acompte payé (démo)." : "Booking confirmed — deposit paid (demo)."); }
+            if (kind === "empreinte") { setTrackingId(id); setScreen("tracking"); showToast(fr ? "Réservation confirmée — carte enregistrée (démo)." : "Booking confirmed — card registered (demo)."); }
             else showToast(fr ? "Paiement enregistré — merci !" : "Payment recorded — thank you!");
           }}
-          onUnavailable={payFor.kind === "acompte" ? () => {
-            // Paiement en ligne indisponible : la réservation est confirmée, acompte à régler plus tard
-            setBookings(p => p.map(x => x.id === payFor.booking.id ? { ...x, statut: "assignée", acompteStatut: "à_régler" } : x));
+          onUnavailable={payFor.kind === "empreinte" ? () => {
+            // Paiement en ligne indisponible : réservation confirmée sans garantie bancaire
+            setBookings(p => p.map(x => x.id === payFor.booking.id ? { ...x, statut: "assignée", garantie: "aucune" } : x));
             setPayFor(null); setTrackingId(payFor.booking.id); setScreen("tracking");
           } : null}
           onClose={() => setPayFor(null)}
@@ -6186,7 +6432,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
         </div>,
         document.body
       )}
-      {showChat && <ChatIntervention bookingId={showChat.id} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={artisanOf(showChat)?.nom || (fr ? "Artisan" : "Craftsman")} onClose={() => setShowChat(null)} lang={lang} />}
+      {showChat && <ChatIntervention booking={showChat} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={artisanOf(showChat)?.nom || (fr ? "Artisan" : "Craftsman")} onClose={() => setShowChat(null)} lang={lang} />}
     </>
   );
 
@@ -6420,9 +6666,10 @@ function ClientApp({ account, bookings, setBookings, onLogout, allAccounts, setA
               )}
             </div>
             <div style={{ padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {bk.acompteStatut === "à_régler" && !bk.acompteClientPaye && (
-                <div style={{ background: "rgba(217,119,6,.07)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.warn, fontWeight: 600 }}>{fr ? "Acompte non réglé : vous pourrez le payer avec la facture finale." : "Deposit not paid: you can pay it with the final invoice."}</div>
+              {bk.garantie === "aucune" && !bk.empreinte && (
+                <div style={{ background: "rgba(217,119,6,.07)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.warn, fontWeight: 600 }}>{fr ? "Carte non enregistrée : vous réglerez l'intervention à la fin, par carte." : "Card not registered: you will pay by card at the end of the intervention."}</div>
               )}
+              {bk.empreinte && <div style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.2)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.textMid, fontWeight: 600 }}>{EMPREINTE_TXT(bk, lang)}</div>}
               <div className="lk-card" style={{ padding: "14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   {steps.map((st, i) => (
@@ -6534,14 +6781,16 @@ ${d.type === "devis" ? `<p class="muted">Devis valable 30 jours. Bon pour accord
   w.document.close();
 }
 
-function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {}, factures = [], setFactures = () => {}, openLegal }) {
+function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {}, factures = [], setFactures = () => {}, openLegal , demoTotal = 0, onCleanupDemo}) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
   const isDesktop = w >= BP;
   const [section, setSection] = useState("dashboard");
   const [sub, setSub] = useState({ interventions: "missions", utilisateurs: "validations", finances: "comptabilite" });
-  const [showDemo, setShowDemo] = useState(false);
+  // Version de démonstration : tout est fictif, tout est montré.
+  // Production : d'éventuelles anciennes données de démo sont masquées (et supprimables).
+  const showDemo = IS_DEMO;
   const [search, setSearch] = useState("");
   const [statutFilter, setStatutFilter] = useState("actives");
   const [detail, setDetail] = useState(null);
@@ -6551,7 +6800,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const [rejectReason, setRejectReason] = useState("");
   const [litigeReply, setLitigeReply] = useState({});
   const [postModal, setPostModal] = useState(false);
-  const emptyBon = { titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: Math.round(PRO_SHARE_DEFAULT * 100), region: "Paris" };
+  const emptyBon = { titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: PCT_DEFAULT, region: "Paris" };
   const [newBon, setNewBon] = useState(emptyBon);
   const [bonErr, setBonErr] = useState("");
   const [newDevis, setNewDevis] = useState({ client: "", clientAdresse: "", service: "", ht: "", type: "facture" });
@@ -6563,7 +6812,8 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const BONS = showDemo ? bons : bons.filter(b => !isDemoRecord(b));
   const q = search.trim().toLowerCase();
   const match = (...vals) => !q || vals.some(v => String(v || "").toLowerCase().includes(q));
-  const isBanned = a => bannedList.some(b => (b.accountId && b.accountId === a.id) || (b.email && normEmail(b.email) === normEmail(a.email)));
+  const isBanned = a => a.banned === true || bannedList.some(b => (b.accountId && b.accountId === a.id) || (b.email && normEmail(b.email) === normEmail(a.email)));
+  const setAccountBanned = (id, banned) => setAccounts(p => p.map(a => a.id === id ? { ...a, banned, ...(banned ? { bannedAt: ts() } : {}) } : a));
   const updateBooking = (id, patch) => setBookings(p => p.map(x => x.id === id ? { ...x, ...patch } : x));
   const accountByArtisan = id => (id ? accounts.find(a => a.role === "pro" && (a.artisanId || a.id) === id) : undefined);
 
@@ -6574,7 +6824,9 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const openLitiges = B.filter(b => b.litige && b.litige.statut !== "résolu");
   const unpaid = done.filter(b => b.statutPaiement !== "payé" && resteAPayer(b) > 0);
   const refunds = B.filter(b => b.remboursementAcompte === "à_traiter");
-  const payouts = done.filter(b => b.statutPaiement === "payé" && !b.proPaid && (b.artisanId || b.partenaireId) && proOwed(b) > 0);
+  // Versements dus : part de l'intervenant et, pour un bon transmis, part de l'apporteur
+  const payoutDue = b => (!b.proPaid && (b.artisanId || b.partenaireId) ? proOwed(b) : 0) + posterOwed(b);
+  const payouts = done.filter(b => b.statutPaiement === "payé" && payoutDue(b) > 0);
   const byMonth = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(new Date().getFullYear(), new Date().getMonth() - 5 + i, 1);
     const value = done.filter(b => { const bd = new Date(b.createdAt); return bd.getMonth() === d.getMonth() && bd.getFullYear() === d.getFullYear(); }).reduce((s2, b) => s2 + lockrShare(b), 0);
@@ -6634,6 +6886,15 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   /* ── Vues ── */
   const renderDashboard = () => (
     <>
+      {demoTotal > 0 && onCleanupDemo && (
+        <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 16, borderLeft: `4px solid ${T.warn}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi }}>{fr ? `${demoTotal} élément(s) de démonstration dans la base` : `${demoTotal} demo item(s) in the database`}</div>
+            <div style={{ fontSize: 12, color: T.textMid, marginTop: 2 }}>{fr ? "Comptes, interventions et annonces d'exemple des premières versions. Ils sont masqués partout ; vous pouvez les supprimer définitivement." : "Sample accounts, bookings and listings from early versions. They are hidden everywhere; you can delete them permanently."}</div>
+          </div>
+          <button onClick={() => { if (window.confirm(fr ? "Supprimer définitivement toutes les données de démonstration ?" : "Permanently delete all demo data?")) onCleanupDemo(); }} className="lk-btn" style={{ width: "auto", padding: "10px 16px", background: "linear-gradient(135deg,#d97706,#b45309)" }}>{fr ? "Supprimer" : "Delete"}</button>
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4,1fr)" : "1fr 1fr", gap: 10, marginBottom: 18 }}>
         {[
           { l: fr ? "Chiffre d'affaires (missions)" : "Revenue (missions)", v: fmt(caTotal), c: T.accent },
@@ -6653,7 +6914,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
         { n: openLitiges.length, l: fr ? "litige(s) ouvert(s)" : "open dispute(s)", go: () => go("interventions", "litiges"), c: T.danger },
         { n: unpaid.length, l: fr ? `mission(s) terminée(s) non payée(s) — ${fmt(unpaid.reduce((s2, b) => s2 + resteAPayer(b), 0))}` : `unpaid completed mission(s) — ${fmt(unpaid.reduce((s2, b) => s2 + resteAPayer(b), 0))}`, go: () => { go("interventions", "missions"); setStatutFilter("impayees"); }, c: T.warn },
         { n: refunds.length, l: fr ? "acompte(s) à rembourser" : "deposit(s) to refund", go: () => go("finances", "comptabilite"), c: T.danger },
-        { n: payouts.length, l: fr ? `versement(s) artisan à effectuer — ${fmt(payouts.reduce((s2, b) => s2 + proOwed(b), 0))}` : `craftsman payout(s) — ${fmt(payouts.reduce((s2, b) => s2 + proOwed(b), 0))}`, go: () => go("finances", "comptabilite"), c: "#2563eb" },
+        { n: payouts.length, l: fr ? `versement(s) à effectuer — ${fmt(payouts.reduce((s2, b) => s2 + payoutDue(b), 0))}` : `payout(s) to make — ${fmt(payouts.reduce((s2, b) => s2 + payoutDue(b), 0))}`, go: () => go("finances", "comptabilite"), c: "#2563eb" },
       ].map((t, i) => (
         <button key={i} onClick={t.go} disabled={!t.n} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "#fff", border: `1px solid ${t.n ? `${t.c}40` : T.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: t.n ? "pointer" : "default", fontFamily: "'Inter',sans-serif", opacity: t.n ? 1 : .55, textAlign: "left" }}>
           <span style={{ minWidth: 30, height: 30, borderRadius: 15, background: t.n ? t.c : "rgba(0,0,0,.08)", color: "#fff", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 8px" }}>{t.n}</span>
@@ -6714,6 +6975,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                 <AdminBadge color={T.success} bg="rgba(30,158,107,.08)">{b.partenaireId ? (fr ? "Entreprise" : "Company") : (fr ? "Artisan" : "Craftsman")} {fmt(proShare(b))} ({pctLabel(b)})</AdminBadge>
                 <AdminBadge color={T.accent} bg="rgba(201,160,48,.1)">LOCKR {fmt(lockrShare(b))}</AdminBadge>
                 {b.proPaid && <AdminBadge color={T.success} bg="rgba(30,158,107,.08)">{fr ? "Artisan payé ✓" : "Craftsman paid ✓"}</AdminBadge>}
+                {posterShare(b) > 0 && <AdminBadge color="#7c3aed" bg="rgba(124,58,237,.08)">{fr ? "Apporteur" : "Referrer"} {b.postedByNom || ""} {fmt(posterShare(b))}{b.posterPaid ? " ✓" : ""}</AdminBadge>}
                 {proAutoPaid(b) > 0 && <AdminBadge color="#635bff" bg="rgba(99,91,255,.08)">{fr ? "Viré par Stripe" : "Paid by Stripe"} {fmt(proAutoPaid(b))}</AdminBadge>}
                 {b.litige && <AdminBadge color={T.danger} bg="rgba(220,38,38,.08)">{fr ? "Litige" : "Dispute"}</AdminBadge>}
               </div>
@@ -6843,7 +7105,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
         </div>
         {!banned
           ? actionBtn(tr.banUser, () => { setBanTarget(a); setBanReason(""); }, T.danger)
-          : actionBtn(fr ? "Débannir" : "Unban", () => setBannedList(p => p.filter(x => !((x.accountId && x.accountId === a.id) || (x.email && normEmail(x.email) === normEmail(a.email))))), T.success)}
+          : actionBtn(fr ? "Débannir" : "Unban", () => { setBannedList(p => p.filter(x => !((x.accountId && x.accountId === a.id) || (x.email && normEmail(x.email) === normEmail(a.email))))); setAccountBanned(a.id, false); }, T.success)}
       </div>, { key: a.id }
     );
   };
@@ -6889,7 +7151,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             <div style={{ fontSize: 11.5, color: T.textLo }}>{b.email} · {fmtDate(b.bannedAt)} · {fr ? "par" : "by"} {b.bannedBy || "—"}</div>
             {b.reason && <div style={{ fontSize: 12, color: T.textMid, fontStyle: "italic", marginTop: 3 }}>{b.reason}</div>}
           </div>
-          {actionBtn(fr ? "Débannir" : "Unban", () => setBannedList(p => p.filter(x => x.id !== b.id)), T.success)}
+          {actionBtn(fr ? "Débannir" : "Unban", () => { setBannedList(p => p.filter(x => x.id !== b.id)); if (b.accountId) setAccountBanned(b.accountId, false); }, T.success)}
         </div>, { key: b.id }
       ))}
     </>
@@ -6898,11 +7160,18 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const renderCompta = () => {
     // Regroupement des versements dus par bénéficiaire (artisan ou entreprise)
     const owed = {};
+    const add = (key, who, fallbackNom, amount, item) => {
+      owed[key] = owed[key] || { nom: who?.nom || fallbackNom || key, iban: who?.iban || "", total: 0, items: [] };
+      owed[key].total += amount; owed[key].items.push(item);
+    };
     payouts.forEach(b => {
-      const key = b.partenaireId || b.artisanId;
-      const who = b.partenaireId ? accounts.find(a => a.id === b.partenaireId) : accountByArtisan(b.artisanId);
-      owed[key] = owed[key] || { nom: who?.nom || b.artisanNom || b.partenaireNom || key, iban: who?.iban || "", total: 0, items: [] };
-      owed[key].total += proOwed(b); owed[key].items.push(b);
+      if (!b.proPaid && (b.artisanId || b.partenaireId) && proOwed(b) > 0) {
+        const who = b.partenaireId ? accounts.find(a => a.id === b.partenaireId) : accountByArtisan(b.artisanId);
+        add(b.partenaireId || b.artisanId, who, b.artisanNom || b.partenaireNom, proOwed(b), { id: b.id, kind: "pro" });
+      }
+      if (posterOwed(b) > 0) {
+        add(b.postedBy, accounts.find(a => a.id === b.postedBy), b.postedByNom, posterOwed(b), { id: b.id, kind: "apport" });
+      }
     });
     return (
       <>
@@ -6924,7 +7193,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               <div style={{ fontSize: 12.5 }}><b>{o.nom}</b> · {o.items.length} mission(s)<div style={{ fontSize: 11, color: T.textLo }}>{o.iban || (fr ? "IBAN non renseigné" : "No IBAN")}</div></div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <b style={{ color: "#2563eb" }}>{fmt(o.total)}</b>
-                {actionBtn(fr ? "Marquer versé" : "Mark paid", () => { if (window.confirm(fr ? `Confirmer le virement de ${fmt(o.total)} à ${o.nom} ?` : `Confirm transfer of ${fmt(o.total)} to ${o.nom}?`)) { const ids = o.items.map(b => b.id); setBookings(p => p.map(x => ids.includes(x.id) ? { ...x, proPaid: true, proPaidAt: ts() } : x)); } }, "#2563eb")}
+                {actionBtn(fr ? "Marquer versé" : "Mark paid", () => { if (window.confirm(fr ? `Confirmer le virement de ${fmt(o.total)} à ${o.nom} ?` : `Confirm transfer of ${fmt(o.total)} to ${o.nom}?`)) { const pro = o.items.filter(i => i.kind === "pro").map(i => i.id); const apport = o.items.filter(i => i.kind === "apport").map(i => i.id); setBookings(p => p.map(x => (pro.includes(x.id) || apport.includes(x.id) ? { ...x, ...(pro.includes(x.id) ? { proPaid: true, proPaidAt: ts() } : {}), ...(apport.includes(x.id) ? { posterPaid: true, posterPaidAt: ts() } : {}) } : x))); } }, "#2563eb")}
               </div>
             </div>
           ))}
@@ -7065,9 +7334,6 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             ))}
           </nav>
           <div style={{ padding: "10px", borderTop: `1px solid ${T.border}` }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: T.textMid, padding: "8px 6px", cursor: "pointer" }}>
-              <input type="checkbox" checked={showDemo} onChange={e => setShowDemo(e.target.checked)} style={{ accentColor: T.accent }} /> {fr ? "Inclure les données de démo" : "Include demo data"}
-            </label>
             {openLegal && <button onClick={() => openLegal("mentions")} style={{ width: "100%", border: "none", background: "transparent", padding: "8px 6px", textAlign: "left", fontSize: 12, color: T.textMid, cursor: "pointer" }}>{fr ? "Centre légal" : "Legal center"}</button>}
             <button onClick={onLogout} style={{ width: "100%", border: "none", background: "transparent", borderRadius: 10, padding: "10px 6px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
               {Icon.sign(T.danger, 16)}<span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>{tr.logout}</span>
@@ -7079,7 +7345,6 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
         <div style={{ background: "#fff", padding: isDesktop ? "16px 32px" : "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           <div style={{ color: T.textHi, fontWeight: 800, fontSize: isDesktop ? 20 : 16 }}>{sections.find(t => t.id === section)?.l}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {!isDesktop && <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: T.textMid }}><input type="checkbox" checked={showDemo} onChange={e => setShowDemo(e.target.checked)} /> {fr ? "Démo" : "Demo"}</label>}
             {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid }}>{tr.lang}</button>}
             {!isDesktop && <button onClick={onLogout} className="lk-ghost" aria-label={tr.logout} style={{ padding: "6px 11px", fontSize: 12 }}>{Icon.sign()}</button>}
           </div>
@@ -7128,6 +7393,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                   [fr ? "Créée le" : "Created", `${fmtDate(b.createdAt)} ${fmtTime(b.createdAt)}`],
                   [fr ? "Montant" : "Amount", `${fmt(bookingTotal(b))} (${fr ? "artisan" : "craftsman"} ${fmt(proShare(b))} · LOCKR ${fmt(lockrShare(b))})`],
                   [fr ? "Acompte" : "Deposit", b.acompte ? `${fmt(b.acompte)} — ${b.acompteClientPaye ? (fr ? "payé" : "paid") : (fr ? "non payé" : "unpaid")}` : "—"],
+                  [fr ? "Carte (empreinte)" : "Card hold", b.empreinte ? EMPREINTE_TXT(b, lang) : (b.garantie === "aucune" ? (fr ? "Non enregistrée" : "Not registered") : "—")],
                   [fr ? "Paiement" : "Payment", b.statutPaiement === "payé" ? `${fr ? "payé le" : "paid on"} ${fmtDate(b.payeLe)}${b.stripeSessionId ? " (Stripe)" : b.paiementDemo ? " (démo)" : b.validePar ? ` (${b.validePar})` : ""}` : "—"],
                   [fr ? "Matériel" : "Material", b.matCost ? fmt(b.matCost) : "—"],
                 ].map(([k, v]) => (
@@ -7169,7 +7435,8 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             <textarea className="lk-input" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder={tr.banReasonPlaceholder} rows={3} style={{ resize: "none", marginBottom: 16 }} />
             <button onClick={() => {
               // Le compte banni est déconnecté immédiatement sur tous ses appareils
-              setBannedList(p => [...p, { id: uid(), accountId: banTarget.id, nom: banTarget.nom, email: banTarget.email, phone: banTarget.tel || "", reason: banReason.trim(), bannedAt: ts(), bannedBy: account.nom, type: banTarget.role }]);
+              setBannedList(p => [...p, { id: uid(), accountId: banTarget.id, nom: banTarget.nom, email: normEmail(banTarget.email), phone: banTarget.tel || "", reason: banReason.trim(), bannedAt: ts(), bannedBy: account.nom, type: banTarget.role }]);
+              setAccountBanned(banTarget.id, true);
               setBanTarget(null);
             }} className="lk-btn" style={{ marginBottom: 10, background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>{tr.banConfirm}</button>
             <button onClick={() => setBanTarget(null)} className="lk-ghost" style={{ width: "100%" }}>{tr.cancel}</button>
@@ -7500,7 +7767,7 @@ function PartenaireLoiTab({ lang = "fr", account }) {
   );
 }
 
-function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBookings, bons, setBons, techs = [], setTechs = () => {}, onLogout, lang = "fr", setLang, listings = [], setListings = () => {}, sales = [], setSales = () => {}, setters, openLegal }) {
+function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, techs = [], setTechs = () => {}, onLogout, lang = "fr", setLang, listings = [], setListings = () => {}, sales = [], setSales = () => {}, setters, openLegal }) {
   const w = useWindowSize();
   const isDesktop = w >= BP;
   const tr = TRANS[lang] || TRANS.fr;
@@ -7528,7 +7795,7 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
   const [profileEdit, setProfileEdit] = useState({ ...account });
   const [profileSaved, setProfileSaved] = useState(false);
   const [bonModal, setBonModal] = useState(false);
-  const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
+  const [newBon, setNewBon] = useState({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 70 });
   const [bonErr, setBonErr] = useState("");
   const [focusTech, setFocusTech] = useState(null);
   const [closeMission, setCloseMission] = useState(null);
@@ -7817,7 +8084,7 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
           </div>
         </div>, document.body
       )}
-      {linkMission && <SendPaymentLinkModal amount={resteAPayer(linkMission)} label={linkMission.typeIntervention || "Prestation LOCKR"} bookingId={linkMission.id} clientNom={linkMission.clientNom} clientTel={accounts.find(a => a.id === linkMission.clientId)?.tel || ""} onClose={() => setLinkMission(null)} lang={lang} />}
+      {linkMission && <SendPaymentLinkModal amount={resteAPayer(linkMission)} bookingId={linkMission.id} clientNom={linkMission.clientNom} clientTel={linkMission.clientTel || ""} onClose={() => setLinkMission(null)} lang={lang} />}
     </div>
   );
 
@@ -8133,21 +8400,35 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
   const myBons = visibleFor(account, bons || []).filter(b => b.postedBy === account.id);
   // Demandes clients (et bons LOCKR ouverts) de la ville, dans les secteurs de l'entreprise
   const openClientBons = visibleFor(account, bons || []).filter(b => b.postedBy === "platform" && b.openPartner && (!b.region || sameCity(b.region, myRegion)) && (!mySecteurs.length || !metierOf(b) || mySecteurs.includes(metierOf(b))));
-  const takeClientBon = (bon, techId) => {
-    if (!bons.some(b => b.id === bon.id)) { alert(fr ? "Cette demande vient d'être prise par un autre professionnel." : "This request was just taken by another professional."); return; }
+  const takeClientBon = async (bon, techId) => {
+    const taken = () => alert(fr ? "Cette demande vient d'être prise par un autre professionnel." : "This request was just taken by another professional.");
+    if (!bons.some(b => b.id === bon.id)) { taken(); return; }
     const tech = myTechs.find(t => t.id === techId);
     // La mission devient une vraie intervention : le client la voit et la suit
-    setBookings(p => [...p, {
-      id: uid(), partenaireId: account.id, partenaireNom: account.nom, artisanNom: tech ? `${tech.prenom} ${tech.nom}` : account.nom,
-      clientId: bon.clientId || "ext", clientNom: bon.clientNom || (fr ? "Client LOCKR" : "LOCKR client"),
+    const bk = {
+      id: "bon_" + bon.id, partenaireId: account.id, partenaireNom: account.nom, artisanNom: tech ? `${tech.prenom} ${tech.nom}` : account.nom,
+      artisanTel: tech?.tel || account.tel || "",
+      clientId: bon.clientId || "ext", clientNom: bon.clientNom || (fr ? "Client LOCKR" : "LOCKR client"), clientTel: bon.clientTel || "",
       adresse: bon.adresse, probleme: bon.probleme, metier: metierOf(bon), typeIntervention: bon.titre, urgence: !!bon.urgence,
       montant: bon.montantEstime, statut: "assignée", technicienId: tech?.id || null, technicienNom: tech ? `${tech.prenom} ${tech.nom}` : null,
       createdAt: ts(), rdvDate: ts(), bonId: bon.id, bonType: "partner", region: bon.region,
-      ...(bon.acompte ? { acompte: bon.acompte, acompteClientPaye: !!bon.acompteClientPaye } : {}),
+      techPct: Number(bon.techPct) || PCT_DEFAULT, postedBy: bon.postedBy || "platform",
       ...(bon.lat && bon.lng ? { lat: bon.lat, lng: bon.lng, clientPos: [bon.lat, bon.lng] } : {}),
       ...(bon.isDemo ? { isDemo: true } : {}),
-    }]);
-    setBons(p => p.filter(b => b.id !== bon.id));
+    };
+    bk.participants = bookingParticipants(bk);
+    if (live) {
+      try {
+        await runBatch([{ collection: "bookings", id: bk.id, data: bk }, { type: "delete", collection: "bons", id: bon.id }]);
+      } catch (e) {
+        console.error("[demande]", e);
+        taken();
+        return;
+      }
+    } else {
+      setBookings(p => [...p, bk]);
+      setBons(p => p.filter(b => b.id !== bon.id));
+    }
     if (tech) setTechStatut(tech.id, "en_mission");
   };
   const posterBon = async () => {
@@ -8156,7 +8437,7 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
     const geo = await geocodeAddress(newBon.adresse);
     setBons(p => [...p, { id: uid(), ...newBon, titre: newBon.titre.trim(), adresse: newBon.adresse.trim(), montantEstime: montant, metier: metierOf(newBon), postedBy: account.id, postedByNom: account.nom, region: myRegion, ...(geo ? { lat: geo[0], lng: geo[1] } : {}), createdAt: ts(), openPlatform: true }]);
     setBonModal(false); setBonErr("");
-    setNewBon({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 35 });
+    setNewBon({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 70 });
   };
   const renderBons = () => (
     <div>
@@ -8247,7 +8528,8 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">{tr.technicianShare} : {newBon.techPct}%</label>
-              <input type="range" min={20} max={70} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value) }))} style={{ width: "100%", accentColor: T.accent }} />
+              <input type="range" min={20} max={PCT_DEFAULT} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
+              <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>{fr ? `Vous recevez ${posterPctFor(newBon.techPct)} % comme apporteur · LOCKR ${Math.round(LOCKR_COMMISSION * 100)} %` : `You receive ${posterPctFor(newBon.techPct)}% as referrer · LOCKR ${Math.round(LOCKR_COMMISSION * 100)}%`}</div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="bon-urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
@@ -8401,7 +8683,6 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
   /* ── Abonnement Entreprise ── */
   const subBenefits = [tr.subBenefit1, tr.subBenefit2, tr.subBenefit3, tr.subBenefit4, tr.subBenefit5, tr.subBenefit6];
   // Abonnement prépayé (1 mois ou 1 an), payé via Stripe ; renouvelable depuis cet écran
-  const SUB_PRICES = { mensuel: 49.9, annuel: 499 };
   const subscribe = (plan) => setSubPay(plan);
   const renderOffers = () => (
     <div className="lk-desktop-2col" style={{ marginBottom: 20 }}>
@@ -8576,8 +8857,7 @@ function PartenaireApp({ account, accounts = [], setAccounts, bookings, setBooki
             label={subPay === "annuel" ? (fr ? "Abonnement Entreprise LOCKR — 1 an" : "LOCKR Business subscription — 1 year") : (fr ? "Abonnement Entreprise LOCKR — 1 mois" : "LOCKR Business subscription — 1 month")}
             type="abonnement"
             payRef={`sub:${account.id}:${subPay}`}
-            email={account.email}
-            demo={isDemoAccount(account)}
+            plan={subPay}
             lang={lang}
             onSimulated={() => { applyPayment(setters || { setAccounts }, { type: "abonnement", ref: `sub:${account.id}:${subPay}`, demo: true }); }}
             onClose={() => setSubPay(null)}
@@ -8636,7 +8916,7 @@ const LEGAL_DOCS = {
       articles: [
         { h: "Article 1 — Prix", p: "Tous les prix affichés sont exprimés en euros toutes taxes comprises (TTC), TVA française applicable. Les prix « À partir de » constituent des tarifs indicatifs minimums ; un devis précis est communiqué avant toute intervention. Aucune intervention n'est facturée sans accord préalable du client sur le prix (arrêté du 24 janvier 2017 relatif aux dépannages)." },
         { h: "Article 2 — Devis obligatoire", p: "Conformément à l'arrêté du 24 janvier 2017, un devis détaillé est obligatoire avant toute prestation de dépannage, réparation et entretien dans le bâtiment : taux horaire, frais de déplacement, pièces, durée estimée. Le devis est gratuit sauf mention contraire expresse." },
-        { h: "Article 3 — Paiement", p: "Le paiement s'effectue en ligne de manière sécurisée (prestataire conforme PCI-DSS et DSP2 avec authentification forte 3-D Secure). Un acompte de 50 % est demandé à la réservation ; le solde est dû à l'issue de la prestation après validation du client." },
+        { h: "Article 3 — Paiement", p: "Le paiement s'effectue en ligne de manière sécurisée (prestataire conforme PCI-DSS et DSP2 avec authentification forte 3-D Secure). À la réservation, le montant du devis est réservé sur la carte du client (empreinte bancaire, aucun débit) ; seul le montant final de la facture est prélevé à l'issue de la prestation. La réservation est libérée sans frais en cas d'annulation avant le départ de l'artisan." },
         { h: "Article 4 — Droit de rétractation", p: "Conformément à l'article L.221-18 du Code de la consommation, le client dispose d'un délai de 14 jours pour se rétracter d'une commande conclue à distance, sans motif ni pénalité. EXCEPTION : le droit de rétractation ne s'applique pas aux travaux d'entretien ou de réparation à réaliser en urgence au domicile du client et expressément sollicités par lui (art. L.221-28 8°), ni aux services pleinement exécutés avant la fin du délai avec accord exprès du client (art. L.221-28 1°). Formulaire de rétractation disponible sur demande à : retractation@lockr.fr." },
         { h: "Article 5 — Garanties légales", p: "Le client bénéficie de la garantie légale de conformité (art. L.217-3 et s. C. conso — 2 ans) et de la garantie des vices cachés (art. 1641 et s. C. civ.) sur les pièces et matériels fournis, ainsi que des garanties applicables aux travaux (parfait achèvement, biennale, décennale le cas échéant — art. 1792 C. civ.)." },
         { h: "Article 6 — Médiation de la consommation", p: "Conformément aux articles L.612-1 et s. du Code de la consommation, en cas de litige non résolu, le client peut saisir gratuitement le médiateur : CNPM Médiation Consommation — 27 avenue de la Libération, 42400 Saint-Chamond — cnpm-mediation-consommation.eu. Plateforme européenne RLL : ec.europa.eu/consumers/odr." },
@@ -8711,7 +8991,7 @@ const LEGAL_DOCS = {
       articles: [
         { h: "Article 1 — Prices", p: "All prices are in euros, all taxes included (TTC). \"From\" prices are indicative minimums; a precise quote is provided before any intervention. No work is invoiced without the client's prior agreement on price (Order of 24 January 2017 on repair services)." },
         { h: "Article 2 — Mandatory quote", p: "In accordance with the Order of 24 January 2017, a detailed quote is mandatory before any building repair or maintenance service: hourly rate, travel costs, parts, estimated duration. Quotes are free unless expressly stated otherwise." },
-        { h: "Article 3 — Payment", p: "Payment is made securely online (PCI-DSS compliant provider, PSD2 strong customer authentication / 3-D Secure). A 50% deposit is required at booking; the balance is due after completion and client validation." },
+        { h: "Article 3 — Payment", p: "Payment is made securely online (PCI-DSS compliant provider, PSD2 strong customer authentication / 3-D Secure). At booking, the quote amount is held on the client's card (no charge); only the final invoice amount is charged after the service. The hold is released free of charge if the booking is cancelled before the craftsman leaves." },
         { h: "Article 4 — Right of withdrawal", p: "Under article L.221-18 of the French Consumer Code, clients have 14 days to withdraw from a distance contract without reason or penalty. EXCEPTIONS: urgent repair or maintenance work at the client's home expressly requested by them (art. L.221-28 8°), and services fully performed before the end of the period with the client's express prior consent (art. L.221-28 1°). Withdrawal form available at: retractation@lockr.fr." },
         { h: "Article 5 — Legal guarantees", p: "Clients benefit from the legal guarantee of conformity (2 years) and the guarantee against hidden defects on supplied parts, as well as construction guarantees where applicable (perfect completion, 2-year, 10-year — art. 1792 French Civil Code)." },
         { h: "Article 6 — Consumer mediation", p: "In accordance with articles L.612-1 et seq., unresolved disputes may be submitted free of charge to the consumer mediator: CNPM Médiation Consommation — cnpm-mediation-consommation.eu. EU ODR platform: ec.europa.eu/consumers/odr." },
@@ -9074,18 +9354,21 @@ function AdminDigitalConformiteTab({ lang = "fr" }) {
   );
 }
 
-/* ─── PAIEMENTS : application d'un paiement confirmé ───
-   Utilisé au retour de Stripe (après vérification serveur) et en mode démo.
-   Idempotent : appliquer deux fois le même paiement ne change rien. */
-function applyPayment({ setBookings, setAccounts, setSales, setListings }, { type, ref, sessionId = null, demo = false, transferred = 0 }) {
+/* ─── PAIEMENTS EN DÉMONSTRATION ───
+   En production, c'est le serveur (fonctions Netlify) qui enregistre les
+   paiements après vérification auprès de Stripe. En démonstration, cette
+   fonction reproduit localement le même résultat.
+   Types : empreinte (carte enregistrée), capture (débit de l'empreinte),
+   liberation (empreinte libérée), prestation (facture réglée), marketplace,
+   abonnement. */
+function applyPayment({ setBookings, setAccounts, setSales, setListings }, { type, ref, amount = 0, demo = true }) {
   if (!ref) return;
-  const stamp = { payeLe: ts(), ...(sessionId ? { stripeSessionId: sessionId } : {}), ...(demo ? { paiementDemo: true } : {}) };
+  const stamp = { payeLe: ts(), ...(demo ? { paiementDemo: true } : {}) };
   if (type === "abonnement" && setAccounts) {
     const [, accountId, plan] = String(ref).split(":");
     const days = plan === "annuel" ? 365 : 30;
     setAccounts(p => p.map(a => {
       if (a.id !== accountId) return a;
-      if (sessionId && a.subscription?.stripeSessionId === sessionId) return a;
       const base = a.subscription?.until && new Date(a.subscription.until) > new Date() ? new Date(a.subscription.until) : new Date();
       return { ...a, subscription: { plan: plan || "mensuel", since: a.subscription?.since || ts(), until: new Date(base.getTime() + days * 86400000).toISOString(), ...stamp } };
     }));
@@ -9103,38 +9386,42 @@ function applyPayment({ setBookings, setAccounts, setSales, setListings }, { typ
     return;
   }
   if (!setBookings) return;
-  // Part artisan déjà virée par Stripe Connect (comptée une seule fois par session)
-  const autoPaid = (b, already) => (transferred > 0 && !already ? { proVerseAuto: Math.round((proAutoPaid(b) + transferred) * 100) / 100 } : {});
-  if (type === "acompte") {
-    setBookings(p => p.map(b => b.id !== ref ? b : {
-      ...b, acompteClientPaye: true, acompteStatut: "payé", acomptePayeLe: b.acomptePayeLe || stamp.payeLe,
-      statut: b.statut === "en_attente_paiement" ? "assignée" : b.statut,
-      ...autoPaid(b, sessionId && b.stripeAcompteSession === sessionId),
-      ...(sessionId ? { stripeAcompteSession: sessionId } : {}), ...(demo ? { paiementDemo: true } : {}),
-    }));
-    return;
-  }
-  // prestation / lien_client : règlement de la facture finale
-  setBookings(p => p.map(b => b.id !== ref ? b : {
-    ...b, statutPaiement: "payé", paiementVerifie: !demo, ...stamp,
-    ...autoPaid(b, sessionId && b.stripeSessionId === sessionId),
+  setBookings(p => p.map(b => {
+    if (b.id !== ref) return b;
+    if (type === "empreinte") {
+      return { ...b, statut: b.statut === "en_attente_paiement" ? "assignée" : b.statut, empreinte: { statut: "autorisée", montant: bookingTotal(b), autoriseeLe: ts(), demo: true } };
+    }
+    if (type === "liberation") {
+      return b.empreinte ? { ...b, empreinte: { ...b.empreinte, statut: "libérée", libereeLe: ts() } } : b;
+    }
+    if (type === "capture") {
+      const debit = Math.round((Number(amount) || 0) * 100) / 100;
+      const encaisse = montantEncaisse(b) + debit;
+      const nb = { ...b, montantEncaisse: encaisse, empreinte: { ...b.empreinte, statut: "débitée", debite: debit, debiteeLe: ts() } };
+      return resteAPayer(nb) <= 0.009 ? { ...nb, statutPaiement: "payé", ...stamp } : nb;
+    }
+    // prestation / lien_client : règlement de la facture finale
+    return { ...b, statutPaiement: "payé", ...stamp };
   }));
 }
 
 /* ─── MODALE DE PAIEMENT ───
-   Plus aucune saisie de carte dans l'application (exigence PCI-DSS) :
-   le client est redirigé vers la page sécurisée Stripe (3-D Secure).
-   Si Stripe n'est pas encore activé :
-   • compte de démo → paiement simulé (clairement indiqué) ;
-   • compte réel → message clair + possibilité de continuer sans payer maintenant. */
-function PayModal({ amount, label, type = "prestation", payRef, email, artisanStripeId, demo = false, onSimulated, onUnavailable, onClose, lang = "fr" }) {
+   Aucune saisie de carte dans l'application (exigence PCI-DSS) : le client
+   est redirigé vers la page sécurisée Stripe (3-D Secure). Le montant est
+   recalculé par le serveur à partir de la base.
+   • Démonstration → paiement simulé (clairement indiqué) ;
+   • paiement en ligne indisponible → message clair (+ « continuer » si prévu). */
+function PayModal({ amount, label, type = "prestation", payRef, plan, onSimulated, onUnavailable, onClose, lang = "fr" }) {
   const fr = lang !== "en";
+  const demo = IS_DEMO;
+  const isHold = type === "empreinte";
   const [step, setStep] = useState("summary"); // summary | loading | demo | unavailable | done
   const pay = async () => {
     setStep("loading");
-    const started = await startStripeCheckout({ amount, label: label || (fr ? "Prestation LOCKR" : "LOCKR service"), type, ref: payRef, email, artisanStripeId });
+    if (demo) { setStep("demo"); return; }
+    const started = await startStripeCheckout({ type, ref: payRef, plan });
     if (started) return; // redirection vers Stripe en cours
-    setStep(demo ? "demo" : "unavailable");
+    setStep("unavailable");
   };
   return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 10010, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
@@ -9150,7 +9437,12 @@ function PayModal({ amount, label, type = "prestation", payRef, email, artisanSt
         {step === "summary" && (
           <>
             <div style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.18)", borderRadius: 12, padding: "10px 14px", marginBottom: 14, display: "flex", flexWrap: "wrap", gap: "6px 14px" }}>
-              {(["acompte", "prestation", "lien_client"].includes(type)
+              {isHold && (
+                <div style={{ width: "100%", fontSize: 12, color: T.textMid, lineHeight: 1.5, marginBottom: 4 }}>
+                  {fr ? "Aucun débit maintenant : ce montant est seulement réservé sur votre carte. Seul le montant final de la facture sera prélevé après l'intervention." : "No charge now: this amount is only held on your card. Only the final invoice amount will be charged after the intervention."}
+                </div>
+              )}
+              {(["empreinte", "prestation", "lien_client"].includes(type)
                 ? (fr ? ["✓ Paiement sécurisé 3-D Secure", "✓ Devis avant travaux", "✓ Artisan vérifié et assuré", "✓ Reçu par e-mail"] : ["✓ 3-D Secure payment", "✓ Quote before work", "✓ Verified, insured craftsman", "✓ Receipt by e-mail"])
                 : (fr ? ["✓ Paiement sécurisé 3-D Secure", "✓ Reçu par e-mail"] : ["✓ 3-D Secure payment", "✓ Receipt by e-mail"])).map((g, i) => (
                 <span key={i} style={{ fontSize: 11, color: T.success, fontWeight: 700 }}>{g}</span>
@@ -9159,7 +9451,7 @@ function PayModal({ amount, label, type = "prestation", payRef, email, artisanSt
             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
               {["visa", "mastercard", "cb", "apple", "google"].map(id => <PayLogo key={id} id={id} size={38} />)}
             </div>
-            <button onClick={pay} className="lk-btn" style={{ marginBottom: 10 }}>{Icon.card("#fff", 16)} {fr ? `Payer ${fmt(amount)} par carte` : `Pay ${fmt(amount)} by card`}</button>
+            <button onClick={pay} className="lk-btn" style={{ marginBottom: 10 }}>{Icon.card("#fff", 16)} {isHold ? (fr ? "Enregistrer ma carte" : "Register my card") : (fr ? `Payer ${fmt(amount)} par carte` : `Pay ${fmt(amount)} by card`)}</button>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, color: T.textLo, fontSize: 11 }}>
               {Icon.shield(T.success, 12)} {fr ? "Vous êtes redirigé vers la page sécurisée de notre prestataire Stripe." : "You are redirected to our provider Stripe's secure page."}
             </div>
@@ -9176,23 +9468,25 @@ function PayModal({ amount, label, type = "prestation", payRef, email, artisanSt
             <div style={{ background: "rgba(217,119,6,.07)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 12, padding: "12px 14px", color: T.warn, fontSize: 12.5, lineHeight: 1.5, marginBottom: 16, textAlign: "left" }}>
               {fr ? "Mode démonstration : le paiement en ligne n'est pas activé. Aucun montant ne sera débité." : "Demo mode: online payment is not enabled. Nothing will be charged."}
             </div>
-            <button onClick={() => { setStep("done"); onSimulated && onSimulated(); }} className="lk-btn" style={{ marginBottom: 10 }}>{fr ? "Simuler le paiement" : "Simulate payment"}</button>
+            <button onClick={() => { setStep("done"); onSimulated && onSimulated(); }} className="lk-btn" style={{ marginBottom: 10 }}>{isHold ? (fr ? "Simuler l'enregistrement de la carte" : "Simulate card registration") : (fr ? "Simuler le paiement" : "Simulate payment")}</button>
             <button onClick={onClose} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Annuler" : "Cancel"}</button>
           </div>
         )}
         {step === "unavailable" && (
           <div>
             <div style={{ background: "rgba(220,38,38,.05)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 12, padding: "12px 14px", color: T.danger, fontSize: 12.5, lineHeight: 1.5, marginBottom: 16 }}>
-              {fr ? "Le paiement en ligne est momentanément indisponible. Vous pourrez régler plus tard depuis « Mes interventions » ou via le lien envoyé par l'artisan." : "Online payment is temporarily unavailable. You can pay later from \"My bookings\" or via the link sent by the craftsman."}
+              {isHold
+                ? (fr ? "L'enregistrement de la carte est momentanément indisponible. Vous pouvez confirmer la réservation et régler l'intervention à la fin." : "Card registration is temporarily unavailable. You can confirm the booking and pay at the end of the intervention.")
+                : (fr ? "Le paiement en ligne est momentanément indisponible. Vous pourrez régler plus tard depuis « Mes interventions » ou via le lien envoyé par l'artisan." : "Online payment is temporarily unavailable. You can pay later from \"My bookings\" or via the link sent by the craftsman.")}
             </div>
-            {onUnavailable && <button onClick={() => { onUnavailable(); }} className="lk-btn" style={{ marginBottom: 10 }}>{fr ? "Continuer et payer plus tard" : "Continue and pay later"}</button>}
+            {onUnavailable && <button onClick={() => { onUnavailable(); }} className="lk-btn" style={{ marginBottom: 10 }}>{isHold ? (fr ? "Confirmer sans enregistrer de carte" : "Confirm without a card") : (fr ? "Continuer et payer plus tard" : "Continue and pay later")}</button>}
             <button onClick={onClose} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Fermer" : "Close"}</button>
           </div>
         )}
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "12px 0" }}>
             <div style={{ width: 70, height: 70, background: "rgba(62,207,142,.1)", border: "1.5px solid rgba(62,207,142,.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", animation: "checkPop .4s ease" }}>{Icon.check(T.success, 30)}</div>
-            <div style={{ color: T.success, fontWeight: 800, fontSize: 18, marginBottom: 18 }}>{fr ? "Paiement enregistré" : "Payment recorded"}</div>
+            <div style={{ color: T.success, fontWeight: 800, fontSize: 18, marginBottom: 18 }}>{isHold ? (fr ? "Carte enregistrée" : "Card registered") : (fr ? "Paiement enregistré" : "Payment recorded")}</div>
             <button onClick={onClose} className="lk-btn">{fr ? "Fermer" : "Close"}</button>
           </div>
         )}
@@ -9226,6 +9520,66 @@ function LoadingScreen({ lang = "fr" }) {
   );
 }
 
+/* Profil public d'un artisan : la seule partie de son compte visible par les
+   clients (liste des artisans disponibles). */
+function publicProfile(a) {
+  const metiers = proMetiers(a);
+  return cleanForFirestore({
+    id: a.id, artisanId: a.artisanId || a.id, nom: a.nom || "", ville: a.ville || "",
+    lat: a.lat ?? null, lng: a.lng ?? null, photo: a.photo || null,
+    metiers, metier: a.metier || metiers[0] || "", tarif: Number(a.tarif) || null,
+    dispo: a.dispo !== false, certif: a.certif || "", tel: a.tel || "",
+    dossierStatus: a.dossierStatus || "approved", banned: !!a.banned, stripeReady: !!a.stripeOnboarded,
+  });
+}
+const sameProfile = (cur, p) => !!cur && Object.keys(p).every(k => JSON.stringify(cur[k] ?? null) === JSON.stringify(p[k] ?? null));
+
+/* Messages d'erreur de connexion / inscription */
+function authErrorText(code, lang) {
+  const fr = lang !== "en";
+  const m = {
+    bad_credentials: fr ? "E-mail ou mot de passe incorrect." : "Wrong e-mail or password.",
+    email_used: fr ? "Cette adresse e-mail est déjà utilisée." : "This e-mail address is already in use.",
+    invalid_email: fr ? "Adresse e-mail invalide." : "Invalid e-mail address.",
+    weak_password: fr ? `Mot de passe trop faible (${MIN_PASS} caractères minimum).` : `Password too weak (min. ${MIN_PASS} characters).`,
+    too_many: fr ? "Trop de tentatives. Patientez quelques minutes ou utilisez « Mot de passe oublié »." : "Too many attempts. Wait a few minutes or use \"Forgot password\".",
+    network: fr ? "Connexion impossible : vérifiez votre réseau." : "Cannot connect: check your network.",
+    banned: fr ? "Cette adresse e-mail ne peut pas être utilisée sur LOCKR." : "This e-mail address cannot be used on LOCKR.",
+    default_password: fr ? "Ce mot de passe par défaut n'est plus accepté. Utilisez « Mot de passe oublié » pour recevoir un lien de réinitialisation par e-mail." : "This default password is no longer accepted. Use \"Forgot password\" to receive a reset link by e-mail.",
+    disabled: fr ? "Ce compte est désactivé." : "This account is disabled.",
+    bad_current: fr ? "Mot de passe actuel incorrect." : "Current password is incorrect.",
+  };
+  return m[code] || (fr ? "Opération impossible pour le moment. Réessayez." : "Operation not possible right now. Please retry.");
+}
+
+/* Bandeau : confirmation de l'adresse e-mail (production) */
+function VerifyEmailBanner({ email, lang = "fr", onVerified }) {
+  const fr = lang !== "en";
+  const [sent, setSent] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  return (
+    <div role="status" style={{ position: "fixed", bottom: 12, left: "50%", transform: "translateX(-50%)", zIndex: 9000, width: "calc(100% - 24px)", maxWidth: 560, background: "#1e293b", color: "#fff", borderRadius: 12, padding: "10px 14px", fontSize: 12.5, fontFamily: "'Inter',sans-serif", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", boxShadow: "0 8px 24px rgba(0,0,0,.25)" }}>
+      <span style={{ flex: 1, minWidth: 180, lineHeight: 1.4 }}>{fr ? `Confirmez votre adresse e-mail : un lien a été envoyé à ${email}.` : `Please confirm your e-mail address: a link was sent to ${email}.`}</span>
+      <button onClick={async () => { if (await sendVerification()) setSent(true); }} disabled={sent} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{sent ? (fr ? "Envoyé ✓" : "Sent ✓") : (fr ? "Renvoyer" : "Resend")}</button>
+      <button onClick={async () => { const u = await reloadUser(); if (u?.emailVerified) onVerified(); else setHidden(true); }} style={{ background: "#fff", border: "none", color: "#1e293b", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>{fr ? "C'est fait" : "Done"}</button>
+    </div>
+  );
+}
+
+/* Pastille : version de démonstration (un appui propose de tout réinitialiser) */
+function DemoBanner({ lang = "fr" }) {
+  const fr = lang !== "en";
+  return (
+    <button
+      title={fr ? "Version de démonstration — données fictives enregistrées sur cet appareil. Appuyer pour réinitialiser." : "Demo version — sample data saved on this device. Tap to reset."}
+      onClick={() => { if (!window.confirm(fr ? "Version de démonstration : les données sont fictives et enregistrées sur cet appareil.\n\nRemettre la démonstration à zéro ?" : "Demo version: data is fictitious and saved on this device.\n\nReset the demo?")) return; resetDemoData(); writeSessionId(null); window.location.reload(); }}
+      style={{ position: "fixed", top: 3, left: "50%", transform: "translateX(-50%)", zIndex: 8500, background: "#c9a030", color: "#1c1c1c", border: "none", borderRadius: 20, padding: "2px 9px", fontSize: 9.5, fontWeight: 800, letterSpacing: ".5px", fontFamily: "'Inter',sans-serif", cursor: "pointer", opacity: .9 }}>
+      {fr ? "DÉMO ↺" : "DEMO ↺"}
+    </button>
+  );
+}
+
 /* ─── ROOT ─── */
 export default function App() {
   const [screen, setScreen] = useState("login");
@@ -9233,52 +9587,223 @@ export default function App() {
   const setLang = l => { setLangState(l); try { localStorage.setItem("lk_lang", l); } catch { /* ignore */ } };
   const tr = TRANS[lang] || TRANS.fr;
 
-  // Données partagées entre TOUS les utilisateurs (Firestore) — mode démo local sinon
-  const [bookings, setBookings, bookingsReady] = useSyncedState("bookings", INIT_BOOKINGS);
-  const [accounts, setAccounts, accountsReady] = useSyncedState("accounts", INIT_ACCOUNTS);
-  const [bons, setBons] = useSyncedState("bons", INIT_BONS);
-  const [chatMessages, setChatMessages] = useSyncedState("chat", INIT_CHAT);
-  const [listings, setListings] = useSyncedState("listings", INIT_LISTINGS);
-  const [sales, setSales] = useSyncedState("sales", INIT_SALES);
-  const [interventionChats, setInterventionChats] = useSyncedState("messages", []);
-  const [bannedList, setBannedList] = useSyncedState("banned", []);
-  const [settings, setSettings] = useSyncedState("settings", []);
-  const [techs, setTechs] = useSyncedState("techs", INIT_PARTNER_TECHS);
-  const [factures, setFactures] = useSyncedState("factures", []);
+  /* ── Identité ──
+     Production : Firebase Authentication (l'identifiant du compte est celui
+     de Firebase). Démonstration : session locale (identifiant seul). */
+  const [authUser, setAuthUser] = useState(live ? undefined : null);
+  const [, setAuthTick] = useState(0);
+  useEffect(() => onAuthChange(u => setAuthUser(u || null)), []);
+  const [demoSession, setDemoSession] = useState(() => (live ? null : readSessionId()));
+  const userId = live ? (authUser ? authUser.uid : null) : demoSession;
+  const [registering, setRegistering] = useState(false);
+
+  // Le compte de l'utilisateur est lu en premier : son rôle décide de ce qui est chargé
+  const [selfDocs, , selfReady] = useSyncedState("accounts", [], { sources: userId ? [{ doc: userId }] : [], demo: false });
+  const me = live ? (selfDocs[0] || null) : null;
+  const role = me?.role;
+  const isAdm = role === "admin";
+  const activePro = !!me && ["pro", "partenaire"].includes(role) && (me.dossierStatus || "approved") === "approved" && !me.banned;
+  /* Ce que chaque rôle charge (le reste est refusé par firestore.rules) */
+  const ALL = undefined;
+  const NONE = [];
+  const mine = field => [{ where: [field, "array-contains", userId] }];
+  const S = !live ? {} : (!userId || !me || me.banned) ? {
+    accounts: NONE, bookings: NONE, bons: NONE, chat: NONE, listings: NONE, sales: NONE, messages: NONE,
+    banned: NONE, settings: NONE, techs: NONE, factures: NONE, profiles: NONE,
+  } : {
+    accounts: isAdm ? ALL : [{ doc: userId }],
+    bookings: isAdm ? ALL : mine("participants"),
+    bons: isAdm || activePro ? ALL : role === "client" ? [{ where: ["clientId", "==", userId] }] : NONE,
+    chat: isAdm || activePro ? ALL : NONE,
+    listings: isAdm || activePro ? ALL : NONE,
+    sales: isAdm ? ALL : activePro ? mine("participants") : NONE,
+    messages: isAdm ? ALL : mine("participants"),
+    banned: isAdm ? ALL : NONE,
+    settings: ALL,
+    techs: isAdm ? ALL : role === "partenaire" ? [{ where: ["partenaireId", "==", userId] }] : NONE,
+    factures: isAdm ? ALL : NONE,
+    profiles: isAdm || role === "client" ? ALL : role === "pro" ? [{ doc: userId }] : NONE,
+  };
+
+  // Données : base partagée en production, locales en démonstration
+  const [bookings, setBookings, bookingsReady] = useSyncedState("bookings", INIT_BOOKINGS, { sources: S.bookings });
+  const [accounts, setAccounts, accountsReady] = useSyncedState("accounts", INIT_ACCOUNTS, { sources: S.accounts });
+  const [bons, setBons] = useSyncedState("bons", INIT_BONS, { sources: S.bons });
+  const [chatMessages, setChatMessages] = useSyncedState("chat", INIT_CHAT, { sources: S.chat });
+  const [listings, setListings] = useSyncedState("listings", INIT_LISTINGS, { sources: S.listings });
+  const [sales, setSales] = useSyncedState("sales", INIT_SALES, { sources: S.sales });
+  const [interventionChats, setInterventionChats] = useSyncedState("messages", [], { sources: S.messages });
+  const [bannedList, setBannedList] = useSyncedState("banned", [], { sources: S.banned });
+  const [settings, setSettings] = useSyncedState("settings", [], { sources: S.settings });
+  const [techs, setTechs] = useSyncedState("techs", INIT_PARTNER_TECHS, { sources: S.techs });
+  const [factures, setFactures] = useSyncedState("factures", [], { sources: S.factures });
+  const [profiles, setProfiles] = useSyncedState("profiles", [], { sources: S.profiles, demo: false });
   const setters = { setBookings, setAccounts, setSales, setListings };
 
   // Ordre de priorité des techniciens (défini par l'admin, partagé avec tous les pros)
   const priorityOrder = settings.find(x => x.id === "priorityOrder")?.order || [];
   const setPriorityOrder = order => setSettings(p => [...p.filter(x => x.id !== "priorityOrder"), { id: "priorityOrder", order: Array.isArray(order) ? order : [], createdAt: "2000-01-01T00:00:00.000Z" }]);
 
-  /* Session : on ne garde que l'identifiant. Le compte affiché est TOUJOURS
-     la version à jour de la base (validation admin, profil, abonnement…). */
-  const [sessionId, setSessionId] = useState(() => readSessionId());
-  const storedAccount = sessionId ? (accounts.find(a => a.id === sessionId) || null) : null;
+  /* Le compte affiché est TOUJOURS la version à jour de la base (validation
+     admin, profil, abonnement…). */
+  const storedAccount = userId ? (accounts.find(a => a.id === userId) || me) : null;
   // Ancien compte artisan sans artisanId : l'id du compte sert d'identifiant
   // (c'est aussi celui qu'utilisent les réservations des clients).
   const account = useMemo(() => (storedAccount && storedAccount.role === "pro" && !storedAccount.artisanId
     ? { ...storedAccount, artisanId: storedAccount.id } : storedAccount), [storedAccount]);
-  const loginAs = acc => { setSessionId(acc.id); writeSessionId(acc.id); };
-  const logout = useCallback(() => { setSessionId(null); writeSessionId(null); setScreen("login"); }, []);
-  const isBanned = useCallback(a => !!a && bannedList.some(b =>
+  const loginAs = acc => { setDemoSession(acc.id); writeSessionId(acc.id); };
+  const logout = useCallback(() => {
+    if (live) signOutUser();
+    else { setDemoSession(null); writeSessionId(null); }
+    setScreen("login");
+  }, []);
+  const isBannedLocal = useCallback(a => !!a && (a.banned === true || bannedList.some(b =>
     (b.accountId && b.accountId === a.id) || (b.email && a.email && normEmail(b.email) === normEmail(a.email))
-  ), [bannedList]);
+  )), [bannedList]);
 
   // Compte supprimé ou banni pendant la session → déconnexion immédiate
   useEffect(() => {
-    if (!sessionId || !accountsReady) return;
+    if (!userId) return;
+    if (live) {
+      if (!selfReady || registering) return;
+      if (!me) {
+        if (!globalThis.__lkLeaving) alert(lang === "en" ? "This account no longer exists." : "Ce compte n'existe plus ou a été supprimé.");
+        logout();
+        return;
+      }
+      if (me.banned) { alert(tr.accountBanned); logout(); }
+      return;
+    }
+    if (!accountsReady) return;
     if (!account) { logout(); return; }
-    if (isBanned(account)) { alert(tr.accountBanned); logout(); }
-  }, [sessionId, accountsReady, account, isBanned, logout, tr.accountBanned]);
+    if (isBannedLocal(account)) { alert(tr.accountBanned); logout(); }
+  }, [userId, selfReady, registering, me, accountsReady, account, isBannedLocal, logout, tr.accountBanned, lang]);
+
+  // Dernière connexion (une fois par session)
+  const lastLoginDone = useRef(null);
+  useEffect(() => {
+    if (!account || lastLoginDone.current === account.id) return;
+    lastLoginDone.current = account.id;
+    setAccounts(p => p.map(a => a.id === account.id ? { ...a, lastLoginAt: ts() } : a));
+  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Langue préférée enregistrée sur le compte
   useEffect(() => { if (account?.lang && account.lang !== lang) setLangState(account.lang); }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Profils publics des artisans tenus à jour (production) : par l'artisan
+     lui-même, et par l'admin pour tous (validation, bannissement…). */
+  const profileTried = useRef(new Map());
+  useEffect(() => {
+    if (!live || !me || registering) return;
+    const targets = role === "pro" && account ? [account] : isAdm && accountsReady ? accounts.filter(a => a.role === "pro") : [];
+    const updates = [];
+    targets.forEach(a => {
+      const p = publicProfile(a);
+      if (sameProfile(profiles.find(x => x.id === a.id), p)) return;
+      const key = JSON.stringify(p);
+      if (profileTried.current.get(a.id) === key) return; // déjà tenté (évite de boucler si refusé)
+      profileTried.current.set(a.id, key);
+      updates.push(p);
+    });
+    const orphans = isAdm && accountsReady && accounts.length ? profiles.filter(p => !accounts.some(a => a.id === p.id && a.role === "pro")).map(p => p.id) : [];
+    if (updates.length || orphans.length) {
+      setProfiles(prev => [...prev.filter(x => !orphans.includes(x.id) && !updates.some(u => u.id === x.id)), ...updates]);
+    }
+  }, [account, accounts, accountsReady, profiles, role, isAdm, me, registering]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Anciennes données (créées avant les comptes sécurisés) : l'admin complète
+     automatiquement la liste des participants, sans laquelle client et
+     artisan ne verraient plus leurs interventions. */
+  const backfillTried = useRef(new Set());
+  useEffect(() => {
+    if (!live || !isAdm || !accountsReady || !bookingsReady) return;
+    const fixBookings = [];
+    bookings.forEach(b => {
+      if (Array.isArray(b.participants) && (b.artisanAccountId || !b.artisanId)) return;
+      if (backfillTried.current.has("b:" + b.id)) return;
+      backfillTried.current.add("b:" + b.id);
+      const acc = b.artisanId ? accounts.find(a => a.role === "pro" && (a.artisanId || a.id) === b.artisanId) : null;
+      const nb = { ...b, ...(acc ? { artisanAccountId: acc.id } : {}) };
+      fixBookings.push({ ...nb, participants: bookingParticipants(nb) });
+    });
+    if (fixBookings.length) setBookings(p => p.map(b => fixBookings.find(f => f.id === b.id) || b));
+    const fixMsgs = interventionChats.filter(m => !Array.isArray(m.participants) && !backfillTried.current.has("m:" + m.id)).map(m => {
+      backfillTried.current.add("m:" + m.id);
+      const b = bookings.find(x => x.id === m.bookingId);
+      return b ? { ...m, participants: Array.isArray(b.participants) ? b.participants : bookingParticipants(b) } : null;
+    }).filter(Boolean);
+    if (fixMsgs.length) setInterventionChats(p => p.map(m => fixMsgs.find(f => f.id === m.id) || m));
+    const fixSales = sales.filter(x => !Array.isArray(x.participants) && !backfillTried.current.has("s:" + x.id)).map(x => {
+      backfillTried.current.add("s:" + x.id);
+      return { ...x, participants: [x.acheteurId, x.vendeurId].filter(Boolean) };
+    });
+    if (fixSales.length) setSales(p => p.map(x => fixSales.find(f => f.id === x.id) || x));
+  }, [isAdm, accountsReady, bookingsReady, bookings, accounts, interventionChats, sales]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Suppression des données de démonstration présentes dans la base de
+     production (anciennes données d'exemple). */
+  const demoCounts = live && isAdm ? {
+    accounts: accounts.filter(isDemoAccount).length, bookings: bookings.filter(isDemoRecord).length,
+    bons: bons.filter(isDemoRecord).length, listings: listings.filter(isDemoRecord).length,
+    sales: sales.filter(isDemoRecord).length, techs: techs.filter(isDemoRecord).length,
+    chat: chatMessages.filter(isDemoRecord).length,
+  } : null;
+  const demoTotal = demoCounts ? Object.values(demoCounts).reduce((a, b) => a + b, 0) : 0;
+  const cleanupDemo = () => {
+    setBookings(p => p.filter(x => !isDemoRecord(x)));
+    setBons(p => p.filter(x => !isDemoRecord(x)));
+    setListings(p => p.filter(x => !isDemoRecord(x)));
+    setSales(p => p.filter(x => !isDemoRecord(x)));
+    setTechs(p => p.filter(x => !isDemoRecord(x)));
+    setChatMessages(p => p.filter(x => !isDemoRecord(x)));
+    setAccounts(p => p.filter(a => !isDemoAccount(a)));
+  };
+
+  // Stripe activé sur la plateforme ? (les artisans doivent alors activer leurs virements)
+  const [platform, setPlatform] = useState({ stripe: false });
+  useEffect(() => { if (live) getPlatformConfig().then(setPlatform); }, []);
+  const stripeRequired = live && !!platform.stripe;
+
+  // Annuaire des artisans proposés aux clients
+  const proDirectory = live ? profiles : accounts.filter(a => a.role === "pro").map(a => ({ ...publicProfile(a), banned: isBannedLocal(a) }));
+
+  /* Inscription : compte de connexion (Firebase) + fiche du compte */
+  const registerAccount = async (fields, password) => {
+    if (!live) {
+      if (emailTaken(accounts, fields.email)) return { error: "email_used" };
+      if (bannedList.some(b => b.email && normEmail(b.email) === normEmail(fields.email))) return { error: "banned" };
+      const acc = await buildAccount({ ...fields, ...(fields.role === "pro" ? { artisanId: "a" + uid() } : {}) }, password);
+      setAccounts(p => [...p, acc]);
+      loginAs(acc);
+      return { ok: true, acc };
+    }
+    setRegistering(true);
+    const r = await signUp(fields.email, password);
+    if (r.error) { setRegistering(false); return r; }
+    if (await isEmailBanned(fields.email)) { await cancelSignUp(); setRegistering(false); return { error: "banned" }; }
+    const acc = {
+      ...fields, id: r.uid, email: normEmail(fields.email), createdAt: ts(),
+      ...(fields.role === "pro" ? { artisanId: r.uid } : {}),
+    };
+    if (acc.role === "client") delete acc.dossierStatus;
+    else acc.dossierStatus = "pending";
+    try {
+      await createAccountDoc(acc);
+    } catch (e) {
+      console.error("[inscription]", e);
+      await cancelSignUp();
+      setRegistering(false);
+      return { error: "unknown" };
+    }
+    sendVerification();
+    setRegistering(false);
+    return { ok: true, acc };
+  };
+
   const [legalOpen, setLegalOpen] = useState(null);
 
-  /* Retour de la page de paiement Stripe : le paiement n'est appliqué
-     qu'après vérification serveur (verify-session), jamais sur la seule URL. */
+  /* Retour de la page de paiement Stripe : le serveur vérifie la session
+     auprès de Stripe et enregistre lui-même le paiement. */
   const [payReturn] = useState(() => {
     const q = new URLSearchParams(window.location.search);
     const st = q.get("paiement");
@@ -9294,33 +9819,35 @@ export default function App() {
       setPayNotice({ kind: "error", text: lang === "en" ? "Payment cancelled — nothing was charged." : "Paiement annulé — aucun montant n'a été débité." });
       return;
     }
-    if (!accountsReady || !bookingsReady) return;
+    if (!live) { payHandled.current = true; return; }
+    if (authUser === undefined) return; // on attend la session (jeton de connexion)
     payHandled.current = true;
     (async () => {
       const v = payReturn.sessionId ? await verifyCheckout(payReturn.sessionId) : null;
-      if (!v) { setPayNotice({ kind: "info", text: lang === "en" ? "Payment received — being confirmed by our team." : "Paiement reçu — confirmation en cours par notre équipe." }); return; }
+      if (!v) { setPayNotice({ kind: "info", text: lang === "en" ? "Payment received — being confirmed." : "Paiement reçu — confirmation en cours." }); return; }
+      if (v.authorized) { setPayNotice({ kind: "success", text: lang === "en" ? "✓ Card registered — nothing is charged before the intervention." : "✓ Carte enregistrée — rien n'est débité avant l'intervention." }); return; }
       if (!v.paid) { setPayNotice({ kind: "error", text: lang === "en" ? "The payment was not confirmed by the bank." : "Le paiement n'a pas été confirmé par la banque." }); return; }
-      applyPayment(setters, { type: v.type, ref: v.ref, sessionId: payReturn.sessionId, transferred: Number(v.transferred) || 0 });
       setPayNotice({ kind: "success", text: lang === "en" ? "✓ Payment confirmed — thank you!" : "✓ Paiement confirmé — merci !" });
     })();
-  }, [payReturn, accountsReady, bookingsReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [payReturn, authUser]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!payNotice) return undefined;
     const t = setTimeout(() => setPayNotice(null), 7000);
     return () => clearTimeout(t);
   }, [payNotice]);
 
-  // Retour de l'onboarding Stripe Connect : l'identifiant est enregistré sur le compte
-  const [connectReturn] = useState(() => {
-    const q = new URLSearchParams(window.location.search);
-    return q.get("stripe_onboard") === "done" ? q.get("acct") : null;
-  });
+  // Retour de l'inscription Stripe Connect : le serveur vérifie l'état du compte Stripe
+  const [connectReturn] = useState(() => new URLSearchParams(window.location.search).get("stripe_onboard"));
+  const connectHandled = useRef(false);
   useEffect(() => {
-    if (!connectReturn || !account) return;
+    if (!connectReturn || connectHandled.current || !account) return;
+    connectHandled.current = true;
     if (window.location.search) window.history.replaceState({}, "", window.location.pathname);
-    if (account.stripeAccountId !== connectReturn || !account.stripeOnboarded) {
-      setAccounts(p => p.map(a => a.id === account.id ? { ...a, stripeAccountId: connectReturn, stripeOnboarded: true } : a));
-    }
+    if (!live) return;
+    refreshConnectStatus().then(r => {
+      if (r?.onboarded) setPayNotice({ kind: "success", text: lang === "en" ? "✓ Automatic payouts enabled" : "✓ Virements automatiques activés" });
+      else setPayNotice({ kind: "info", text: lang === "en" ? "Stripe registration not finished yet — you can resume it from your profile." : "Inscription Stripe pas encore terminée — vous pouvez la reprendre depuis votre profil." });
+    });
   }, [connectReturn, account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const legalLinks = lang === "en"
@@ -9329,9 +9856,11 @@ export default function App() {
 
   const wrapper = (children) => (
     <>
+      {IS_DEMO && <DemoBanner lang={lang} />}
       {children}
       <SyncBanner lang={lang} />
       <CookieConsent lang={lang} />
+      {live && authUser && !authUser.emailVerified && account && <VerifyEmailBanner email={authUser.email} lang={lang} onVerified={() => setAuthTick(t => t + 1)} />}
       {payNotice && (
         <div role="status" style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 10000, background: payNotice.kind === "success" ? T.success : payNotice.kind === "info" ? "#2563eb" : T.danger, color: "#fff", borderRadius: 12, padding: "12px 20px", fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,.2)", maxWidth: "calc(100% - 24px)" }}>
           {payNotice.text}
@@ -9350,24 +9879,24 @@ export default function App() {
     </>
   );
 
-  // Session en cours de restauration : on attend les comptes avant d'afficher
-  if (sessionId && !accountsReady) return wrapper(<LoadingScreen lang={lang} />);
+  // Session en cours de restauration
+  if (live && (authUser === undefined || (userId && (!selfReady || (!me && registering))))) return wrapper(<LoadingScreen lang={lang} />);
 
   const common = { account, accounts, setAccounts, bookings, setBookings, bons, setBons, onLogout: logout, lang, setLang, setters, openLegal: setLegalOpen };
   if (account) {
-    if (account.role === "client") return wrapper(<ClientApp {...common} allAccounts={accounts} interventionChats={interventionChats} setInterventionChats={setInterventionChats} bannedList={bannedList} />);
-    if (account.role === "pro") return wrapper(<ProApp {...common} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} priorityOrder={priorityOrder} />);
-    if (account.role === "admin") return wrapper(<AdminApp {...common} listings={listings} setListings={setListings} sales={sales} setSales={setSales} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} factures={factures} setFactures={setFactures} techs={techs} />);
+    if (account.role === "client") return wrapper(<ClientApp {...common} pros={proDirectory} stripeRequired={stripeRequired} interventionChats={interventionChats} setInterventionChats={setInterventionChats} />);
+    if (account.role === "pro") return wrapper(<ProApp {...common} stripeRequired={stripeRequired} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} priorityOrder={priorityOrder} />);
+    if (account.role === "admin") return wrapper(<AdminApp {...common} listings={listings} setListings={setListings} sales={sales} setSales={setSales} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} factures={factures} setFactures={setFactures} techs={techs} demoTotal={demoTotal} onCleanupDemo={cleanupDemo} />);
     if (account.role === "partenaire") return wrapper(<PartenaireApp {...common} techs={techs} setTechs={setTechs} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
   }
-  const onRegistered = acc => loginAs(acc);
+  const regProps = { onBack: () => setScreen("register-choice"), onRegister: registerAccount, lang, openLegal: setLegalOpen };
   if (screen === "register-choice") return wrapper(<RegisterChoiceScreen onChoice={type => setScreen(type === "pro" ? "register-pro" : type === "entreprise" ? "register-entreprise" : "register-client")} onBack={() => setScreen("login")} lang={lang} />);
-  if (screen === "register-client") return wrapper(<RegisterClientScreen onBack={() => setScreen("register-choice")} onSuccess={onRegistered} accounts={accounts} setAccounts={setAccounts} lang={lang} openLegal={setLegalOpen} />);
-  if (screen === "register-pro") return wrapper(<RegisterProScreen onBack={() => setScreen("register-choice")} onSuccess={onRegistered} accounts={accounts} setAccounts={setAccounts} lang={lang} openLegal={setLegalOpen} />);
-  if (screen === "register-entreprise") return wrapper(<RegisterEntrepriseScreen onBack={() => setScreen("register-choice")} onSuccess={onRegistered} accounts={accounts} setAccounts={setAccounts} lang={lang} openLegal={setLegalOpen} />);
+  if (screen === "register-client") return wrapper(<RegisterClientScreen {...regProps} />);
+  if (screen === "register-pro") return wrapper(<RegisterProScreen {...regProps} />);
+  if (screen === "register-entreprise") return wrapper(<RegisterEntrepriseScreen {...regProps} />);
   return wrapper(<LoginScreen
     onLogin={acc => {
-      if (isBanned(acc)) { alert(tr.accountBanned); return; }
+      if (isBannedLocal(acc)) { alert(tr.accountBanned); return; }
       loginAs(acc);
     }}
     onRegister={() => setScreen("register-choice")}

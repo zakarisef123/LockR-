@@ -13,11 +13,15 @@
    • document trop lourd (> 900 Ko, ex. photo non compressée) détecté ;
    • toute erreur est remontée dans un bandeau visible (useSyncStatus).
 
-   Sans Firebase configuré (src/firebase.js), mode démo local : état React
-   classique, rien n'est partagé. */
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
+   Chaque utilisateur ne charge que ce qu'il a le droit de voir : l'option
+   `sources` décrit les requêtes à écouter (voir useSyncedState) et les règles
+   firestore.rules refusent tout le reste.
+
+   Mode démonstration (VITE_DEMO=1) : état local, enregistré dans le
+   navigateur (rien n'est partagé). */
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { db, firebaseReady } from "../firebase.js";
-import { collection, onSnapshot, doc, setDoc, deleteDoc, getDoc, deleteField } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, deleteDoc, deleteField, query, where, writeBatch } from "firebase/firestore";
 
 const MAX_DOC_CHARS = 900 * 1024; // limite Firestore : 1 Mo par document
 
@@ -125,74 +129,101 @@ function persistDiff(name, prev, next) {
   });
 }
 
-export function useSyncedState(collectionName, initial) {
+/* ── Mode démonstration : données enregistrées dans le navigateur ── */
+const DEMO_PREFIX = "lk_demo_v2_";
+function loadDemo(name, initial) {
+  try {
+    const raw = localStorage.getItem(DEMO_PREFIX + name);
+    if (raw) return sortByCreation(JSON.parse(raw));
+  } catch { /* stockage indisponible ou corrompu : données initiales */ }
+  return sortByCreation(initial || []);
+}
+function saveDemo(name, data) {
+  try { localStorage.setItem(DEMO_PREFIX + name, JSON.stringify(data)); } catch { /* quota dépassé : tant pis */ }
+}
+/* Remet la démonstration à zéro (données fictives d'origine) */
+export function resetDemoData() {
+  try { Object.keys(localStorage).filter(k => k.startsWith(DEMO_PREFIX)).forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
+}
+
+/* Opération atomique (tout ou rien) — ex. prendre un bon : création de
+   l'intervention + suppression du bon. Lève une erreur si refusée. */
+export async function runBatch(ops) {
+  const batch = writeBatch(db);
+  ops.forEach(op => {
+    const ref = doc(db, op.collection, String(op.id));
+    if (op.type === "delete") batch.delete(ref);
+    else batch.set(ref, cleanForFirestore(op.data), op.merge ? { merge: true } : undefined);
+  });
+  await batch.commit();
+}
+
+/* useSyncedState(collection, initial, { sources })
+   sources (mode réel uniquement) :
+     undefined           → collection entière (administration)
+     []                  → rien n'est chargé
+     [{ doc: id }]       → un document
+     [{ where: [champ, opérateur, valeur] }, …] → requêtes, résultats fusionnés
+   En démonstration, `sources` est ignoré : toutes les données sont locales. */
+export function useSyncedState(collectionName, initial, { sources, demo = true } = {}) {
   const live = firebaseReady && !!db;
-  const [data, setData] = useState(() => (live ? [] : sortByCreation(initial)));
+  const srcKey = live ? JSON.stringify(sources === undefined ? [{ all: true }] : sources) : "";
+  // demo: false → liste toujours vide en démonstration (écoute réservée au mode réel)
+  const [data, setData] = useState(() => (live || !demo ? [] : loadDemo(collectionName, initial)));
   const [ready, setReady] = useState(!live);
-  const initialRef = useRef(initial);
-  const seedChecked = useRef(false);
 
   useEffect(() => {
     if (!live) return undefined;
+    const srcs = JSON.parse(srcKey);
+    setData([]);
+    if (!srcs.length) { setReady(true); return undefined; }
+    setReady(false);
     let cancelled = false;
-    let gotServer = false;
-    const unsub = onSnapshot(collection(db, collectionName), async snap => {
-      // Un instantané vide venant du cache local n'est pas fiable : on attend le serveur
-      if (snap.empty && snap.metadata.fromCache && !gotServer) return;
-      gotServer = true;
-      if (snap.empty) {
-        if (!seedChecked.current) {
-          seedChecked.current = true;
-          try {
-            // Données de démo injectées UNE SEULE FOIS (marqueur meta/<collection>) :
-            // une collection vidée volontairement n'est plus jamais re-remplie.
-            const marker = await getDoc(doc(db, "meta", collectionName));
-            if (!marker.exists()) {
-              await setDoc(doc(db, "meta", collectionName), { seededAt: new Date().toISOString() });
-              const seed = initialRef.current || [];
-              if (seed.length) {
-                await Promise.all(seed.map(item => setDoc(doc(db, collectionName, String(item.id)), cleanForFirestore(item))));
-                return; // l'instantané suivant contiendra les données
-              }
-            }
-          } catch (e) {
-            reportError(collectionName, e);
-          }
-        }
-        if (!cancelled) { setData([]); setReady(true); }
-        return;
+    const parts = srcs.map(() => null);
+    const publish = () => {
+      if (cancelled || parts.some(p => p === null)) return;
+      const merged = new Map();
+      parts.forEach(m => m.forEach((v, k) => merged.set(k, v)));
+      setData(sortByCreation([...merged.values()]));
+      setReady(true);
+    };
+    const toItem = d => { const v = d.data(); return v.id == null ? { ...v, id: d.id } : v; };
+    const unsubs = srcs.map((s, i) => {
+      let gotServer = false;
+      const onErr = err => {
+        reportError(collectionName, err);
+        if (!cancelled && parts[i] === null) { parts[i] = new Map(); publish(); }
+      };
+      if (s.doc) {
+        return onSnapshot(doc(db, collectionName, String(s.doc)), snap => {
+          // Un document « absent » venant du cache local n'est pas fiable : on attend le serveur
+          if (!snap.exists() && snap.metadata.fromCache && !gotServer) return;
+          if (!snap.metadata.fromCache) gotServer = true;
+          parts[i] = snap.exists() ? new Map([[snap.id, toItem(snap)]]) : new Map();
+          publish();
+        }, onErr);
       }
-      if (!seedChecked.current) {
-        seedChecked.current = true;
-        // Collection déjà remplie : on pose le marqueur (une fois par navigateur)
-        try {
-          const k = `lk_meta_${collectionName}`;
-          if (!localStorage.getItem(k)) {
-            setDoc(doc(db, "meta", collectionName), { seededAt: new Date().toISOString() }, { merge: true }).catch(() => {});
-            localStorage.setItem(k, "1");
-          }
-        } catch { /* stockage local indisponible */ }
-      }
-      const docs = snap.docs.map(d => {
-        const v = d.data();
-        return v.id == null ? { ...v, id: d.id } : v;
-      });
-      if (!cancelled) { setData(sortByCreation(docs)); setReady(true); }
-    }, err => {
-      reportError(collectionName, err);
-      if (!cancelled) setReady(true);
+      const ref = s.where ? query(collection(db, collectionName), where(...s.where)) : collection(db, collectionName);
+      return onSnapshot(ref, snap => {
+        if (snap.empty && snap.metadata.fromCache && !gotServer) return;
+        if (!snap.metadata.fromCache) gotServer = true;
+        parts[i] = new Map(snap.docs.map(d => [d.id, toItem(d)]));
+        publish();
+      }, onErr);
     });
-    return () => { cancelled = true; unsub(); };
-  }, [collectionName, live]);
+    return () => { cancelled = true; unsubs.forEach(u => u()); };
+  }, [collectionName, live, srcKey]);
 
   const update = useCallback(updater => {
     setData(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
       if (!Array.isArray(next) || next === prev) return prev;
       if (live) persistDiff(collectionName, prev, next);
-      return sortByCreation(next);
+      const sorted = sortByCreation(next);
+      if (!live && demo) saveDemo(collectionName, sorted);
+      return sorted;
     });
-  }, [collectionName, live]);
+  }, [collectionName, live, demo]);
 
   return [data, update, ready];
 }

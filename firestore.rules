@@ -3,47 +3,255 @@ rules_version = '2';
 // Règles de sécurité Firestore — LOCKR
 // ─────────────────────────────────────────────────────────────────────────────
 // À publier dans : console Firebase → Firestore Database → Règles
-// (ou `firebase deploy --only firestore:rules` si la CLI Firebase est installée).
-// Testez-les d'abord dans le « Rules Playground » de la console.
+// (ou `npx firebase deploy --only firestore:rules`).
+// Testées automatiquement : `npm run test:rules` (émulateur Firebase).
 //
-// PHASE 1 (ci-dessous, ACTIVE) — compatible avec l'application actuelle.
-//   L'application n'utilise pas encore Firebase Authentication : Firestore ne
-//   peut donc PAS savoir qui écrit. Ces règles ferment déjà la base à tout ce
-//   qui n'est pas une collection de l'application (plus de `if true` global),
-//   mais elles ne protègent pas les données d'un utilisateur contre un autre.
-//   → Voir SECURITE.md : la migration vers Firebase Authentication est la
-//     priorité n°1 avant un lancement public.
-//
-// PHASE 2 (en commentaire en bas du fichier) — après migration vers Firebase
-//   Authentication : chaque utilisateur ne lit/modifie que ses propres données,
-//   les rôles admin sont vérifiés côté serveur.
+// Principes :
+//   • Il faut être connecté (Firebase Authentication) pour tout accès.
+//   • L'identifiant d'un compte (accounts/{id}) est celui de Firebase Auth.
+//   • Chacun ne lit que ses propres données ; l'admin lit tout.
+//   • Les champs sensibles (rôle, validation du dossier, abonnement, paiements,
+//     Stripe) ne sont modifiables que par un admin ou par le serveur
+//     (fonctions Netlify avec le SDK Admin, qui ne passent pas par ces règles).
+//   • Si la commission LOCKR change (15 %), mettre à jour PCT_DEFAULT ci-dessous.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function appCollection(c) {
-      return c in ["accounts", "bookings", "bons", "chat", "listings", "sales",
-                   "messages", "banned", "settings", "techs", "factures"];
+    // ── Outils ──────────────────────────────────────────────────────────────
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function path(c, id) { return /databases/$(database)/documents/$(c)/$(id); }
+    function me() { return get(path('accounts', uid())).data; }
+    function hasAccount() { return signedIn() && exists(path('accounts', uid())); }
+    function isAdmin() { return hasAccount() && me().role == 'admin'; }
+    function notBanned() { return me().get('banned', false) != true; }
+    // Professionnel (artisan ou entreprise) validé par LOCKR et non banni
+    function isActivePro() {
+      return hasAccount() && me().role in ['pro', 'partenaire']
+        && me().get('dossierStatus', 'approved') == 'approved' && notBanned();
+    }
+    function isActiveUser() { return hasAccount() && notBanned(); }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function unchanged(fields) { return !changed().hasAny(fields); }
+    function newField(f, dflt) { return request.resource.data.get(f, dflt); }
+    function oldField(f, dflt) { return resource.data.get(f, dflt); }
+
+    // Part de l'artisan sur une intervention standard (100 − commission LOCKR 15 %)
+    function PCT_DEFAULT() { return 85; }
+
+    // ── Comptes (données privées) ───────────────────────────────────────────
+    // Champs réservés à l'admin / au serveur
+    function accountPrivileged() {
+      return ['role', 'subscription', 'internalAccess', 'banned', 'stripeAccountId',
+              'stripeOnboarded', 'stripeMode', 'artisanId', 'isDemo', 'migratedAt', 'createdAt', 'id'];
+    }
+    match /accounts/{accountId} {
+      allow get: if signedIn() && (accountId == uid() || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && accountId == uid()
+        && request.resource.data.id == uid()
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role in ['client', 'pro', 'partenaire']
+        && (request.resource.data.role == 'client'
+            ? !('dossierStatus' in request.resource.data)
+            : request.resource.data.dossierStatus == 'pending')
+        && (request.resource.data.role != 'pro' || request.resource.data.artisanId == uid())
+        && !request.resource.data.keys().hasAny(['subscription', 'internalAccess', 'banned',
+              'stripeAccountId', 'stripeOnboarded', 'stripeMode', 'isDemo', 'migratedAt']);
+      allow update: if isAdmin() || (
+        accountId == uid() && notBanned()
+        && unchanged(accountPrivileged())
+        && request.resource.data.get('email', '') == request.auth.token.email
+        // Un dossier refusé peut être renvoyé (retour à « pending »), rien d'autre
+        && (unchanged(['dossierStatus']) || request.resource.data.dossierStatus == 'pending'));
+      allow delete: if signedIn() && (accountId == uid() || isAdmin());
     }
 
-    // L'identifiant stocké dans le document doit correspondre à son nom
-    // (les anciens documents sans champ `id` restent modifiables).
-    function idMatches(docId) {
-      return !("id" in request.resource.data) || string(request.resource.data.id) == docId;
+    // ── Profils publics des artisans (liste proposée aux clients) ───────────
+    // Copie publique d'une partie du compte : le statut de validation, le
+    // bannissement et Stripe doivent correspondre au compte.
+    match /profiles/{accountId} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() || (
+        accountId == uid() && hasAccount() && me().role == 'pro'
+        && request.resource.data.id == uid()
+        && request.resource.data.artisanId == me().artisanId
+        && request.resource.data.get('dossierStatus', 'approved') == me().get('dossierStatus', 'approved')
+        && request.resource.data.get('banned', false) == me().get('banned', false)
+        && request.resource.data.get('stripeReady', false) == me().get('stripeOnboarded', false)
+        && request.resource.data.keys().hasOnly(['id', 'artisanId', 'nom', 'ville', 'lat', 'lng', 'photo',
+              'metiers', 'metier', 'tarif', 'dispo', 'certif', 'tel', 'dossierStatus', 'banned',
+              'stripeReady', 'updatedAt']));
+      allow delete: if signedIn() && (accountId == uid() || isAdmin());
     }
 
-    // Marqueurs d'initialisation des données de démonstration
-    match /meta/{c} {
-      allow read: if appCollection(c);
-      allow create, update: if appCollection(c)
-        && request.resource.data.keys().hasOnly(["seededAt"]);
-      allow delete: if false;
+    // ── Interventions ───────────────────────────────────────────────────────
+    function paymentFields() {
+      return ['statutPaiement', 'paiementVerifie', 'payeLe', 'stripeSessionId',
+              'acompteClientPaye', 'acompteStatut', 'acomptePayeLe', 'stripeAcompteSession',
+              'empreinte', 'proPaid', 'proPaidAt', 'posterPaid', 'posterPaidAt',
+              'proVerseAuto', 'paiementDemo', 'rembourseLe'];
+    }
+    function bookingFrozen() {
+      return ['participants', 'clientId', 'artisanId', 'artisanAccountId', 'partenaireId',
+              'techPct', 'posterPct', 'postedBy', 'bonId', 'acompte', 'createdAt', 'id'];
+    }
+    function participantsOf(d) { return d.get('participants', []); }
+    function isWorkerOn(d) {
+      return d.get('artisanAccountId', '') == uid() || d.get('partenaireId', '') == uid();
+    }
+    // Une intervention créée à partir d'un bon : identifiant « bon_<id du bon> »,
+    // le bon est supprimé dans la même opération (un seul preneur possible).
+    function takesBon(bookingId) {
+      let bonId = request.resource.data.bonId;
+      let bon = get(path('bons', bonId)).data;
+      return bookingId == 'bon_' + bonId
+        && exists(path('bons', bonId)) && !existsAfter(path('bons', bonId))
+        && request.resource.data.techPct == bon.get('techPct', PCT_DEFAULT())
+        && request.resource.data.get('clientId', 'ext') == bon.get('clientId', 'ext')
+        && request.resource.data.get('postedBy', 'platform') == bon.get('postedBy', 'platform')
+        && request.resource.data.get('posterPct', 0) ==
+             (bon.get('postedBy', 'platform') == 'platform' || bon.get('techPct', PCT_DEFAULT()) >= PCT_DEFAULT() ? 0 : PCT_DEFAULT() - bon.get('techPct', PCT_DEFAULT()))
+        && participantsOf(request.resource.data).hasOnly([uid(), bon.get('clientId', 'ext'), bon.get('postedBy', 'platform')]);
+    }
+    match /bookings/{bookingId} {
+      allow read: if isAdmin() || (signedIn() && uid() in participantsOf(resource.data));
+      allow create: if isAdmin() || (
+        isActiveUser() && request.resource.data.id == bookingId
+        && uid() in participantsOf(request.resource.data)
+        && !request.resource.data.keys().hasAny(paymentFields())
+        && (
+          // Client qui réserve un artisan validé, au taux standard
+          (request.resource.data.clientId == uid()
+            && request.resource.data.statut == 'en_attente_paiement'
+            && request.resource.data.techPct == PCT_DEFAULT()
+            && !('posterPct' in request.resource.data)
+            && !('partenaireId' in request.resource.data)
+            && exists(path('profiles', request.resource.data.artisanAccountId))
+            && get(path('profiles', request.resource.data.artisanAccountId)).data.artisanId == request.resource.data.artisanId
+            && participantsOf(request.resource.data).hasOnly([uid(), request.resource.data.artisanAccountId]))
+          // Artisan qui prend un bon
+          || (isActivePro() && me().role == 'pro'
+            && request.resource.data.artisanAccountId == uid()
+            && request.resource.data.artisanId == me().artisanId
+            && !('partenaireId' in request.resource.data)
+            && takesBon(bookingId))
+          // Entreprise partenaire qui prend une demande client
+          || (isActivePro() && me().role == 'partenaire'
+            && request.resource.data.partenaireId == uid()
+            && !('artisanAccountId' in request.resource.data)
+            && takesBon(bookingId))
+        ));
+      allow update: if isAdmin() || (
+        isActiveUser() && uid() in participantsOf(resource.data)
+        && unchanged(bookingFrozen())
+        && unchanged(paymentFields())
+        // Seul l'intervenant fixe le montant final
+        && (unchanged(['montant', 'montantFinal']) || isWorkerOn(resource.data))
+        // Le client peut seulement demander le remboursement d'un ancien acompte
+        && (unchanged(['remboursementAcompte']) || request.resource.data.remboursementAcompte == 'à_traiter'));
+      allow delete: if isAdmin();
     }
 
-    match /{c}/{docId} {
-      allow read: if appCollection(c);
-      allow create, update: if appCollection(c) && idMatches(docId);
-      allow delete: if appCollection(c);
+    // ── Bons (demandes et missions ouvertes) ────────────────────────────────
+    match /bons/{bonId} {
+      allow read: if isAdmin() || isActivePro()
+        || (signedIn() && resource.data.get('clientId', '') == uid());
+      allow create: if isAdmin() || (
+        isActiveUser() && request.resource.data.id == bonId && (
+          // Demande publiée par un client (au taux standard)
+          (request.resource.data.clientId == uid() && request.resource.data.postedBy == 'platform'
+            && request.resource.data.techPct == PCT_DEFAULT())
+          // Bon transmis par un professionnel
+          || (isActivePro() && request.resource.data.postedBy == uid()
+            && request.resource.data.techPct > 0 && request.resource.data.techPct <= PCT_DEFAULT())
+          // Mission refusée par l'artisan : la demande du client est republiée
+          || (isActivePro() && request.resource.data.postedBy == 'platform'
+            && 'fromBookingId' in request.resource.data
+            && isWorkerOn(get(path('bookings', request.resource.data.fromBookingId)).data)
+            && request.resource.data.get('clientId', 'ext') == get(path('bookings', request.resource.data.fromBookingId)).data.get('clientId', 'ext')
+            && request.resource.data.techPct == get(path('bookings', request.resource.data.fromBookingId)).data.get('techPct', PCT_DEFAULT()))
+        ));
+      allow update: if isAdmin() || (signedIn()
+        && (resource.data.postedBy == uid() || resource.data.get('clientId', '') == uid())
+        && unchanged(['postedBy', 'clientId', 'techPct', 'id', 'fromBookingId']));
+      // Suppression : auteur, client concerné, admin, ou professionnel qui prend le bon
+      // (l'intervention « bon_<id> » est créée dans la même opération).
+      allow delete: if isAdmin() || (signedIn() && (
+        resource.data.postedBy == uid() || resource.data.get('clientId', '') == uid()
+        || (isActivePro() && existsAfter(path('bookings', 'bon_' + bonId)))));
+    }
+
+    // ── Messages d'une intervention ─────────────────────────────────────────
+    match /messages/{messageId} {
+      allow read: if isAdmin() || (signedIn() && uid() in resource.data.get('participants', []));
+      allow create: if isActiveUser()
+        && request.resource.data.auteurId == uid()
+        && uid() in request.resource.data.participants
+        && request.resource.data.participants == participantsOf(get(path('bookings', request.resource.data.bookingId)).data);
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Chat régional (professionnels) ──────────────────────────────────────
+    match /chat/{messageId} {
+      allow read: if isAdmin() || isActivePro();
+      allow create: if isActivePro() && request.resource.data.auteurId == uid();
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.auteurId == uid());
+    }
+
+    // ── Marketplace ─────────────────────────────────────────────────────────
+    match /listings/{listingId} {
+      allow read: if isAdmin() || isActivePro();
+      allow create: if isActivePro() && request.resource.data.proId == uid()
+        && !('sold' in request.resource.data && request.resource.data.sold == true);
+      // Le vendeur modifie son annonce ; les autres professionnels ne peuvent
+      // qu'y déposer une offre (champ « offers »).
+      allow update: if isAdmin() || (signedIn() && resource.data.proId == uid() && unchanged(['proId', 'id']))
+        || (isActivePro() && changed().hasOnly(['offers']));
+      allow delete: if isAdmin() || (signedIn() && resource.data.proId == uid());
+    }
+    match /sales/{saleId} {
+      allow read: if isAdmin() || (signedIn() && uid() in resource.data.get('participants', []));
+      allow create: if isActivePro() && request.resource.data.id == saleId
+        && exists(path('listings', request.resource.data.listingId))
+        && request.resource.data.prix == get(path('listings', request.resource.data.listingId)).data.prix
+        && request.resource.data.commission == math.round(request.resource.data.prix * 15) / 100.0
+        && request.resource.data.participants.hasOnly([request.resource.data.acheteurId, request.resource.data.vendeurId])
+        && (
+          // Achat : en attente du paiement
+          (request.resource.data.acheteurId == uid() && request.resource.data.statut == 'en_attente_paiement'
+            && request.resource.data.vendeurId == get(path('listings', request.resource.data.listingId)).data.proId)
+          // Vente déclarée par le vendeur (hors plateforme) : la commission reste due
+          || (request.resource.data.vendeurId == uid() && request.resource.data.statut == 'declaree_vendeur')
+        );
+      allow update: if isAdmin();
+      // Achat abandonné avant paiement
+      allow delete: if isAdmin() || (signedIn() && resource.data.acheteurId == uid()
+        && resource.data.statut == 'en_attente_paiement');
+    }
+
+    // ── Techniciens des entreprises partenaires ─────────────────────────────
+    match /techs/{techId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.partenaireId == uid());
+      allow create: if isAdmin() || (isActiveUser() && me().role == 'partenaire' && request.resource.data.partenaireId == uid());
+      allow update: if isAdmin() || (signedIn() && resource.data.partenaireId == uid() && unchanged(['partenaireId']));
+      allow delete: if isAdmin() || (signedIn() && resource.data.partenaireId == uid());
+    }
+
+    // ── Administration ──────────────────────────────────────────────────────
+    match /banned/{banId} {
+      // Chacun peut vérifier si sa propre adresse est bannie (inscription)
+      allow read: if isAdmin() || (signedIn() && resource.data.get('email', '') == request.auth.token.email);
+      allow write: if isAdmin();
+    }
+    match /settings/{settingId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /factures/{factureId} {
+      allow read, write: if isAdmin();
     }
 
     // Tout le reste est fermé
@@ -52,55 +260,3 @@ service cloud.firestore {
     }
   }
 }
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   PHASE 2 — MODÈLE CIBLE (après migration vers Firebase Authentication)
-   Prérequis : chaque compte `accounts/{uid}` porte l'uid Firebase Auth comme
-   identifiant, et le rôle admin est posé par une fonction serveur (custom
-   claim `admin: true`), jamais par l'application elle-même.
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
-    function me() { return get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data; }
-    function isPro() { return signedIn() && me().role in ["pro", "partenaire"] && me().dossierStatus == "approved"; }
-    // Champs qu'un utilisateur ne peut jamais modifier lui-même
-    function untouched(fields) { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields); }
-
-    match /accounts/{uid} {
-      allow read: if request.auth.uid == uid || isAdmin() || isPro();  // idéalement : profil public séparé
-      allow create: if request.auth.uid == uid && request.resource.data.role in ["client", "pro", "partenaire"]
-                    && !("dossierStatus" in request.resource.data && request.resource.data.dossierStatus == "approved");
-      allow update: if isAdmin() || (request.auth.uid == uid && untouched(["role", "dossierStatus", "subscription", "internalAccess"]));
-      allow delete: if isAdmin() || request.auth.uid == uid;
-    }
-
-    match /bookings/{id} {
-      allow read: if isAdmin() || resource.data.clientId == request.auth.uid
-                  || resource.data.artisanId == request.auth.uid || resource.data.partenaireId == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.clientId == request.auth.uid;
-      // Statuts de paiement : écrits uniquement par le webhook Stripe (Admin SDK)
-      allow update: if isAdmin() || ((resource.data.clientId == request.auth.uid || resource.data.artisanId == request.auth.uid
-                    || resource.data.partenaireId == request.auth.uid)
-                    && untouched(["statutPaiement", "acompteClientPaye", "paiementVerifie", "proPaid"]));
-      allow delete: if isAdmin();
-    }
-
-    match /bons/{id}      { allow read: if isPro() || isAdmin(); allow write: if isPro() || isAdmin(); }
-    match /chat/{id}      { allow read, create: if isPro(); allow update, delete: if isAdmin(); }
-    match /messages/{id}  { allow read, write: if signedIn(); /* à restreindre aux participants de la mission */ }
-    match /listings/{id}  { allow read: if isPro(); allow create: if isPro() && request.resource.data.proId == request.auth.uid;
-                            allow update, delete: if isAdmin() || resource.data.proId == request.auth.uid; }
-    match /sales/{id}     { allow read: if isAdmin() || resource.data.acheteurId == request.auth.uid || resource.data.vendeurId == request.auth.uid;
-                            allow create: if isPro() && request.resource.data.acheteurId == request.auth.uid;
-                            allow update: if isAdmin(); }
-    match /techs/{id}     { allow read, write: if isAdmin() || resource.data.partenaireId == request.auth.uid
-                            || request.resource.data.partenaireId == request.auth.uid; }
-    match /banned/{id}    { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /settings/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
-    match /factures/{id}  { allow read, write: if isAdmin(); }
-    match /meta/{id}      { allow read: if signedIn(); allow write: if isAdmin(); }
-  }
-}
-───────────────────────────────────────────────────────────────────────────── */

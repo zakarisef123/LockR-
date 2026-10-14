@@ -1,28 +1,19 @@
-/* Paiements Stripe (fonctions serverless Netlify).
-   Si Stripe n'est pas configuré (clé absente, développement local), chaque
-   appel renvoie un résultat « non configuré » et l'application bascule en
-   mode démonstration — clairement signalé à l'utilisateur. */
+/* Paiements Stripe (fonctions serveur Netlify).
+   Les montants sont toujours calculés par le serveur à partir des données
+   de la base (jamais à partir de ce qu'envoie le navigateur), et c'est le
+   serveur qui enregistre les paiements. Si Stripe ou le serveur n'est pas
+   configuré, chaque appel renvoie un échec et l'application l'indique
+   clairement à l'utilisateur. */
+import { callFunction } from "./backend.js";
 
-async function post(path, body) {
-  const res = await fetch(`/.netlify/functions/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  let data = null;
-  try { data = await res.json(); } catch { /* réponse non JSON (fonction absente) */ }
-  return { ok: res.ok, status: res.status, data };
+/* Session de paiement Stripe Checkout. Renvoie l'URL de paiement ou null.
+   type : empreinte | prestation | lien_client | marketplace | abonnement */
+export async function createCheckout({ type, ref, plan }) {
+  const r = await callFunction("create-checkout", { type, ref, plan });
+  return r.ok && r.data?.url ? r.data.url : null;
 }
 
-/* Crée une session Stripe Checkout. Renvoie l'URL de paiement ou null. */
-export async function createCheckout({ amount, label, type, ref, email, artisanStripeId }) {
-  try {
-    const { ok, data } = await post("create-checkout", { amount, label, type, bookingId: ref, email, artisanStripeId });
-    return ok && data?.url ? data.url : null;
-  } catch { return null; }
-}
-
-/* Redirige vers la page de paiement Stripe. Renvoie false si Stripe est indisponible. */
+/* Redirige vers la page de paiement Stripe. Renvoie false si indisponible. */
 export async function startStripeCheckout(params) {
   const url = await createCheckout(params);
   if (!url) return false;
@@ -30,20 +21,40 @@ export async function startStripeCheckout(params) {
   return true;
 }
 
-/* Vérifie côté serveur qu'une session Stripe est réellement payée.
-   Renvoie { paid, amount, type, ref } ou null si la vérification est impossible. */
+/* Retour de Stripe : le serveur vérifie la session et enregistre le paiement.
+   Renvoie { paid, authorized, type, ref } ou null. */
 export async function verifyCheckout(sessionId) {
-  try {
-    const { ok, data } = await post("verify-session", { sessionId });
-    return ok && data ? data : null;
-  } catch { return null; }
+  const r = await callFunction("verify-session", { sessionId });
+  return r.ok && r.data ? r.data : null;
+}
+
+/* Débit de l'empreinte bancaire après l'intervention (montant final) */
+export async function captureHold(bookingId) {
+  const r = await callFunction("capture-payment", { bookingId });
+  return r.ok ? { ok: true, ...r.data } : { ok: false, error: r.data?.error || "unavailable" };
+}
+
+/* Libération de l'empreinte (annulation, refus de mission) */
+export async function releaseHold(bookingId, reason) {
+  const r = await callFunction("cancel-hold", { bookingId, reason });
+  return r.ok ? { ok: true, ...r.data } : { ok: false, error: r.data?.error || "unavailable" };
 }
 
 /* Onboarding Stripe Connect (virements automatiques de l'artisan) */
-export async function startConnectOnboarding({ email, nom, accountId }) {
-  try {
-    const { ok, data } = await post("connect-onboard", { email, nom, accountId });
-    if (ok && data?.url) return { url: data.url, accountId: data.accountId };
-    return null;
-  } catch { return null; }
+export async function startConnectOnboarding() {
+  const r = await callFunction("connect-onboard", {});
+  return r.ok && r.data?.url ? r.data : null;
+}
+export async function refreshConnectStatus() {
+  const r = await callFunction("connect-status", {});
+  return r.ok ? r.data : null;
+}
+
+/* Configuration de la plateforme (Stripe activé ?), mise en cache */
+let configPromise = null;
+export function getPlatformConfig() {
+  if (!configPromise) {
+    configPromise = callFunction("platform-config", {}).then(r => (r.ok && r.data ? r.data : { stripe: false, server: false }));
+  }
+  return configPromise;
 }

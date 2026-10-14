@@ -1,43 +1,36 @@
-// Connexion à Firebase (base de données partagée entre TOUS les utilisateurs).
+// Connexion à Firebase : base de données (Firestore) + comptes (Authentication).
 //
-// SANS CETTE CONFIGURATION, l'application reste en mode démo local : chaque
-// utilisateur a ses propres données isolées (rien n'est partagé entre eux).
+// En mode démonstration (VITE_DEMO=1), rien n'est initialisé : l'application
+// fonctionne avec des données locales (voir src/lib/config.js).
 //
-// ⚠️ SÉCURITÉ — À FAIRE AVANT UN LANCEMENT PUBLIC
-// Les règles Firestore ne doivent PAS rester ouvertes (`allow read, write: if true`) :
-// n'importe qui pourrait lire les comptes et modifier les données.
-// Voir firestore.rules (à la racine du projet) et SECURITE.md.
+// La sécurité des données repose sur Firebase Authentication et sur les règles
+// firestore.rules (à publier dans la console Firebase) — voir SECURITE.md.
 
 import { initializeApp, getApps } from "firebase/app";
-import { initializeFirestore, getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { IS_DEMO, USE_EMULATORS, FIREBASE_CONFIG } from "./lib/config.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyD3yHJW5KV_dLehgUFHAA3WiA9w2YBUodE",
-  authDomain: "lockr-app-5d9ce.firebaseapp.com",
-  projectId: "lockr-app-5d9ce",
-  storageBucket: "lockr-app-5d9ce.firebasestorage.app",
-  messagingSenderId: "769396447216",
-  appId: "1:769396447216:web:f395e989ce28bfc3416f35",
-  measurementId: "G-TJKB6WNX7E",
-};
-
-// VITE_DISABLE_FIREBASE=1 (ex. `VITE_DISABLE_FIREBASE=1 npm run dev`) : mode démo
-// local, sans toucher à la base de production — pratique pour tester.
-const isConfigured = firebaseConfig.apiKey !== "REMPLACE_MOI" && import.meta.env.VITE_DISABLE_FIREBASE !== "1";
-
-function createDb() {
-  if (!isConfigured) return null;
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+function init() {
+  if (IS_DEMO) return { db: null, auth: null };
+  const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+  let db;
   try {
-    // ignoreUndefinedProperties : un champ `undefined` dans un objet ne fait plus
-    // échouer l'écriture (sinon Firestore rejette TOUT le document).
-    return initializeFirestore(app, { ignoreUndefinedProperties: true });
+    // ignoreUndefinedProperties : un champ `undefined` ne fait plus échouer l'écriture
+    db = initializeFirestore(app, { ignoreUndefinedProperties: true });
   } catch {
-    // Déjà initialisé (rechargement à chaud en développement)
-    return getFirestore(app);
+    db = getFirestore(app); // déjà initialisé (rechargement à chaud)
   }
+  const auth = getAuth(app);
+  if (USE_EMULATORS && !globalThis.__lkEmulators) {
+    globalThis.__lkEmulators = true;
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  }
+  return { db, auth };
 }
 
-export const db = createDb();
+export const { db, auth } = init();
 
-export const firebaseReady = isConfigured;
+// true = base partagée réelle (ou émulateurs) ; false = démonstration locale
+export const firebaseReady = !!db;
