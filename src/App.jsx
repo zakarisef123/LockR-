@@ -6214,6 +6214,7 @@ function MissionRecapModal({ mission: b, lang = "fr", onClose }) {
    → suivi en direct (position réelle partagée par l'artisan) → facture. */
 const CLIENT_ST = {
   en_attente_paiement: { fr: "Carte à enregistrer", en: "Card required", c: T.warn },
+  en_attente: { fr: "En attente", en: "Pending", c: T.warn },
   assignée: { fr: "Confirmée", en: "Confirmed", c: T.accent },
   en_route: { fr: "Artisan en route", en: "On the way", c: "#2563eb" },
   en_cours: { fr: "En cours", en: "In progress", c: "#2563eb" },
