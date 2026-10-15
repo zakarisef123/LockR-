@@ -5,8 +5,10 @@
 | Sujet | Protection |
 |---|---|
 | Comptes | **Firebase Authentication** (e-mail + mot de passe) : mots de passe gérés par Google, limitation des tentatives, e-mail de confirmation, « mot de passe oublié » par e-mail. |
-| Accès aux données | **Règles Firestore** ([`firestore.rules`](firestore.rules)) : il faut être connecté ; chacun ne lit que ses données (ses interventions, ses messages, ses ventes) ; l'admin voit tout. Testées automatiquement (`npm run test:rules`, 16 scénarios). |
-| Champs sensibles | Rôle, validation du dossier, abonnement, bannissement, Stripe et **tous les statuts de paiement** ne sont modifiables que par l'admin ou par le serveur. Un client ne peut pas se déclarer payé, ni s'attribuer un rôle. |
+| Accès aux données | **Règles Firestore** ([`firestore.rules`](firestore.rules)) : il faut être connecté ; chacun ne lit que ses données (ses interventions, ses messages, ses ventes) ; l'admin voit tout. Testées automatiquement (`npm run test:rules`, 18 scénarios). |
+| Champs sensibles | Rôle, validation du dossier, abonnement, bannissement, Stripe, **tous les statuts de paiement, montants encaissés et frais de déplacement** ne sont modifiables que par l'admin ou par le serveur. Un client ne peut pas se déclarer payé, ni s'attribuer un rôle, ni faire avancer une mission ; une fois l'artisan en route, l'annulation passe par le serveur. |
+| E-mail confirmé | Recopié sur le compte uniquement si Firebase Authentication le confirme (jeton). Obligatoire pour qu'un professionnel soit validé. |
+| Marketplace | Paiement conservé jusqu'à la réception ; versement, remboursement et litiges décidés par le serveur ou l'admin uniquement. |
 | Profils publics | Les clients ne voient des artisans qu'une fiche publique (nom, ville, métiers, tarif, téléphone pro) — jamais l'IBAN, les documents ou les données personnelles. |
 | Prise de bons | Opération atomique : deux artisans ne peuvent pas prendre le même bon. |
 | Paiements | Montants calculés et paiements enregistrés **par le serveur** après vérification auprès de Stripe (voir [PAIEMENTS.md](PAIEMENTS.md)). Aucune saisie de carte dans l'application. |

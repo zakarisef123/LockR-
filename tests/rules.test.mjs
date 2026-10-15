@@ -79,6 +79,14 @@ test("compte : lecture du sien uniquement, champs sensibles protégés", async (
   await assertSucceeds(updateDoc(doc(as(ids.pending), "accounts", ids.pending), { dossierStatus: "pending", nom: "Pro en attente" }));
 });
 
+test("compte : « e-mail confirmé » seulement si Firebase Auth le confirme", async () => {
+  await assertFails(updateDoc(doc(as(ids.pending), "accounts", ids.pending), { emailVerified: true }));
+  const verified = env.authenticatedContext(ids.pending, { email: email(ids.pending), email_verified: true }).firestore();
+  await assertFails(updateDoc(doc(verified, "accounts", ids.pending), { emailVerified: "oui" }));
+  await assertSucceeds(updateDoc(doc(verified, "accounts", ids.pending), { emailVerified: true }));
+  await assertFails(setDoc(doc(as("new4"), "accounts", "new4"), { id: "new4", email: email("new4"), role: "client", emailVerified: true }));
+});
+
 test("admin : lit et modifie tout", async () => {
   const db = as(ids.admin);
   await assertSucceeds(getDocs(collection(db, "accounts")));
@@ -131,6 +139,20 @@ test("interventions : paiements et montant protégés", async () => {
   await assertSucceeds(updateDoc(doc(as(ids.admin), "bookings", "b1"), { statutPaiement: "payé" }));
 });
 
+test("interventions : le client annule seulement avant le départ ; frais et encaissements protégés", async () => {
+  const client = as(ids.client), pro = as(ids.pro);
+  await assertFails(updateDoc(doc(client, "bookings", "b1"), { montantEncaisse: 100 }));
+  await assertFails(updateDoc(doc(client, "bookings", "b1"), { fraisDeplacement: 0 }));
+  await assertFails(updateDoc(doc(pro, "bookings", "b1"), { fraisDeplacement: 80 }));
+  // Le client ne fait pas avancer la mission à la place de l'artisan
+  await assertFails(updateDoc(doc(client, "bookings", "b1"), { statut: "terminée" }));
+  await assertSucceeds(updateDoc(doc(pro, "bookings", "b1"), { statut: "en_route" }));
+  // Artisan en route : annulation uniquement par le serveur (frais de déplacement)
+  await assertFails(updateDoc(doc(client, "bookings", "b1"), { statut: "annulée_client" }));
+  await assertSucceeds(updateDoc(doc(pro, "bookings", "b1"), { statut: "assignée" }));
+  await assertSucceeds(updateDoc(doc(client, "bookings", "b1"), { statut: "annulée_client", annuleeLe: "2026-01-01" }));
+});
+
 // ── Bons ───────────────────────────────────────────────────────────────────
 test("bons : un seul artisan peut prendre un bon (opération atomique)", async () => {
   const take = async (who, artisanId) => {
@@ -171,6 +193,9 @@ test("bons : visibilité et création", async () => {
   await assertSucceeds(setDoc(doc(c, "bons", "bon3"), { id: "bon3", clientId: ids.client, postedBy: "platform", techPct: 85 }));
   await assertFails(setDoc(doc(c, "bons", "bon4"), { id: "bon4", clientId: ids.client, postedBy: "platform", techPct: 95 }));
   await assertFails(setDoc(doc(as(ids.pro), "bons", "bon5"), { id: "bon5", postedBy: ids.pro, techPct: 90 }));
+  // Part de l'apporteur plafonnée à 50 % : l'intervenant garde au moins 35 %
+  await assertFails(setDoc(doc(as(ids.pro), "bons", "bon5"), { id: "bon5", postedBy: ids.pro, techPct: 30 }));
+  await assertSucceeds(setDoc(doc(as(ids.pro), "bons", "bon8"), { id: "bon8", postedBy: ids.pro, techPct: 35 }));
   await assertSucceeds(setDoc(doc(as(ids.pro), "bons", "bon5"), { id: "bon5", postedBy: ids.pro, techPct: 70 }));
   // Republication après refus : seulement par l'artisan de la mission
   await assertSucceeds(setDoc(doc(as(ids.pro), "bons", "bon6"), { id: "bon6", postedBy: "platform", clientId: ids.client, techPct: 85, fromBookingId: "b1" }));

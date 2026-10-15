@@ -7,11 +7,15 @@ export function createFakeStripe({ baseUrl = "http://localhost:5173" } = {}) {
   const sessions = new Map();
   const intents = new Map();
   const accounts = new Map();
+  const transfers = new Map();
+  const refunds = new Map();
+  const idem = new Map(); // clés d'idempotence (même requête = même résultat)
   const calls = [];
 
   const stripe = {
     calls,
-    sessions, intents, accounts,
+    sessions, intents, accounts, transfers, refunds,
+    failTransfers: false,
     checkout: {
       sessions: {
         async create(params) {
@@ -23,6 +27,7 @@ export function createFakeStripe({ baseUrl = "http://localhost:5173" } = {}) {
             id: pid, object: "payment_intent", amount: cents, amount_capturable: 0, amount_received: 0,
             status: "requires_payment_method", capture_method: manual ? "manual" : "automatic",
             metadata: params.payment_intent_data?.metadata || {},
+            transfer_group: params.payment_intent_data?.transfer_group || null, latest_charge: null,
             transfer_data: params.payment_intent_data?.transfer_data || null,
             application_fee_amount: params.payment_intent_data?.application_fee_amount || null,
           });
@@ -83,6 +88,30 @@ export function createFakeStripe({ baseUrl = "http://localhost:5173" } = {}) {
         return { ...a };
       },
     },
+    transfers: {
+      async create(params, opts = {}) {
+        calls.push(["transfers.create", params, opts]);
+        if (opts.idempotencyKey && idem.has(opts.idempotencyKey)) return { ...idem.get(opts.idempotencyKey) };
+        if (stripe.failTransfers) throw new Error("Insufficient funds in Stripe account");
+        if (!accounts.has(params.destination)) throw new Error("No such destination");
+        const t = { id: id("tr"), object: "transfer", ...params };
+        transfers.set(t.id, t);
+        if (opts.idempotencyKey) idem.set(opts.idempotencyKey, t);
+        return { ...t };
+      },
+    },
+    refunds: {
+      async create(params, opts = {}) {
+        calls.push(["refunds.create", params, opts]);
+        if (opts.idempotencyKey && idem.has(opts.idempotencyKey)) return { ...idem.get(opts.idempotencyKey) };
+        const pi = intents.get(params.payment_intent);
+        if (!pi || pi.status !== "succeeded") throw new Error("PaymentIntent not refundable");
+        const r = { id: id("re"), object: "refund", amount: params.amount ?? pi.amount_received, payment_intent: pi.id, status: "succeeded" };
+        refunds.set(r.id, r);
+        if (opts.idempotencyKey) idem.set(opts.idempotencyKey, r);
+        return { ...r };
+      },
+    },
     accountLinks: {
       async create(params) {
         calls.push(["accountLinks.create", params]);
@@ -102,7 +131,7 @@ export function createFakeStripe({ baseUrl = "http://localhost:5173" } = {}) {
       const pi = intents.get(s.payment_intent);
       s.status = "complete";
       if (pi.capture_method === "manual") { pi.status = "requires_capture"; pi.amount_capturable = pi.amount; }
-      else { pi.status = "succeeded"; pi.amount_received = pi.amount; s.payment_status = "paid"; }
+      else { pi.status = "succeeded"; pi.amount_received = pi.amount; pi.latest_charge = id("ch"); s.payment_status = "paid"; }
       return s;
     },
     expireIntent(pid) { const pi = intents.get(pid); pi.status = "canceled"; pi.amount_capturable = 0; },

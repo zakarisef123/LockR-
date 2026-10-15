@@ -4,17 +4,20 @@ import { useSyncedState, useSyncStatus, clearSyncError, cleanForFirestore, reset
 import { IS_DEMO } from "./lib/config.js";
 import {
   live, onAuthChange, signIn, signUp, cancelSignUp, createAccountDoc, isEmailBanned, signOutUser,
-  resetPassword, sendVerification, reloadUser, changePassword, confirmPassword, deleteOwnAccount, currentUser,
+  resetPassword, sendVerification, refreshEmailVerified, changePassword, confirmPassword, deleteOwnAccount, currentUser,
 } from "./lib/backend.js";
 import {
   LOCKR_COMMISSION, PARTNER_COMMISSION, MARKET_COMMISSION, PCT_DEFAULT, SUB_PRICES,
   proShareRate, posterPctFor, bookingTotal, proShare, posterShare, lockrShare,
   posterOwed, proAutoPaid, proOwed, acomptePaid, resteAPayer, marketCommission,
   bookingParticipants, empreinteActive, empreinteMontant, montantEncaisse,
+  TECH_PCT_MIN, APPORTEUR_MAX_PCT, CLIENT_ABSENT_WAIT_MIN, fraisDeplacementFrom, isBillable,
+  FRAIS_DEPLACEMENT_DEFAULT,
+  MARKETPLACE_RELEASE_DAYS, marketSellerNet,
 } from "./lib/business.js";
 import { compressImage, readImageInput } from "./lib/images.js";
 import { randomId, passwordFields, checkPassword, normEmail, readSessionId, writeSessionId } from "./lib/auth.js";
-import { startStripeCheckout, createCheckout, verifyCheckout, startConnectOnboarding, refreshConnectStatus, captureHold, releaseHold, getPlatformConfig } from "./lib/payments.js";
+import { startStripeCheckout, createCheckout, verifyCheckout, startConnectOnboarding, refreshConnectStatus, captureHold, releaseHold, getPlatformConfig, marketplaceAction } from "./lib/payments.js";
 
 /* ─── PROTECTION CODE SOURCE ───
    Clic droit et raccourcis DevTools bloqués sur ordinateur. La copie de texte
@@ -84,6 +87,42 @@ const EMPREINTE_TXT = (b, lang = "fr") => {
   return "";
 };
 const pctLabel = b => `${Math.round(proShareRate(b) * 100)} %`;
+/* Frais de déplacement facturés à la place de l'intervention */
+const FRAIS_TXT = (b, lang = "fr") => {
+  const fr = lang !== "en";
+  if (!(Number(b?.fraisDeplacement) > 0)) return "";
+  const why = b.annulationRaison === "client_absent" ? (fr ? "client absent" : "client absent") : (fr ? "annulation tardive" : "late cancellation");
+  return fr ? `🚗 Frais de déplacement (${why}) : ${fmt(b.fraisDeplacement)}` : `🚗 Travel fee (${why}): ${fmt(b.fraisDeplacement)}`;
+};
+
+/* « Client absent » : l'artisan est sur place depuis au moins 10 minutes.
+   Le forfait de déplacement est débité de l'empreinte (sinon il reste dû).
+   Renvoie { ok, msg } ou null si l'artisan renonce. */
+async function declareClientAbsent(b, { setBookings, setters, fraisDep = FRAIS_DEPLACEMENT_DEFAULT, lang = "fr" }) {
+  const fr = lang !== "en";
+  const waited = b.arriveAt ? (Date.now() - new Date(b.arriveAt).getTime()) / 60000 : Infinity;
+  if (waited < CLIENT_ABSENT_WAIT_MIN) {
+    const left = Math.max(1, Math.ceil(CLIENT_ABSENT_WAIT_MIN - waited));
+    return { ok: false, msg: fr ? `Patientez encore ${left} min sur place (et essayez d'appeler le client) avant de le déclarer absent.` : `Please wait ${left} more min on site (and try calling the client) before declaring them absent.` };
+  }
+  const feeTxt = fraisDep > 0 ? (fr ? ` Des frais de déplacement de ${fmt(fraisDep)} seront facturés au client.` : ` A ${fmt(fraisDep)} travel fee will be charged to the client.`) : "";
+  if (!window.confirm((fr ? "Déclarer le client absent ? La mission sera annulée." : "Declare the client absent? The job will be cancelled.") + feeTxt)) return null;
+  if (live) {
+    const r = await releaseHold(b.id, "client_absent");
+    if (!r.ok) return { ok: false, msg: r.error === "wait" ? (fr ? `Attendez ${CLIENT_ABSENT_WAIT_MIN} minutes sur place avant de déclarer le client absent.` : `Wait ${CLIENT_ABSENT_WAIT_MIN} minutes on site first.`) : (fr ? "Impossible pour le moment, réessayez dans un instant." : "Not possible right now, please retry in a moment.") };
+    if (!(r.frais > 0)) return { ok: true, msg: fr ? "Mission annulée (client absent)." : "Job cancelled (client absent)." };
+    return { ok: true, msg: r.captured > 0
+      ? (fr ? `Mission annulée — ${fmt(r.captured)} de frais de déplacement débités sur la carte du client.` : `Job cancelled — ${fmt(r.captured)} travel fee charged to the client's card.`)
+      : (fr ? `Mission annulée — ${fmt(r.frais)} de frais de déplacement à régler par le client (suivi par LOCKR).` : `Job cancelled — ${fmt(r.frais)} travel fee owed by the client (handled by LOCKR).`) };
+  }
+  // Démonstration : même résultat, en local
+  setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée", annulationRaison: "client_absent", annuleeLe: ts(), ...(fraisDep > 0 ? { fraisDeplacement: fraisDep, montantFinal: fraisDep } : {}) } : x));
+  if (empreinteActive(b)) {
+    if (fraisDep > 0) applyPayment(setters || { setBookings }, { type: "capture", ref: b.id, amount: Math.min(fraisDep, empreinteMontant(b)), demo: true });
+    else applyPayment(setters || { setBookings }, { type: "liberation", ref: b.id, demo: true });
+  }
+  return { ok: true, msg: fraisDep > 0 ? (fr ? `Mission annulée — ${fmt(fraisDep)} de frais de déplacement facturés au client.` : `Job cancelled — ${fmt(fraisDep)} travel fee charged to the client.`) : (fr ? "Mission annulée (client absent)." : "Job cancelled (client absent).") };
+}
 
 /* Données de démonstration : visibles uniquement par les comptes de démo
    (jamais par les vrais clients / artisans). */
@@ -282,7 +321,7 @@ const TRANS = {
     buyFullName: "Nom complet", buyAddress: "Adresse", buyCity: "Ville", buyZip: "Code postal", buyPhone: "Téléphone",
     buyCardNum: "Numéro de carte", buyExpiry: "Date d'expiration (MM/AA)", buyCvv: "CVV",
     buyNext: "Continuer", buyConfirm: "Confirmer la commande",
-    buySuccess: "Commande confirmée !", buySuccessDesc: "Votre commande a été transmise au vendeur. Il vous contactera pour la livraison.",
+    buySuccess: "Commande confirmée !", buySuccessDesc: "Votre commande a été transmise au vendeur, qui vous contactera pour la livraison. Votre paiement est conservé par LOCKR : il n'est versé au vendeur qu'une fois l'article reçu (« J'ai reçu l'article » dans « Mes achats »).",
     buyTotal: "Total TTC", buySellerGets: "Le vendeur reçoit", buyCommInfo: "dont 15% de commission LOCKR",
     buyDelivery: "Livraison", buyPayment: "Paiement", buyRecap: "Récapitulatif",
     adminMarketplace: "Marketplace", adminMarketplaceDesc: "Suivi des ventes & commissions",
@@ -682,7 +721,7 @@ const TRANS = {
     buyFullName: "Full name", buyAddress: "Address", buyCity: "City", buyZip: "Postal code", buyPhone: "Phone",
     buyCardNum: "Card number", buyExpiry: "Expiry date (MM/YY)", buyCvv: "CVV",
     buyNext: "Continue", buyConfirm: "Confirm order",
-    buySuccess: "Order confirmed!", buySuccessDesc: "Your order has been sent to the seller. They will contact you for delivery.",
+    buySuccess: "Order confirmed!", buySuccessDesc: "Your order has been sent to the seller, who will contact you for delivery. Your payment is held by LOCKR and only released to the seller once you have received the item (\"I received the item\" in \"My purchases\").",
     buyTotal: "Total", buySellerGets: "Seller receives", buyCommInfo: "incl. 15% LOCKR commission",
     buyDelivery: "Delivery", buyPayment: "Payment", buyRecap: "Summary",
     adminMarketplace: "Marketplace", adminMarketplaceDesc: "Sales & commissions tracking",
@@ -2866,7 +2905,7 @@ function LoginScreen({ onLogin, onRegister, accounts, setAccounts, accountsReady
 }
 
 /* ─── DEVIS MODAL (Feature 3) ─── */
-function DevisModal({ artisan, probleme, montant, adresse, onAccept, onCancel, lang = "fr" }) {
+function DevisModal({ artisan, probleme, montant, adresse, onAccept, onCancel, lang = "fr", fraisDep = FRAIS_DEPLACEMENT_DEFAULT }) {
   const tr = TRANS[lang] || TRANS.fr;
   const [accepted, setAccepted] = useState(false);
   const [err, setErr] = useState("");
@@ -2904,6 +2943,9 @@ function DevisModal({ artisan, probleme, montant, adresse, onAccept, onCancel, l
               💳 {fr
                 ? "Rien n'est débité maintenant : ce montant est seulement réservé sur votre carte (empreinte bancaire). Après l'intervention, seul le montant final de la facture est prélevé. Annulation gratuite avant le départ de l'artisan."
                 : "Nothing is charged now: this amount is only held on your card. After the intervention, only the final invoice amount is charged. Free cancellation before the craftsman leaves."}
+              {fraisDep > 0 && <div style={{ marginTop: 6 }}>🚗 {fr
+                ? `Si vous annulez une fois l'artisan en route, ou si vous êtes absent au rendez-vous, ${fmt(fraisDep)} de frais de déplacement sont dus.`
+                : `If you cancel once the craftsman is on the way, or are not there at the appointment, a ${fmt(fraisDep)} travel fee applies.`}</div>}
             </div>
           </div>
         </div>
@@ -3328,6 +3370,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
     const geo = await geocodeAddress(newBon.adresse);
     const b = {
       id: uid(), ...newBon, titre: newBon.titre.trim(), adresse: newBon.adresse.trim(), montantEstime: montant,
+      techPct: Math.min(PCT_DEFAULT, Math.max(TECH_PCT_MIN, Number(newBon.techPct) || 70)), // part de l'apporteur plafonnée
       metier: metierOf(newBon), postedBy: account.id, postedByNom: account.nom, region: myRegion,
       ...(geo ? { lat: geo[0], lng: geo[1] } : {}), createdAt: ts(),
     };
@@ -3434,8 +3477,8 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" inputMode="decimal" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">{tr.technicianShare} : {newBon.techPct}%</label>
-              <input type="range" min={20} max={PCT_DEFAULT} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
-              <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>{fr ? `Vous recevez ${posterPctFor(newBon.techPct)} % comme apporteur · LOCKR ${Math.round(LOCKR_COMMISSION * 100)} %` : `You receive ${posterPctFor(newBon.techPct)}% as referrer · LOCKR ${Math.round(LOCKR_COMMISSION * 100)}%`}</div>
+              <input type="range" min={TECH_PCT_MIN} max={PCT_DEFAULT} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
+              <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>{fr ? `Vous recevez ${posterPctFor(newBon.techPct)} % comme apporteur (${APPORTEUR_MAX_PCT} % maximum) · LOCKR ${Math.round(LOCKR_COMMISSION * 100)} %` : `You receive ${posterPctFor(newBon.techPct)}% as referrer (max ${APPORTEUR_MAX_PCT}%) · LOCKR ${Math.round(LOCKR_COMMISSION * 100)}%`}</div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
@@ -3456,7 +3499,7 @@ function BonsScreen({ account, bons, setBons, bookings, setBookings, lang = "fr"
 function EarningsChart({ bookings, artisanId, apports = [], lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
   const MONTH_LABELS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-  const done = bookings.filter(b => b.artisanId === artisanId && b.statut === "terminée");
+  const done = bookings.filter(b => b.artisanId === artisanId && isBillable(b));
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
@@ -3852,10 +3895,12 @@ function ChatIntervention({ booking, account, interventionChats, setIntervention
 
 /* Dossier en cours de vérification : le pro voit clairement pourquoi il ne
    reçoit pas encore de missions et ce qu'il doit faire. */
-function PendingApprovalCard({ account, lang = "fr" }) {
+function PendingApprovalCard({ account, setAccounts, lang = "fr" }) {
   const fr = lang !== "en";
   const rejected = account.dossierStatus === "rejected";
   return (
+    <>
+    {!rejected && <EmailVerifyNotice lang={lang} account={account} setAccounts={setAccounts} required />}
     <div style={{ background: rejected ? "rgba(220,38,38,.06)" : "rgba(217,119,6,.07)", border: `1px solid ${rejected ? "rgba(220,38,38,.25)" : "rgba(217,119,6,.25)"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
       <div style={{ fontWeight: 800, fontSize: 14, color: rejected ? T.danger : T.warn, marginBottom: 4 }}>
         {rejected ? (fr ? "Dossier refusé" : "Application rejected") : (fr ? "Dossier en cours de vérification" : "Application under review")}
@@ -3866,6 +3911,7 @@ function PendingApprovalCard({ account, lang = "fr" }) {
           : (fr ? "Notre équipe vérifie vos documents (identité, SIRET, assurance) sous 48 h. Vous recevrez des missions dès la validation." : "Our team checks your documents (ID, SIRET, insurance) within 48h. You will receive jobs once approved.")}
       </div>
     </div>
+    </>
   );
 }
 
@@ -3899,7 +3945,7 @@ function PasswordChangeCard({ account, setAccounts, lang = "fr" }) {
   };
   return (
     <div className="lk-card" style={{ padding: "16px 18px", marginTop: 16 }}>
-      <EmailVerifyNotice lang={lang} />
+      <EmailVerifyNotice lang={lang} account={account} setAccounts={setAccounts} required={["pro", "partenaire"].includes(account.role) && account.dossierStatus === "pending"} />
       <div style={{ fontWeight: 700, fontSize: 14, color: T.textHi, marginBottom: 12 }}>🔑 {fr ? "Changer mon mot de passe" : "Change my password"}</div>
       <input className="lk-input" type="password" autoComplete="current-password" value={cur} onChange={e => setCur(e.target.value)} placeholder={fr ? "Mot de passe actuel" : "Current password"} style={{ marginBottom: 8 }} />
       <input className="lk-input" type="password" autoComplete="new-password" value={n1} onChange={e => setN1(e.target.value)} placeholder={fr ? `Nouveau mot de passe (${MIN_PASS} car. min.)` : `New password (${MIN_PASS}+ chars)`} style={{ marginBottom: 8 }} />
@@ -4122,7 +4168,90 @@ const MARKET_METIERS = [
 ];
 const mLabel = (m, lang) => (lang === "en" && m?.labelEn) ? m.labelEn : (m?.label || "");
 
-function ProMarketplace({ account, listings, setListings, setSales, lang, isPartner = false }) {
+/* ─── MARKETPLACE : MES ACHATS ET VENTES ───
+   Le paiement de l'acheteur est conservé par LOCKR jusqu'à la réception de
+   l'article, puis 85 % sont versés au vendeur (automatiquement après 14 jours
+   sans problème signalé). */
+function MarketplaceOrders({ account, sales = [], setSales, lang = "fr" }) {
+  const fr = lang !== "en";
+  const [problemFor, setProblemFor] = useState(null);
+  const [motif, setMotif] = useState("");
+  const [busy, setBusy] = useState(null);
+  const [msg, setMsg] = useState(null);
+  const mine = visibleFor(account, sales)
+    .filter(x => (x.acheteurId === account.id || x.vendeurId === account.id) && x.statut !== "en_attente_paiement")
+    .sort((x, y) => String(y.payeLe || y.createdAt || "").localeCompare(String(x.payeLe || x.createdAt || "")))
+    .slice(0, 20);
+  if (!mine.length) return null;
+  const releaseDate = x => x.liberationAuto || (x.payeLe ? new Date(new Date(x.payeLe).getTime() + MARKETPLACE_RELEASE_DAYS * 86400000).toISOString() : null);
+  const act = async (x, action, text) => {
+    setBusy(x.id + action); setMsg(null);
+    if (live) {
+      const r = await marketplaceAction(x.id, action, text);
+      setBusy(null);
+      if (!r.ok) { setMsg({ ok: false, t: fr ? "Action impossible pour le moment, réessayez." : "Not possible right now, please retry." }); return false; }
+    } else {
+      // Démonstration : même résultat, en local
+      setSales(p => p.map(y => y.id !== x.id ? y : action === "recu"
+        ? { ...y, statut: "terminée", recuLe: ts(), termineeLe: ts(), liberation: "recu", vendeurPaye: true, vendeurPayeLe: ts(), vendeurVerse: marketSellerNet(y) }
+        : { ...y, statut: "litige", litige: { motif: text, ouvertLe: ts(), par: account.id } }));
+      setBusy(null);
+    }
+    setMsg({ ok: true, t: action === "recu" ? (fr ? "Merci ! Le vendeur va être payé." : "Thanks! The seller will be paid.") : (fr ? "Problème signalé : l'équipe LOCKR vous recontacte. Le versement au vendeur est suspendu." : "Issue reported: the LOCKR team will contact you. The seller payout is on hold.") });
+    return true;
+  };
+  return (
+    <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 8 }}>{fr ? "Mes achats et ventes" : "My purchases and sales"}</div>
+      {msg && <div role="status" style={{ fontSize: 12, fontWeight: 600, color: msg.ok ? T.success : T.danger, marginBottom: 8 }}>{msg.t}</div>}
+      {mine.map(x => {
+        const buyer = x.acheteurId === account.id;
+        const net = marketSellerNet(x);
+        const until = releaseDate(x);
+        let line;
+        if (x.statut === "payée") line = buyer
+          ? (fr ? `Paiement conservé par LOCKR — versé au vendeur quand vous confirmez la réception${until ? ` (automatiquement le ${fmtDate(until)})` : ""}.` : `Payment held by LOCKR — released to the seller once you confirm receipt${until ? ` (automatically on ${fmtDate(until)})` : ""}.`)
+          : (fr ? `Payé par l'acheteur. Expédiez l'article : ${fmt(net)} vous seront versés à la réception${until ? ` (au plus tard le ${fmtDate(until)})` : ""}.` : `Paid by the buyer. Ship the item: ${fmt(net)} will be paid to you on receipt${until ? ` (by ${fmtDate(until)} at the latest)` : ""}.`);
+        else if (x.statut === "litige") line = buyer
+          ? (fr ? "Problème signalé — l'équipe LOCKR vous recontacte." : "Issue reported — the LOCKR team will contact you.")
+          : (fr ? `L'acheteur a signalé un problème${x.litige?.motif ? ` : « ${x.litige.motif} »` : ""}. L'équipe LOCKR vous contacte.` : `The buyer reported an issue${x.litige?.motif ? `: "${x.litige.motif}"` : ""}. The LOCKR team will contact you.`);
+        else if (x.statut === "terminée") line = buyer
+          ? (fr ? "Article reçu ✓" : "Item received ✓")
+          : x.vendeurPaye ? (fr ? `Versé : ${fmt(x.vendeurVerse || net)} ✓` : `Paid out: ${fmt(x.vendeurVerse || net)} ✓`) : (fr ? `Versement de ${fmt(net)} en cours` : `Payout of ${fmt(net)} in progress`);
+        else if (x.statut === "remboursée" || x.statut === "remboursement") line = buyer ? (fr ? "Remboursé ✓" : "Refunded ✓") : (fr ? "Vente annulée : l'acheteur a été remboursé." : "Sale cancelled: the buyer was refunded.");
+        else if (x.statut === "declaree_vendeur") line = fr ? `Vente déclarée — commission LOCKR due : ${fmt(x.commission)}` : `Declared sale — LOCKR commission due: ${fmt(x.commission)}`;
+        else line = x.statut;
+        return (
+          <div key={x.id} style={{ borderTop: `1px solid ${T.border}`, padding: "9px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <div style={{ fontWeight: 700, fontSize: 12.5, color: T.textHi, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{buyer ? (fr ? "Achat" : "Purchase") : (fr ? "Vente" : "Sale")} · {x.titre}</div>
+              <div style={{ fontWeight: 800, fontSize: 12.5, color: T.accent, flexShrink: 0 }}>{fmt(x.prix)}</div>
+            </div>
+            <div style={{ fontSize: 11.5, color: T.textMid, marginTop: 2, lineHeight: 1.45 }}>{line}</div>
+            {!buyer && x.statut === "payée" && x.livraison && <div style={{ fontSize: 11, color: T.textLo, marginTop: 2 }}>{fr ? "Livraison" : "Delivery"} : {x.acheteurNom} · {x.livraison.adresse}, {x.livraison.zip} {x.livraison.ville}{x.acheteurTel ? ` · ${x.acheteurTel}` : ""}</div>}
+            {buyer && x.statut === "payée" && problemFor !== x.id && (
+              <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                <button disabled={!!busy} onClick={() => { if (window.confirm(fr ? `Confirmer la réception de « ${x.titre} » ? Le vendeur sera payé.` : `Confirm receipt of "${x.titre}"? The seller will be paid.`)) act(x, "recu"); }} className="lk-btn" style={{ flex: 2, padding: "8px 10px", fontSize: 12 }}>{busy === x.id + "recu" ? "…" : (fr ? "J'ai reçu l'article" : "I received the item")}</button>
+                <button disabled={!!busy} onClick={() => { setProblemFor(x.id); setMotif(""); }} className="lk-ghost" style={{ flex: 1, padding: "8px 10px", fontSize: 12, color: T.danger }}>{fr ? "Signaler un problème" : "Report a problem"}</button>
+              </div>
+            )}
+            {problemFor === x.id && (
+              <div style={{ marginTop: 7 }}>
+                <textarea className="lk-input" rows={3} value={motif} onChange={e => setMotif(e.target.value)} placeholder={fr ? "Décrivez le problème (article non reçu, abîmé, non conforme…)" : "Describe the problem (not received, damaged, not as described…)"} style={{ resize: "vertical", marginBottom: 6 }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button disabled={motif.trim().length < 5 || !!busy} onClick={async () => { if (await act(x, "probleme", motif.trim())) setProblemFor(null); }} className="lk-btn" style={{ flex: 2, padding: "8px 10px", fontSize: 12, background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}>{busy ? "…" : (fr ? "Envoyer" : "Send")}</button>
+                  <button onClick={() => setProblemFor(null)} className="lk-ghost" style={{ flex: 1, padding: "8px 10px", fontSize: 12 }}>{fr ? "Annuler" : "Cancel"}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProMarketplace({ account, listings, setListings, sales = [], setSales, lang, isPartner = false }) {
   const tr = TRANS[lang] || TRANS.fr;
   const w = useWindowSize();
   const isDesktop = w >= BP;
@@ -4226,6 +4355,7 @@ function ProMarketplace({ account, listings, setListings, setSales, lang, isPart
       {/* ── Notification ── */}
       <div style={{ padding: "10px 14px 0" }}>
         {posted && <div style={{ background: "rgba(62,207,142,.1)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 10, color: T.success, fontWeight: 600, fontSize: 13 }}>{Icon.check(T.success, 14)} {tr.listingPosted}</div>}
+        <MarketplaceOrders account={account} sales={sales} setSales={setSales} lang={lang} />
       </div>
 
       {/* ── Onglets secteurs avec photo de fond ── */}
@@ -4665,6 +4795,8 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
   // Carte du client encore réservée : débit du montant final
   const hold = empreinteMontant(b);
   const aDebiter = Math.min(resteAPayer(b), hold);
+  // Déplacement facturé (mission annulée) : montant fixe, pas de débit d'empreinte ici
+  const fee = b.statut !== "terminée" && Number(b.fraisDeplacement) > 0;
   const capture = async () => {
     setBusy(true); setMsg("");
     if (!live) { applyPayment({ setBookings }, { type: "capture", ref: b.id, amount: aDebiter, demo: true }); setBusy(false); return; }
@@ -4678,13 +4810,14 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
         <div>
           <div style={{ color: T.textHi, fontWeight: 600, fontSize: 13 }}>{pLabel(pr, lang) || b.typeIntervention || b.probleme}</div>
           <div style={{ color: T.textLo, fontSize: 11 }}>{b.clientNom} · {fmtDate(b.createdAt)} · {fmt(bookingTotal(b))}</div>
+          {fee && <div style={{ color: T.textMid, fontSize: 11, fontWeight: 600, marginTop: 2 }}>{FRAIS_TXT(b, lang)}</div>}
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ color: isPaid ? T.success : T.warn, fontWeight: 700, fontSize: 15 }}>{fmt(proShare(b))}</div>
           <div style={{ color: T.textLo, fontSize: 10 }}>{isPaid ? tr.paid : (fr ? `À encaisser : ${fmt(resteAPayer(b))}` : `To collect: ${fmt(resteAPayer(b))}`)}</div>
         </div>
       </div>
-      {!isPaid && hold > 0 && (
+      {!isPaid && hold > 0 && !fee && (
         <button onClick={capture} disabled={busy} className="lk-btn" style={{ marginTop: 10, fontSize: 12 }}>{busy ? "…" : (fr ? `Débiter la carte du client — ${fmt(aDebiter)}` : `Charge the client's card — ${fmt(aDebiter)}`)}</button>
       )}
       {msg && <div role="alert" style={{ color: T.danger, fontSize: 12, marginTop: 6 }}>{msg}</div>}
@@ -4693,9 +4826,9 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
           <button onClick={() => setShowLink(true)} style={{ flex: 1, background: T.grad, border: "none", borderRadius: 10, padding: "9px", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
             {fr ? "Envoyer un lien de paiement" : "Send payment link"}
           </button>
-          <button onClick={() => setShowForm(s => !s)} style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 10, padding: "9px 12px", color: T.accent, fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+          {!fee && <button onClick={() => setShowForm(s => !s)} style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 10, padding: "9px 12px", color: T.accent, fontWeight: 600, fontSize: 12, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
             {showForm ? (fr ? "Fermer" : "Close") : (fr ? "Corriger le montant" : "Edit amount")}
-          </button>
+          </button>}
         </div>
       )}
       {!isPaid && showForm && (
@@ -4716,7 +4849,7 @@ function HistoryCard({ b, isPaid, pr, tr, setBookings, lang }) {
 /* ─── AUTO-ENTREPRENEUR TAB ─── */
 function AutoEntrepriseTab({ account, setAccounts, bookings, artisanId, lang = "fr" }) {
   const tr = TRANS[lang] || TRANS.fr;
-  const done = bookings.filter(b => b.artisanId === artisanId && b.statut === "terminée");
+  const done = bookings.filter(b => b.artisanId === artisanId && isBillable(b));
   const now = new Date();
   // Chiffre d'affaires de l'artisan = sa part des missions (ce qu'il facture réellement)
   const caMonth = done.filter(b => { const d = new Date(b.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((s, b) => s + proShare(b), 0);
@@ -5128,7 +5261,7 @@ function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr", 
   );
 }
 
-function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [], stripeRequired = false, openLegal }) {
+function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [], stripeRequired = false, openLegal, fraisDep = FRAIS_DEPLACEMENT_DEFAULT, setters }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
@@ -5154,7 +5287,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const myM = visibleFor(account, bookings).filter(b => b.artisanId === account.artisanId);
   const active = myM.filter(b => ["assignée", "en_route", "en_cours"].includes(b.statut))
     .sort((x, y) => String(x.rdvDate || x.createdAt).localeCompare(String(y.rdvDate || y.createdAt)));
-  const done = myM.filter(b => b.statut === "terminée");
+  // Missions terminées + déplacements facturés (annulation tardive, client absent)
+  const done = myM.filter(isBillable);
   const activeMission = activeMissionId ? (myM.find(b => b.id === activeMissionId) || null) : null;
   const setActiveMission = b => setActiveMissionId(b ? b.id : null);
   const updateMission = (id, patch) => setBookings(p => p.map(x => x.id === id ? { ...x, ...(typeof patch === "function" ? patch(x) : patch) } : x));
@@ -5193,7 +5327,8 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
 
   // Feature 2: payment block check (unpaid > 7 days)
   const sevenDaysAgo = Date.now() - 7 * 86400000;
-  const hasPaymentBlock = done.some(b => b.statutPaiement !== "payé" && resteAPayer(b) > 0 && new Date(b.termineeLe || b.createdAt).getTime() < sevenDaysAgo);
+  // (les frais de déplacement impayés sont recouvrés par LOCKR : ils ne bloquent pas l'artisan)
+  const hasPaymentBlock = done.some(b => b.statut === "terminée" && b.statutPaiement !== "payé" && resteAPayer(b) > 0 && new Date(b.termineeLe || b.createdAt).getTime() < sevenDaysAgo);
 
   // ── ALERTE INTERVENTION < 25 KM : notification téléphone + vibration + jingle LOCKR ──
   const NOTIF_RADIUS_KM = 25;
@@ -5303,6 +5438,13 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   const arriveMission = b => {
     updateMission(b.id, x => ({ statut: "en_cours", arriveAt: ts(), rdvDate: x.rdvDate || ts() }));
     setActiveMission(b); setTab("active");
+  };
+  const [absentMsg, setAbsentMsg] = useState(null);
+  const clientAbsent = async b => {
+    const r = await declareClientAbsent(b, { setBookings, setters, fraisDep, lang });
+    if (!r) return;
+    setAbsentMsg(r);
+    if (r.ok) { setActiveMissionId(null); setTimeout(() => setAbsentMsg(null), 6000); }
   };
   const finishMission = (montantFinal, factureImg) => {
     if (!activeMission) return;
@@ -5488,7 +5630,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
         {/* Stats bar mobile */}
         {!isDesktop && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: T.border }}>
-            {[{ l: tr.pending, v: active.length, c: T.accent }, { l: tr.completedStat, v: done.length, c: T.success }, { l: tr.netEarnings, v: fmt(earnings), c: T.success }].map(k => (
+            {[{ l: tr.pending, v: active.length, c: T.accent }, { l: tr.completedStat, v: done.filter(b => b.statut === "terminée").length, c: T.success }, { l: tr.netEarnings, v: fmt(earnings), c: T.success }].map(k => (
               <div key={k.l} style={{ background: T.bg, padding: "12px 8px", textAlign: "center" }}>
                 <div style={{ color: k.c, fontWeight: 800, fontSize: k.l === "Gains net" ? 11 : 20 }}>{k.v}</div>
                 <div style={{ color: T.textLo, fontSize: 9, marginTop: 2, textTransform: "uppercase" }}>{k.l}</div>
@@ -5597,7 +5739,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                   </div>
                 </div>
 
-                {!approved && <PendingApprovalCard account={account} lang={lang} />}
+                {!approved && <PendingApprovalCard account={account} setAccounts={setAccounts} lang={lang} />}
                 {needsConnect && approved && (
                   <div style={{ background: "rgba(99,91,255,.07)", border: "1px solid rgba(99,91,255,.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 4 }}>💶 {fr ? "Activez vos virements pour recevoir des missions" : "Enable payouts to receive jobs"}</div>
@@ -5711,7 +5853,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                     <div key={b.id} onClick={() => setRecapMission(b)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
                       <div>
                         <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{b.clientNom}</div>
-                        <div style={{ fontSize: 11, color: T.textLo }}>{fmtDate(b.createdAt)}</div>
+                        <div style={{ fontSize: 11, color: T.textLo }}>{fmtDate(b.createdAt)}{b.statut !== "terminée" && b.fraisDeplacement > 0 ? (fr ? " · déplacement facturé" : " · travel fee") : ""}</div>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: 13, color: T.success }}>{fmt(proShare(b))}</div>
                     </div>
@@ -5787,6 +5929,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
           )}
           {view === "active" && (
             <div style={{ padding: "14px" }}>
+              {absentMsg && <div role="status" style={{ background: absentMsg.ok ? "rgba(30,158,107,.08)" : "rgba(217,119,6,.08)", border: `1px solid ${absentMsg.ok ? "rgba(30,158,107,.25)" : "rgba(217,119,6,.25)"}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, fontWeight: 600, color: absentMsg.ok ? T.success : T.warn }}>{absentMsg.msg}</div>}
               {!bk ? (
                 <div style={{ textAlign: "center", padding: "52px 20px" }}>
                   <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>{tr.noMissionActive}</div>
@@ -5863,6 +6006,9 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
                       )}
                     </div>
                     {bk.statut === "en_cours" && !bk.photoAvant && <div style={{ fontSize: 11, color: T.textLo, textAlign: "center", marginTop: 8 }}>{fr ? "Ajoutez la photo « avant » pour pouvoir clôturer." : "Add the \"before\" photo to be able to close."}</div>}
+                    {bk.statut === "en_cours" && !bk.photoAvant && (
+                      <button onClick={() => clientAbsent(bk)} className="lk-ghost" style={{ width: "100%", marginTop: 12, fontSize: 12.5, color: T.textMid }}>🚪 {fr ? "Client absent ?" : "Client not there?"}</button>
+                    )}
                   </>
                 );
               })()}
@@ -5879,7 +6025,7 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
               </div>
             </div>
           ) : !approved ? (
-            <div style={{ padding: "14px" }}><PendingApprovalCard account={account} lang={lang} /></div>
+            <div style={{ padding: "14px" }}><PendingApprovalCard account={account} setAccounts={setAccounts} lang={lang} /></div>
           ) : needsConnect ? (
             <div style={{ padding: "14px" }}>
               <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi, marginBottom: 6 }}>💶 {fr ? "Activez vos virements pour prendre des bons" : "Enable payouts to take jobs"}</div>
@@ -6076,7 +6222,7 @@ const CLIENT_ST = {
   annulée_client: { fr: "Annulée", en: "Cancelled", c: T.danger },
 };
 
-function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripeRequired = false, setAccounts = () => {}, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {}, setters, openLegal }) {
+function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripeRequired = false, fraisDep = FRAIS_DEPLACEMENT_DEFAULT, setAccounts = () => {}, interventionChats, setInterventionChats, lang = "fr", setLang, bons = [], setBons = () => {}, setters, openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
@@ -6220,6 +6366,26 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
   };
 
   const cancelBooking = async b => {
+    // Artisan déjà en route : annulation tardive, frais de déplacement
+    if (b.statut === "en_route") {
+      const card = empreinteActive(b);
+      if (!window.confirm(fr
+        ? `L'artisan est déjà en route.${fraisDep > 0 ? ` Annuler maintenant entraîne ${fmt(fraisDep)} de frais de déplacement${card ? ", débités de votre carte" : ""}.` : ""} Confirmer l'annulation ?`
+        : `The craftsman is already on the way.${fraisDep > 0 ? ` Cancelling now incurs a ${fmt(fraisDep)} travel fee${card ? ", charged to your card" : ""}.` : ""} Confirm cancellation?`)) return;
+      if (live) {
+        const r = await releaseHold(b.id, "annulation_tardive");
+        showToast(!r.ok
+          ? (fr ? "Annulation impossible pour le moment : réessayez ou appelez l'artisan." : "Cannot cancel right now: retry or call the craftsman.")
+          : r.frais > 0
+            ? (fr ? `Intervention annulée — frais de déplacement : ${fmt(r.frais)}.` : `Booking cancelled — travel fee: ${fmt(r.frais)}.`)
+            : (fr ? "Intervention annulée." : "Booking cancelled."));
+        return;
+      }
+      setBookings(p => p.map(x => x.id === b.id ? { ...x, statut: "annulée_client", annulationRaison: "annulation_tardive", annuleeLe: ts(), ...(fraisDep > 0 ? { fraisDeplacement: fraisDep, montantFinal: fraisDep } : {}) } : x));
+      if (card) applyPayment(setters || { setBookings }, fraisDep > 0 ? { type: "capture", ref: b.id, amount: Math.min(fraisDep, empreinteMontant(b)), demo: true } : { type: "liberation", ref: b.id, demo: true });
+      showToast(fraisDep > 0 ? (fr ? `Intervention annulée — frais de déplacement : ${fmt(fraisDep)}.` : `Booking cancelled — travel fee: ${fmt(fraisDep)}.`) : (fr ? "Intervention annulée." : "Booking cancelled."));
+      return;
+    }
     if (!window.confirm(fr ? "Annuler cette intervention ?" : "Cancel this booking?")) return;
     // Empreinte bancaire : le serveur libère le montant réservé et annule la mission
     if (live && empreinteActive(b)) {
@@ -6274,7 +6440,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
     const pr = PROBLEMES.find(p => p.id === b.probleme);
     const st = CLIENT_ST[b.statut] || { fr: b.statut, en: b.statut, c: T.textLo };
     const reste = resteAPayer(b);
-    const unpaid = b.statut === "terminée" && b.statutPaiement !== "payé" && reste > 0;
+    const unpaid = isBillable(b) && b.statutPaiement !== "payé" && reste > 0;
     const btn = (label, onClick, kind = "ghost") => (
       <button onClick={onClick} style={{ flex: 1, minWidth: 130, background: kind === "main" ? T.grad : kind === "danger" ? "rgba(220,38,38,.06)" : "rgba(201,160,48,.07)", border: kind === "main" ? "none" : `1px solid ${kind === "danger" ? "rgba(220,38,38,.2)" : "rgba(201,160,48,.25)"}`, borderRadius: 9, padding: "8px 10px", color: kind === "main" ? "#fff" : kind === "danger" ? T.danger : T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{label}</button>
     );
@@ -6293,12 +6459,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
         {b.litige && <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: b.litige.statut === "résolu" ? T.success : T.warn }}>{b.litige.statut === "résolu" ? (fr ? `Litige résolu${b.litige.reponse ? ` — ${b.litige.reponse}` : ""}` : `Dispute resolved${b.litige.reponse ? ` — ${b.litige.reponse}` : ""}`) : (fr ? "Litige en cours de traitement" : "Dispute being handled")}</div>}
         {b.remboursementAcompte && <div style={{ marginTop: 6, fontSize: 11, color: T.textMid }}>{b.remboursementAcompte === "remboursé" ? (fr ? "Acompte remboursé ✓" : "Deposit refunded ✓") : (fr ? "Remboursement de l'acompte en cours" : "Deposit refund in progress")}</div>}
         {b.empreinte && <div style={{ marginTop: 6, fontSize: 11, color: T.textMid }}>{EMPREINTE_TXT(b, lang)}</div>}
+        {b.fraisDeplacement > 0 && <div style={{ marginTop: 6, fontSize: 11, color: T.textMid }}>{FRAIS_TXT(b, lang)}{b.statutPaiement === "payé" ? (fr ? " — réglés ✓" : " — paid ✓") : ""}</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
           {b.statut === "en_attente_paiement" && btn(fr ? "Confirmer avec ma carte" : "Confirm with my card", () => setPayFor({ booking: b, kind: "empreinte" }), "main")}
           {["assignée", "en_route", "en_cours"].includes(b.statut) && btn(fr ? "Suivre en direct" : "Live tracking", () => { setTrackingId(b.id); setScreen("tracking"); }, "main")}
-          {unpaid && !empreinteActive(b) && btn(fr ? `Régler la facture (${fmt(reste)})` : `Pay invoice (${fmt(reste)})`, () => setPayFor({ booking: b, kind: "facture" }), "main")}
+          {unpaid && !empreinteActive(b) && btn(b.statut === "terminée" ? (fr ? `Régler la facture (${fmt(reste)})` : `Pay invoice (${fmt(reste)})`) : (fr ? `Régler les frais (${fmt(reste)})` : `Pay the fee (${fmt(reste)})`), () => setPayFor({ booking: b, kind: "facture" }), "main")}
           {b.statut === "terminée" && b.factureImg && btn(fr ? "Voir la facture" : "View invoice", () => setFactureView(b))}
           {["en_attente_paiement", "assignée"].includes(b.statut) && btn(tr.cancelBooking, () => cancelBooking(b), "danger")}
+          {b.statut === "en_route" && btn(fraisDep > 0 ? (fr ? `Annuler (${fmt(fraisDep)} de frais)` : `Cancel (${fmt(fraisDep)} fee)`) : tr.cancelBooking, () => cancelBooking(b), "danger")}
           {b.statut === "terminée" && !b.litige && btn(fr ? "Signaler un problème" : "Report a problem", () => { setLitigeModal(b); setLitigeText(""); })}
           {["terminée", "annulée", "annulée_client"].includes(b.statut) && btn(fr ? "↻ Refaire une demande" : "↻ Book again", () => rebook(b))}
         </div>
@@ -6380,7 +6548,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
         document.body
       )}
       {devis && selArt && selProb && (
-        <DevisModal artisan={selArt} probleme={selProb.id} montant={devis.montant} adresse={devis.adresse} onAccept={confirmDevis} onCancel={() => setDevis(null)} lang={lang} />
+        <DevisModal artisan={selArt} probleme={selProb.id} montant={devis.montant} adresse={devis.adresse} onAccept={confirmDevis} onCancel={() => setDevis(null)} lang={lang} fraisDep={fraisDep} />
       )}
       {payFor && (
         <PayModal
@@ -6701,7 +6869,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
               {bk.statut === "terminée" && bk.statutPaiement !== "payé" && resteAPayer(bk) > 0 && (
                 <button onClick={() => setPayFor({ booking: bk, kind: "facture" })} className="lk-btn">{Icon.card("#fff", 16)} {tr.payInvoiceBtn} — {fmt(resteAPayer(bk))}</button>
               )}
-              {bk.statut === "assignée" && <button onClick={() => cancelBooking(bk)} className="lk-ghost" style={{ color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{tr.cancelBooking}</button>}
+              {["assignée", "en_route"].includes(bk.statut) && <button onClick={() => cancelBooking(bk)} className="lk-ghost" style={{ color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{bk.statut === "en_route" && fraisDep > 0 ? (fr ? `Annuler (${fmt(fraisDep)} de frais de déplacement)` : `Cancel (${fmt(fraisDep)} travel fee)`) : tr.cancelBooking}</button>}
             </div>
           </div>
         )}
@@ -6783,7 +6951,29 @@ ${d.type === "devis" ? `<p class="muted">Devis valable 30 jours. Bon pour accord
   w.document.close();
 }
 
-function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], setSales = () => {}, onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {}, factures = [], setFactures = () => {}, openLegal , demoTotal = 0, onCleanupDemo}) {
+/* Réglage admin : forfait de frais de déplacement (annulation tardive, client absent) */
+function FraisDeplacementCard({ value, onSave, lang = "fr" }) {
+  const fr = lang !== "en";
+  const [v, setV] = useState(String(value));
+  const [saved, setSaved] = useState(false);
+  const n = Number(String(v).replace(",", "."));
+  const ok = Number.isFinite(n) && n >= 0 && n <= 150;
+  return (
+    <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14, borderLeft: `4px solid ${T.accent}` }}>
+      <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 2 }}>🚗 {fr ? "Frais de déplacement" : "Travel fee"}</div>
+      <div style={{ fontSize: 12, color: T.textLo, marginBottom: 10 }}>{fr ? `Facturés si le client annule alors que l'artisan est en route, ou s'il est absent (après ${CLIENT_ABSENT_WAIT_MIN} min d'attente). Partagés comme une intervention (artisan 85 % / LOCKR 15 %). 0 = désactivé.` : `Charged if the client cancels once the craftsman is on the way, or is absent (after ${CLIENT_ABSENT_WAIT_MIN} min). Split like a job (85% / 15%). 0 = disabled.`}</div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input className="lk-input" type="number" inputMode="decimal" min="0" max="150" value={v} onChange={e => { setV(e.target.value); setSaved(false); }} style={{ maxWidth: 120 }} aria-label={fr ? "Montant des frais de déplacement" : "Travel fee amount"} />
+        <span style={{ fontSize: 13, color: T.textMid }}>€ TTC</span>
+        <button disabled={!ok || n === value} onClick={() => { onSave(Math.round(n * 100) / 100); setSaved(true); }} className="lk-btn" style={{ width: "auto", padding: "10px 16px", fontSize: 13 }}>{fr ? "Enregistrer" : "Save"}</button>
+        {saved && <span style={{ fontSize: 12, color: T.success, fontWeight: 700 }}>✓</span>}
+      </div>
+      {!ok && <div role="alert" style={{ fontSize: 11.5, color: T.danger, marginTop: 6 }}>{fr ? "Entre 0 et 150 €." : "Between €0 and €150."}</div>}
+    </div>
+  );
+}
+
+function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, listings = [], sales = [], setSales = () => {}, onLogout, lang = "fr", setLang, bannedList = [], setBannedList, priorityOrder = [], setPriorityOrder = () => {}, factures = [], setFactures = () => {}, openLegal , demoTotal = 0, onCleanupDemo, fraisDep = FRAIS_DEPLACEMENT_DEFAULT, setFraisDep = () => {} }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
@@ -6818,10 +7008,16 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const setAccountBanned = (id, banned) => setAccounts(p => p.map(a => a.id === id ? { ...a, banned, ...(banned ? { bannedAt: ts() } : {}) } : a));
   const updateBooking = (id, patch) => setBookings(p => p.map(x => x.id === id ? { ...x, ...patch } : x));
   const accountByArtisan = id => (id ? accounts.find(a => a.role === "pro" && (a.artisanId || a.id) === id) : undefined);
+  // Adresse e-mail confirmée (exigée pour valider un professionnel ; pas en démonstration)
+  const emailOk = a => IS_DEMO || a.emailVerified === true;
 
-  const done = B.filter(b => b.statut === "terminée");
+  // Missions terminées + déplacements facturés (annulation tardive, client absent)
+  const done = B.filter(isBillable);
   const caTotal = done.reduce((s2, b) => s2 + bookingTotal(b), 0);
-  const revenuLockr = done.reduce((s2, b) => s2 + lockrShare(b), 0) + S.filter(x => x.statut !== "en_attente_paiement").reduce((s2, x) => s2 + (Number(x.commission) || 0), 0);
+  const revenuLockr = done.reduce((s2, b) => s2 + lockrShare(b), 0) + S.filter(x => !["en_attente_paiement", "remboursée", "remboursement"].includes(x.statut)).reduce((s2, x) => s2 + (Number(x.commission) || 0), 0);
+  // Marketplace : problèmes signalés par un acheteur, vendeurs à payer à la main
+  const saleDisputes = S.filter(x => x.statut === "litige");
+  const sellersToPay = S.filter(x => x.statut === "terminée" && !x.vendeurPaye);
   const pendingValidations = A.filter(a => (a.role === "pro" || a.role === "partenaire") && a.dossierStatus === "pending");
   const openLitiges = B.filter(b => b.litige && b.litige.statut !== "résolu");
   const unpaid = done.filter(b => b.statutPaiement !== "payé" && resteAPayer(b) > 0);
@@ -6901,7 +7097,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
         {[
           { l: fr ? "Chiffre d'affaires (missions)" : "Revenue (missions)", v: fmt(caTotal), c: T.accent },
           { l: fr ? "Revenu LOCKR" : "LOCKR revenue", v: fmt(revenuLockr), c: T.success },
-          { l: fr ? "Missions terminées" : "Completed missions", v: done.length, c: "#2563eb" },
+          { l: fr ? "Missions terminées" : "Completed missions", v: done.filter(b => b.statut === "terminée").length, c: "#2563eb" },
           { l: fr ? "Artisans validés" : "Approved craftsmen", v: A.filter(a => a.role === "pro" && (a.dossierStatus || "approved") === "approved").length, c: T.success },
         ].map(k => (
           <div key={k.l} className="lk-card" style={{ padding: "14px" }}>
@@ -6914,7 +7110,9 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
       {[
         { n: pendingValidations.length, l: fr ? "dossier(s) à valider" : "application(s) to review", go: () => go("utilisateurs", "validations"), c: T.warn },
         { n: openLitiges.length, l: fr ? "litige(s) ouvert(s)" : "open dispute(s)", go: () => go("interventions", "litiges"), c: T.danger },
-        { n: unpaid.length, l: fr ? `mission(s) terminée(s) non payée(s) — ${fmt(unpaid.reduce((s2, b) => s2 + resteAPayer(b), 0))}` : `unpaid completed mission(s) — ${fmt(unpaid.reduce((s2, b) => s2 + resteAPayer(b), 0))}`, go: () => { go("interventions", "missions"); setStatutFilter("impayees"); }, c: T.warn },
+        { n: unpaid.length, l: fr ? `mission(s) ou frais de déplacement non payé(s) — ${fmt(unpaid.reduce((s2, b) => s2 + resteAPayer(b), 0))}` : `unpaid mission(s) or travel fee(s) — ${fmt(unpaid.reduce((s2, b) => s2 + resteAPayer(b), 0))}`, go: () => { go("interventions", "missions"); setStatutFilter("impayees"); }, c: T.warn },
+        { n: saleDisputes.length, l: fr ? "problème(s) signalé(s) sur la marketplace" : "marketplace issue(s) reported", go: () => go("finances", "marketplace"), c: T.danger },
+        { n: sellersToPay.length, l: fr ? `vendeur(s) marketplace à payer — ${fmt(sellersToPay.reduce((s2, x) => s2 + marketSellerNet(x), 0))}` : `marketplace seller(s) to pay — ${fmt(sellersToPay.reduce((s2, x) => s2 + marketSellerNet(x), 0))}`, go: () => go("finances", "marketplace"), c: "#2563eb" },
         { n: refunds.length, l: fr ? "acompte(s) à rembourser" : "deposit(s) to refund", go: () => go("finances", "comptabilite"), c: T.danger },
         { n: payouts.length, l: fr ? `versement(s) à effectuer — ${fmt(payouts.reduce((s2, b) => s2 + payoutDue(b), 0))}` : `payout(s) to make — ${fmt(payouts.reduce((s2, b) => s2 + payoutDue(b), 0))}`, go: () => go("finances", "comptabilite"), c: "#2563eb" },
       ].map((t, i) => (
@@ -6940,7 +7138,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const renderMissions = () => {
     const filters = [
       { id: "actives", l: fr ? "En cours" : "Active", f: b => ["en_attente_paiement", "assignée", "en_route", "en_cours", "en_attente"].includes(b.statut) },
-      { id: "impayees", l: fr ? "Non payées" : "Unpaid", f: b => b.statut === "terminée" && b.statutPaiement !== "payé" },
+      { id: "impayees", l: fr ? "Non payées" : "Unpaid", f: b => isBillable(b) && b.statutPaiement !== "payé" && resteAPayer(b) > 0 },
       { id: "terminees", l: fr ? "Terminées" : "Completed", f: b => b.statut === "terminée" },
       { id: "annulees", l: fr ? "Annulées" : "Cancelled", f: b => String(b.statut).startsWith("annulée") },
       { id: "toutes", l: fr ? "Toutes" : "All", f: () => true },
@@ -6972,7 +7170,8 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-                {b.statut === "terminée" && <AdminBadge color={b.statutPaiement === "payé" ? T.success : T.warn} bg={b.statutPaiement === "payé" ? "rgba(30,158,107,.1)" : "rgba(217,119,6,.1)"}>{b.statutPaiement === "payé" ? (b.paiementDemo ? (fr ? "Payé (démo)" : "Paid (demo)") : (fr ? "Payé" : "Paid")) : (fr ? `Reste ${fmt(resteAPayer(b))}` : `Due ${fmt(resteAPayer(b))}`)}</AdminBadge>}
+                {b.fraisDeplacement > 0 && <AdminBadge color={T.textMid} bg="rgba(0,0,0,.05)">{FRAIS_TXT(b, lang)}</AdminBadge>}
+                {isBillable(b) && <AdminBadge color={b.statutPaiement === "payé" ? T.success : T.warn} bg={b.statutPaiement === "payé" ? "rgba(30,158,107,.1)" : "rgba(217,119,6,.1)"}>{b.statutPaiement === "payé" ? (b.paiementDemo ? (fr ? "Payé (démo)" : "Paid (demo)") : (fr ? "Payé" : "Paid")) : (fr ? `Reste ${fmt(resteAPayer(b))}` : `Due ${fmt(resteAPayer(b))}`)}</AdminBadge>}
                 {acomptePaid(b) > 0 && <AdminBadge>{fr ? `Acompte ${fmt(acomptePaid(b))}` : `Deposit ${fmt(acomptePaid(b))}`}</AdminBadge>}
                 <AdminBadge color={T.success} bg="rgba(30,158,107,.08)">{b.partenaireId ? (fr ? "Entreprise" : "Company") : (fr ? "Artisan" : "Craftsman")} {fmt(proShare(b))} ({pctLabel(b)})</AdminBadge>
                 <AdminBadge color={T.accent} bg="rgba(201,160,48,.1)">LOCKR {fmt(lockrShare(b))}</AdminBadge>
@@ -6983,8 +7182,9 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {actionBtn(fr ? "Détails" : "Details", () => setDetail(b), T.textMid)}
-                {b.statut === "terminée" && b.statutPaiement !== "payé" && actionBtn(fr ? "Paiement reçu" : "Payment received", () => { if (window.confirm(fr ? "Confirmer la réception du paiement (hors Stripe) ?" : "Confirm payment received (outside Stripe)?")) updateBooking(b.id, { statutPaiement: "payé", paiementVerifie: true, payeLe: ts(), validePar: account.nom }); }, T.success)}
-                {b.statut === "terminée" && b.statutPaiement === "payé" && !b.proPaid && proOwed(b) > 0 && actionBtn(fr ? "Artisan payé" : "Craftsman paid", () => updateBooking(b.id, { proPaid: true, proPaidAt: ts() }), "#2563eb")}
+                {isBillable(b) && b.statutPaiement !== "payé" && b.fraisDeplacement > 0 && b.statut !== "terminée" && !(montantEncaisse(b) > 0) && actionBtn(fr ? "Renoncer aux frais" : "Waive the fee", () => { if (window.confirm(fr ? `Renoncer aux ${fmt(b.fraisDeplacement)} de frais de déplacement ?` : `Waive the ${fmt(b.fraisDeplacement)} travel fee?`)) updateBooking(b.id, { fraisDeplacement: 0, montantFinal: 0, fraisAnnulesLe: ts(), fraisAnnulesPar: account.nom }); }, T.textMid)}
+                {isBillable(b) && b.statutPaiement !== "payé" && actionBtn(fr ? "Paiement reçu" : "Payment received", () => { if (window.confirm(fr ? "Confirmer la réception du paiement (hors Stripe) ?" : "Confirm payment received (outside Stripe)?")) updateBooking(b.id, { statutPaiement: "payé", paiementVerifie: true, payeLe: ts(), validePar: account.nom }); }, T.success)}
+                {isBillable(b) && b.statutPaiement === "payé" && !b.proPaid && proOwed(b) > 0 && actionBtn(fr ? "Artisan payé" : "Craftsman paid", () => updateBooking(b.id, { proPaid: true, proPaidAt: ts() }), "#2563eb")}
                 {!["terminée", "annulée", "annulée_client"].includes(b.statut) && actionBtn(fr ? "Annuler" : "Cancel", async () => {
                   if (!window.confirm(fr ? "Annuler cette mission ? La carte éventuellement réservée du client sera libérée." : "Cancel this mission? Any card hold will be released.")) return;
                   // Empreinte bancaire : libérée par le serveur avant l'annulation
@@ -7062,7 +7262,12 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               <div style={{ fontSize: 12, color: T.textLo }}>{a.email} · {a.tel || "—"} · {a.ville || "—"}</div>
               <div style={{ fontSize: 11.5, color: T.textMid, marginTop: 2 }}>{a.role === "pro" ? (fr ? "Artisan" : "Craftsman") : (fr ? "Entreprise" : "Company")} · {fr ? "inscrit le" : "registered"} {fmtDate(a.createdAt)}</div>
             </div>
-            <AdminBadge color={T.warn} bg="rgba(217,119,6,.1)">{tr.dossierPending}</AdminBadge>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+              <AdminBadge color={T.warn} bg="rgba(217,119,6,.1)">{tr.dossierPending}</AdminBadge>
+              {emailOk(a)
+                ? <AdminBadge color={T.success} bg="rgba(30,158,107,.1)">{fr ? "E-mail confirmé ✓" : "E-mail confirmed ✓"}</AdminBadge>
+                : <AdminBadge color={T.danger} bg="rgba(220,38,38,.08)">{fr ? "E-mail non confirmé" : "E-mail not confirmed"}</AdminBadge>}
+            </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 6, marginBottom: 10 }}>
             {[
@@ -7085,9 +7290,10 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
               </div>
             ))}
           </div>
+          {!emailOk(a) && <div style={{ fontSize: 11.5, color: T.danger, marginBottom: 8 }}>{fr ? "Validation possible dès que le professionnel aura cliqué sur le lien de confirmation reçu par e-mail (il peut le renvoyer depuis son espace)." : "Approval possible once the professional has clicked the confirmation link sent by e-mail (they can resend it from their space)."}</div>}
           <div style={{ fontSize: 11, color: T.textLo, marginBottom: 10 }}>{fr ? "Vérifiez le SIRET sur annuaire-entreprises.data.gouv.fr et demandez les justificatifs par e-mail avant validation." : "Check the SIRET on annuaire-entreprises.data.gouv.fr and request documents by e-mail before approval."} <a href={`https://annuaire-entreprises.data.gouv.fr/rechercher?terme=${encodeURIComponent(a.siret || a.nom)}`} target="_blank" rel="noopener noreferrer" style={{ color: T.accent, fontWeight: 700 }}>{fr ? "Vérifier →" : "Check →"}</a></div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <button onClick={() => setAccounts(p => p.map(x => x.id === a.id ? { ...x, dossierStatus: "approved", statut: "actif", valideLe: ts(), validePar: account.nom } : x))} style={{ background: "rgba(30,158,107,.1)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "11px", color: T.success, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{Icon.check(T.success, 14)} {tr.approveDossier}</button>
+            <button disabled={!emailOk(a)} title={emailOk(a) ? "" : (fr ? "Le professionnel doit d'abord confirmer son adresse e-mail" : "The professional must confirm their e-mail first")} onClick={() => setAccounts(p => p.map(x => x.id === a.id ? { ...x, dossierStatus: "approved", statut: "actif", valideLe: ts(), validePar: account.nom } : x))} style={{ background: "rgba(30,158,107,.1)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "11px", color: T.success, fontWeight: 700, fontSize: 13, cursor: emailOk(a) ? "pointer" : "not-allowed", opacity: emailOk(a) ? 1 : .45 }}>{Icon.check(T.success, 14)} {tr.approveDossier}</button>
             <button onClick={() => { setRejectTarget(a); setRejectReason(""); }} style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "11px", color: T.danger, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{Icon.x(T.danger, 14)} {tr.rejectDossier}</button>
           </div>
         </>, { key: a.id }
@@ -7185,12 +7391,13 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     });
     return (
       <>
+        <FraisDeplacementCard value={fraisDep} onSave={setFraisDep} lang={lang} />
         <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14, borderLeft: `4px solid ${T.warn}` }}>
           <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 2 }}>{fr ? "Encaissements en attente (clients)" : "Pending client payments"}</div>
-          <div style={{ fontSize: 12, color: T.textLo, marginBottom: 10 }}>{fr ? "Missions terminées non réglées" : "Completed, unpaid missions"}</div>
+          <div style={{ fontSize: 12, color: T.textLo, marginBottom: 10 }}>{fr ? "Missions terminées et frais de déplacement non réglés" : "Completed missions and travel fees not paid"}</div>
           {unpaid.length === 0 ? <div style={{ fontSize: 12.5, color: T.success }}>{fr ? "Tout est à jour ✓" : "All up to date ✓"}</div> : unpaid.map(b => (
             <div key={b.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", borderBottom: "1px solid rgba(0,0,0,.05)", fontSize: 12.5 }}>
-              <span>{b.clientNom} · {fmtDate(b.termineeLe || b.createdAt)}</span>
+              <span>{b.clientNom} · {fmtDate(b.termineeLe || b.annuleeLe || b.createdAt)}{b.fraisDeplacement > 0 && b.statut !== "terminée" ? (fr ? " · frais de déplacement" : " · travel fee") : ""}</span>
               <b style={{ color: T.warn }}>{fmt(resteAPayer(b))}</b>
             </div>
           ))}
@@ -7276,8 +7483,34 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
     );
   };
 
+  const saleAction = async (x, action) => {
+    const net = marketSellerNet(x);
+    const q = action === "rembourser"
+      ? (fr ? `Rembourser ${fmt(x.prix)} à ${x.acheteurNom} ?` : `Refund ${fmt(x.prix)} to ${x.acheteurNom}?`)
+      : (fr ? `Verser ${fmt(net)} à ${x.vendeurNom} ?` : `Pay ${fmt(net)} to ${x.vendeurNom}?`);
+    if (!window.confirm(q)) return;
+    if (live) {
+      const r = await marketplaceAction(x.id, action);
+      if (!r.ok) { alert(fr ? "Action impossible pour le moment (paiement en ligne indisponible ?)." : "Action not possible right now (online payment unavailable?)."); return; }
+      if (action === "liberer" && r.manual) alert(fr ? `Le vendeur n'a pas activé ses virements Stripe : faites-lui un virement de ${fmt(net)}, puis cliquez sur « Vendeur payé ».` : `The seller has not enabled Stripe payouts: send ${fmt(net)} by bank transfer, then click "Seller paid".`);
+      return;
+    }
+    setSales(p => p.map(y => y.id !== x.id ? y : action === "rembourser"
+      ? { ...y, statut: "remboursée", rembourseLe: ts() }
+      : { ...y, statut: "terminée", termineeLe: ts(), liberation: "admin", vendeurPaye: true, vendeurPayeLe: ts(), vendeurVerse: net }));
+  };
   const renderMarketplace = () => {
-    const paid = S.filter(x => x.statut !== "en_attente_paiement");
+    const paid = S.filter(x => !["en_attente_paiement", "remboursée", "remboursement"].includes(x.statut));
+    const stLabel = x => ({
+      en_attente_paiement: fr ? "Paiement en attente" : "Awaiting payment",
+      payée: fr ? "Payée — attente de réception" : "Paid — awaiting receipt",
+      litige: fr ? "Problème signalé" : "Issue reported",
+      terminée: fr ? "Reçue" : "Received",
+      remboursement: fr ? "Remboursement…" : "Refunding…",
+      remboursée: fr ? "Remboursée" : "Refunded",
+      declaree_vendeur: fr ? "Déclarée par le vendeur" : "Declared by seller",
+    })[x.statut] || x.statut;
+    const smallBtn = (label, onClick, color) => <button onClick={onClick} style={{ marginTop: 4, background: `${color}14`, border: `1px solid ${color}40`, color, borderRadius: 8, padding: "4px 8px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>{label}</button>;
     return (
       <>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
@@ -7288,19 +7521,28 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             { l: fr ? "Annonces actives" : "Active listings", v: (showDemo ? listings : listings.filter(l => !isDemoRecord(l))).filter(l => !l.sold).length, c: T.warn },
           ].map(k => <div key={k.l} className="lk-card" style={{ padding: "14px" }}><div style={{ color: T.textLo, fontSize: 11, marginBottom: 6 }}>{k.l}</div><div style={{ color: k.c, fontWeight: 800, fontSize: 18 }}>{k.v}</div></div>)}
         </div>
+        <div style={{ fontSize: 12, color: T.textLo, marginBottom: 12, lineHeight: 1.5 }}>{fr ? `Le paiement de l'acheteur est conservé jusqu'à la réception de l'article, puis ${Math.round((1 - MARKET_COMMISSION) * 100)} % sont versés au vendeur (automatiquement après ${MARKETPLACE_RELEASE_DAYS} jours sans problème signalé). Vendeur sans virements Stripe : virement à faire par vous.` : `The buyer's payment is held until receipt, then ${Math.round((1 - MARKET_COMMISSION) * 100)}% is paid to the seller (automatically after ${MARKETPLACE_RELEASE_DAYS} days without a reported issue). Sellers without Stripe payouts: pay them by bank transfer.`}</div>
         {S.length === 0 && <div style={{ textAlign: "center", color: T.textLo, padding: "30px 0", fontSize: 13 }}>{tr.noSales}</div>}
         {S.slice().reverse().map(x => card(
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 12.5, color: T.textHi }}>{x.titre}</div>
               <div style={{ fontSize: 11, color: T.textLo }}>{x.vendeurNom} → {x.acheteurNom} · {fmtDate(x.createdAt)}{x.livraison ? ` · ${x.livraison.adresse}, ${x.livraison.zip} ${x.livraison.ville}` : ""}</div>
+              {x.statut === "litige" && x.litige?.motif && <div style={{ fontSize: 11.5, color: T.danger, marginTop: 3 }}>⚠️ {x.litige.motif}</div>}
+              {x.versementErreur && !x.vendeurPaye && <div style={{ fontSize: 11, color: T.warn, marginTop: 3 }}>{fr ? "Virement Stripe échoué : " : "Stripe transfer failed: "}{x.versementErreur}</div>}
             </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ textAlign: "right", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{fmt(x.prix)}</div>
-              <div style={{ fontSize: 11, color: x.statut === "en_attente_paiement" ? T.warn : T.success, fontWeight: 600 }}>{x.statut === "en_attente_paiement" ? (fr ? "Paiement en attente" : "Awaiting payment") : `+${fmt(x.commission)} LOCKR`}</div>
-              {x.statut === "payée" && (x.vendeurPaye
-                ? <div style={{ fontSize: 10.5, color: T.success, fontWeight: 700, marginTop: 3 }}>{fr ? "Vendeur payé ✓" : "Seller paid ✓"}</div>
-                : <button onClick={() => { if (window.confirm(fr ? `Confirmer le virement de ${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))} à ${x.vendeurNom} ?` : `Confirm transfer of ${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))} to ${x.vendeurNom}?`)) setSales(p => p.map(y => y.id === x.id ? { ...y, vendeurPaye: true, vendeurPayeLe: ts() } : y)); }} style={{ marginTop: 4, background: "rgba(37,99,235,.08)", border: "1px solid rgba(37,99,235,.25)", color: "#2563eb", borderRadius: 8, padding: "4px 8px", fontSize: 10.5, fontWeight: 700, cursor: "pointer" }}>{fr ? `Vendeur payé (${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))})` : `Seller paid (${fmt((Number(x.prix) || 0) - (Number(x.commission) || 0))})`}</button>)}
+              <div style={{ fontSize: 11, color: ["en_attente_paiement", "payée"].includes(x.statut) ? T.warn : x.statut === "litige" ? T.danger : T.success, fontWeight: 600 }}>{stLabel(x)}</div>
+              {!["en_attente_paiement", "remboursée", "remboursement"].includes(x.statut) && <div style={{ fontSize: 10.5, color: T.success }}>+{fmt(x.commission)} LOCKR</div>}
+              {["payée", "litige"].includes(x.statut) && smallBtn(fr ? `Verser au vendeur (${fmt(marketSellerNet(x))})` : `Pay seller (${fmt(marketSellerNet(x))})`, () => saleAction(x, "liberer"), "#2563eb")}
+              {["payée", "litige"].includes(x.statut) && smallBtn(fr ? "Rembourser l'acheteur" : "Refund buyer", () => saleAction(x, "rembourser"), T.danger)}
+              {x.statut === "terminée" && (x.vendeurPaye
+                ? <div style={{ fontSize: 10.5, color: T.success, fontWeight: 700, marginTop: 3 }}>{fr ? `Vendeur payé ${fmt(x.vendeurVerse || marketSellerNet(x))} ✓` : `Seller paid ${fmt(x.vendeurVerse || marketSellerNet(x))} ✓`}</div>
+                : <>
+                    {live && smallBtn(fr ? "Réessayer le virement Stripe" : "Retry Stripe transfer", () => saleAction(x, "liberer"), "#635bff")}
+                    {smallBtn(fr ? `Vendeur payé (${fmt(marketSellerNet(x))})` : `Seller paid (${fmt(marketSellerNet(x))})`, () => { if (window.confirm(fr ? `Confirmer le virement de ${fmt(marketSellerNet(x))} à ${x.vendeurNom} ?` : `Confirm transfer of ${fmt(marketSellerNet(x))} to ${x.vendeurNom}?`)) setSales(p => p.map(y => y.id === x.id ? { ...y, vendeurPaye: true, vendeurPayeLe: ts(), vendeurVerse: marketSellerNet(x) } : y)); }, T.success)}
+                  </>)}
             </div>
           </div>, { key: x.id }
         ))}
@@ -7780,7 +8022,7 @@ function PartenaireLoiTab({ lang = "fr", account }) {
   );
 }
 
-function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, techs = [], setTechs = () => {}, onLogout, lang = "fr", setLang, listings = [], setListings = () => {}, sales = [], setSales = () => {}, setters, openLegal }) {
+function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setBons, techs = [], setTechs = () => {}, onLogout, lang = "fr", setLang, listings = [], setListings = () => {}, sales = [], setSales = () => {}, setters, openLegal, fraisDep = FRAIS_DEPLACEMENT_DEFAULT }) {
   const w = useWindowSize();
   const isDesktop = w >= BP;
   const tr = TRANS[lang] || TRANS.fr;
@@ -7827,7 +8069,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const myTechs = visibleFor(account, techs).filter(t => t.partenaireId === account.id);
   const myMissions = visibleFor(account, bookings).filter(m => m.partenaireId === account.id)
     .sort((x, y) => String(y.createdAt || "").localeCompare(String(x.createdAt || "")));
-  const doneMissions = myMissions.filter(m => m.statut === "terminée");
+  const doneMissions = myMissions.filter(isBillable);
   const activeTechs = myTechs.filter(t => t.statut !== "inactif");
   const now = new Date();
   const doneThisMonth = doneMissions.filter(m => { const d = new Date(m.termineeLe || m.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); });
@@ -7967,7 +8209,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     <div>
       <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi, marginBottom: 4 }}>{tr.partnerDashboard}</div>
       <div style={{ color: T.textLo, fontSize: 12, marginBottom: 18 }}>{fr ? "Toute votre entreprise en un coup d'œil." : "Your entire business at a glance."}</div>
-      {!approved && <PendingApprovalCard account={account} lang={lang} />}
+      {!approved && <PendingApprovalCard account={account} setAccounts={setAccounts} lang={lang} />}
       {approved && !hasPartnerAccess && (
         <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 16, border: "1px solid rgba(201,160,48,.35)", background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 200 }}>
@@ -8075,7 +8317,9 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {step && <button disabled={!approved || (step.next !== "assignée" && !m.technicienId)} onClick={() => updateMission(m.id, { statut: step.next, ...(step.next === "en_cours" ? { arriveAt: ts() } : step.next === "en_route" ? { departAt: ts() } : {}) })} className="lk-btn" style={{ flex: 1, padding: "9px 12px", fontSize: 12 }}>{step.l}</button>}
               {m.statut === "en_cours" && <button onClick={() => { setCloseMission(m); setCloseAmount(String(bookingTotal(m) || "")); }} className="lk-btn" style={{ flex: 1, padding: "9px 12px", fontSize: 12, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)" }}>{fr ? "Clôturer la mission" : "Close mission"}</button>}
-              {m.statut === "terminée" && m.statutPaiement !== "payé" && resteAPayer(m) > 0 && <button onClick={() => setLinkMission(m)} className="lk-ghost" style={{ flex: 1, fontSize: 12 }}>{fr ? `Lien de paiement (${fmt(resteAPayer(m))})` : `Payment link (${fmt(resteAPayer(m))})`}</button>}
+              {m.statut === "en_cours" && <button onClick={async () => { const r = await declareClientAbsent(m, { setBookings, setters, fraisDep, lang }); if (r) { if (r.ok && m.technicienId) setTechStatut(m.technicienId, "actif"); alert(r.msg); } }} className="lk-ghost" style={{ flex: 1, padding: "9px 12px", fontSize: 12 }}>{fr ? "Client absent" : "Client absent"}</button>}
+              {m.fraisDeplacement > 0 && <span style={{ fontSize: 12, fontWeight: 600, color: T.textMid, alignSelf: "center" }}>{FRAIS_TXT(m, lang)}</span>}
+              {isBillable(m) && m.statutPaiement !== "payé" && resteAPayer(m) > 0 && <button onClick={() => setLinkMission(m)} className="lk-ghost" style={{ flex: 1, fontSize: 12 }}>{fr ? `Lien de paiement (${fmt(resteAPayer(m))})` : `Payment link (${fmt(resteAPayer(m))})`}</button>}
               {m.statut === "terminée" && <span style={{ fontSize: 12, fontWeight: 700, color: m.statutPaiement === "payé" ? T.success : T.warn, alignSelf: "center" }}>{m.statutPaiement === "payé" ? (fr ? "Payée ✓" : "Paid ✓") : (fr ? "En attente de paiement" : "Awaiting payment")}</span>}
             </div>
             {step && step.next !== "assignée" && !m.technicienId && <div style={{ fontSize: 11, color: T.textLo, marginTop: 6 }}>{fr ? "Assignez d'abord un technicien." : "Assign a technician first."}</div>}
@@ -8089,7 +8333,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             <label className="lk-label">{fr ? "Montant total facturé (TTC)" : "Total amount (incl. VAT)"}</label>
             <input className="lk-input" type="number" inputMode="decimal" value={closeAmount} onChange={e => setCloseAmount(e.target.value)} style={{ marginBottom: 14 }} />
             <button disabled={!(parseFloat(closeAmount) > 0)} onClick={() => {
-              updateMission(closeMission.id, { statut: "terminée", termineeLe: ts(), montantFinal: parseFloat(closeAmount), statutPaiement: closeMission.statutPaiement === "payé" ? "payé" : "en_attente" });
+              // Le statut de paiement est tenu par le serveur (il ne change pas ici)
+              updateMission(closeMission.id, { statut: "terminée", termineeLe: ts(), montantFinal: parseFloat(closeAmount) });
               if (closeMission.technicienId) setTechStatut(closeMission.technicienId, "actif");
               setCloseMission(null);
             }} className="lk-btn" style={{ marginBottom: 10 }}>{fr ? "Valider" : "Confirm"}</button>
@@ -8448,7 +8693,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
     const montant = parseFloat(newBon.montantEstime);
     if (!newBon.titre.trim() || !newBon.adresse.trim() || !(montant > 0)) { setBonErr(fr ? "Titre, adresse et montant obligatoires." : "Title, address and amount required."); return; }
     const geo = await geocodeAddress(newBon.adresse);
-    setBons(p => [...p, { id: uid(), ...newBon, titre: newBon.titre.trim(), adresse: newBon.adresse.trim(), montantEstime: montant, metier: metierOf(newBon), postedBy: account.id, postedByNom: account.nom, region: myRegion, ...(geo ? { lat: geo[0], lng: geo[1] } : {}), createdAt: ts(), openPlatform: true }]);
+    setBons(p => [...p, { id: uid(), ...newBon, titre: newBon.titre.trim(), adresse: newBon.adresse.trim(), montantEstime: montant, techPct: Math.min(PCT_DEFAULT, Math.max(TECH_PCT_MIN, Number(newBon.techPct) || 70)), metier: metierOf(newBon), postedBy: account.id, postedByNom: account.nom, region: myRegion, ...(geo ? { lat: geo[0], lng: geo[1] } : {}), createdAt: ts(), openPlatform: true }]);
     setBonModal(false); setBonErr("");
     setNewBon({ titre: "", adresse: "", probleme: "ouverture", urgence: false, montantEstime: "", techPct: 70 });
   };
@@ -8541,8 +8786,8 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
             <div style={{ marginBottom: 14 }}><label className="lk-label">{tr.estimatedAmount}</label><input type="number" className="lk-input" value={newBon.montantEstime} onChange={e => setNewBon(p => ({ ...p, montantEstime: e.target.value }))} placeholder="150" /></div>
             <div style={{ marginBottom: 20 }}>
               <label className="lk-label">{tr.technicianShare} : {newBon.techPct}%</label>
-              <input type="range" min={20} max={PCT_DEFAULT} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
-              <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>{fr ? `Vous recevez ${posterPctFor(newBon.techPct)} % comme apporteur · LOCKR ${Math.round(LOCKR_COMMISSION * 100)} %` : `You receive ${posterPctFor(newBon.techPct)}% as referrer · LOCKR ${Math.round(LOCKR_COMMISSION * 100)}%`}</div>
+              <input type="range" min={TECH_PCT_MIN} max={PCT_DEFAULT} step={5} value={newBon.techPct} onChange={e => setNewBon(p => ({ ...p, techPct: parseInt(e.target.value, 10) }))} style={{ width: "100%", accentColor: T.accent }} />
+              <div style={{ fontSize: 11, color: T.textLo, marginTop: 4 }}>{fr ? `Vous recevez ${posterPctFor(newBon.techPct)} % comme apporteur (${APPORTEUR_MAX_PCT} % maximum) · LOCKR ${Math.round(LOCKR_COMMISSION * 100)} %` : `You receive ${posterPctFor(newBon.techPct)}% as referrer (max ${APPORTEUR_MAX_PCT}%) · LOCKR ${Math.round(LOCKR_COMMISSION * 100)}%`}</div>
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 20 }}>
               <input type="checkbox" id="bon-urgence" checked={newBon.urgence} onChange={e => setNewBon(p => ({ ...p, urgence: e.target.checked }))} style={{ accentColor: T.danger }} />
@@ -8766,7 +9011,7 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
 
   const renderContent = () => {
     if (!approved && !["dashboard", "profil", "documents", "contrat", "lois", "conformite", "fe_part"].includes(view)) {
-      return <PendingApprovalCard account={account} lang={lang} />;
+      return <PendingApprovalCard account={account} setAccounts={setAccounts} lang={lang} />;
     }
     if (!hasPartnerAccess && !["abonnement", "profil", "documents", "dashboard"].includes(view)) return renderPaywall();
     if (view === "dashboard") return renderDashboard();
@@ -8916,6 +9161,7 @@ const LEGAL_DOCS = {
         { h: "Article 3 — Rôle de la plateforme", p: "LOCKR est un intermédiaire technique au sens de l'article L.111-7 du Code de la consommation. Les contrats de prestation sont conclus directement entre le client et l'artisan. LOCKR fournit un classement loyal, clair et transparent des offres (loi n°2016-1321 pour une République numérique)." },
         { h: "Article 4 — Obligations de l'utilisateur", p: "L'utilisateur s'engage à ne pas publier de contenus illicites, à ne pas contourner la plateforme pour éviter les commissions, à respecter les artisans et à fournir des informations sincères. Tout manquement peut entraîner la suspension ou la suppression du compte après mise en demeure." },
         { h: "Article 4 bis — Paiement obligatoire via la plateforme", p: "Toute somme due au titre d'une prestation mise en relation par LOCKR (y compris avec un client non inscrit sur l'application) doit être réglée exclusivement via les moyens de paiement intégrés à la plateforme (paiement en application, lien de paiement sécurisé envoyé par SMS/email, ou QR code de paiement). Il est strictement interdit à l'artisan comme au client de convenir, solliciter ou accepter un règlement en espèces ou par tout autre moyen hors plateforme afin de contourner la commission LOCKR. Ce contournement constitue un manquement grave aux présentes CGU pouvant entraîner, après mise en demeure restée infructueuse : la suspension immédiate du compte, la résiliation définitive, le recouvrement des commissions éludées et, le cas échéant, des poursuites judiciaires. LOCKR se réserve le droit de vérifier la conformité des paiements déclarés clos sur la plateforme." },
+        { h: "Article 4 ter — Marketplace entre professionnels", p: "Le prix d'un article acheté sur la marketplace est conservé par LOCKR, via son prestataire de paiement, jusqu'à ce que l'acheteur confirme la réception. Le vendeur reçoit alors le prix diminué de la commission LOCKR de 15 %. Sans confirmation ni signalement de l'acheteur dans les 14 jours suivant le paiement, le versement au vendeur est automatique. En cas de problème signalé (article non reçu, non conforme), LOCKR examine la situation avec les deux parties et décide du versement au vendeur ou du remboursement de l'acheteur." },
         { h: "Article 5 — Avis et notations", p: "Les avis publiés font l'objet d'un contrôle conformément à l'article L.111-7-2 du Code de la consommation et à la norme sur les avis en ligne. Seuls les clients ayant effectivement bénéficié d'une prestation peuvent déposer un avis." },
         { h: "Article 6 — Responsabilité de la plateforme", p: "LOCKR est un intermédiaire technique de mise en relation et n'est PAS partie au contrat de prestation conclu entre le client et l'artisan. LOCKR met en œuvre tous les moyens raisonnables pour assurer la disponibilité du service et la vérification des professionnels référencés (SIRET, assurance RC Pro, qualifications), sans obligation de résultat. La responsabilité de LOCKR ne saurait être engagée au titre de l'exécution, de l'inexécution, de la mauvaise exécution ou des dommages de toute nature résultant de la prestation réalisée par l'artisan, qui en assume seul l'entière responsabilité." },
         { h: "Article 7 — Responsabilité des artisans et recours", p: "L'artisan intervient en qualité de professionnel indépendant, sous sa seule responsabilité. Il est seul responsable de la qualité, de la conformité, des délais et des dommages éventuels liés à ses interventions, couverts par son assurance RC Pro obligatoire (et garantie décennale le cas échéant). Toute réclamation, demande d'indemnisation ou action relative à une prestation doit être dirigée exclusivement contre l'artisan intervenant et son assureur, dont les coordonnées figurent sur le devis et la facture. En acceptant les présentes CGU, l'artisan s'engage à garantir et relever indemne LOCKR de toute condamnation, réclamation ou frais liés à ses interventions. Cette clause ne prive pas le consommateur de ses droits légaux à l'égard du professionnel prestataire." },
@@ -8929,7 +9175,7 @@ const LEGAL_DOCS = {
       articles: [
         { h: "Article 1 — Prix", p: "Tous les prix affichés sont exprimés en euros toutes taxes comprises (TTC), TVA française applicable. Les prix « À partir de » constituent des tarifs indicatifs minimums ; un devis précis est communiqué avant toute intervention. Aucune intervention n'est facturée sans accord préalable du client sur le prix (arrêté du 24 janvier 2017 relatif aux dépannages)." },
         { h: "Article 2 — Devis obligatoire", p: "Conformément à l'arrêté du 24 janvier 2017, un devis détaillé est obligatoire avant toute prestation de dépannage, réparation et entretien dans le bâtiment : taux horaire, frais de déplacement, pièces, durée estimée. Le devis est gratuit sauf mention contraire expresse." },
-        { h: "Article 3 — Paiement", p: "Le paiement s'effectue en ligne de manière sécurisée (prestataire conforme PCI-DSS et DSP2 avec authentification forte 3-D Secure). À la réservation, le montant du devis est réservé sur la carte du client (empreinte bancaire, aucun débit) ; seul le montant final de la facture est prélevé à l'issue de la prestation. La réservation est libérée sans frais en cas d'annulation avant le départ de l'artisan." },
+        { h: "Article 3 — Paiement", p: "Le paiement s'effectue en ligne de manière sécurisée (prestataire conforme PCI-DSS et DSP2 avec authentification forte 3-D Secure). À la réservation, le montant du devis est réservé sur la carte du client (empreinte bancaire, aucun débit) ; seul le montant final de la facture est prélevé à l'issue de la prestation. La réservation est libérée sans frais en cas d'annulation avant le départ de l'artisan. Si le client annule alors que l'artisan est en route, ou s'il est absent au rendez-vous (après 10 minutes d'attente sur place), un forfait de frais de déplacement, dont le montant est indiqué sur le devis avant la réservation, est dû et prélevé sur la carte enregistrée." },
         { h: "Article 4 — Droit de rétractation", p: "Conformément à l'article L.221-18 du Code de la consommation, le client dispose d'un délai de 14 jours pour se rétracter d'une commande conclue à distance, sans motif ni pénalité. EXCEPTION : le droit de rétractation ne s'applique pas aux travaux d'entretien ou de réparation à réaliser en urgence au domicile du client et expressément sollicités par lui (art. L.221-28 8°), ni aux services pleinement exécutés avant la fin du délai avec accord exprès du client (art. L.221-28 1°). Formulaire de rétractation disponible sur demande à : retractation@lockr.fr." },
         { h: "Article 5 — Garanties légales", p: "Le client bénéficie de la garantie légale de conformité (art. L.217-3 et s. C. conso — 2 ans) et de la garantie des vices cachés (art. 1641 et s. C. civ.) sur les pièces et matériels fournis, ainsi que des garanties applicables aux travaux (parfait achèvement, biennale, décennale le cas échéant — art. 1792 C. civ.)." },
         { h: "Article 6 — Médiation de la consommation", p: "Conformément aux articles L.612-1 et s. du Code de la consommation, en cas de litige non résolu, le client peut saisir gratuitement le médiateur : CNPM Médiation Consommation — 27 avenue de la Libération, 42400 Saint-Chamond — cnpm-mediation-consommation.eu. Plateforme européenne RLL : ec.europa.eu/consumers/odr." },
@@ -8991,6 +9237,7 @@ const LEGAL_DOCS = {
         { h: "Article 3 — Role of the platform", p: "LOCKR is a technical intermediary within the meaning of article L.111-7 of the French Consumer Code. Service contracts are concluded directly between the client and the craftsman. LOCKR provides fair, clear and transparent ranking of offers." },
         { h: "Article 4 — User obligations", p: "Users undertake not to publish illegal content, not to bypass the platform to avoid commissions, to respect craftsmen and to provide truthful information. Any breach may lead to suspension or deletion of the account after formal notice." },
         { h: "Article 4 bis — Mandatory payment via the platform", p: "Any amount owed for a service arranged via LOCKR (including with a client not registered on the app) must be paid exclusively through the platform's integrated payment methods (in-app payment, secure payment link sent by SMS/email, or payment QR code). Craftsmen and clients are strictly prohibited from agreeing to, requesting, or accepting cash payment or any other off-platform method to bypass the LOCKR commission. Such circumvention is a serious breach of these Terms and may lead, after unsuccessful formal notice, to immediate account suspension, permanent termination, recovery of evaded commissions and, where applicable, legal action. LOCKR reserves the right to verify the compliance of payments declared as completed on the platform." },
+        { h: "Article 4 ter — Marketplace between professionals", p: "The price of an item bought on the marketplace is held by LOCKR, through its payment provider, until the buyer confirms receipt. The seller then receives the price minus LOCKR's 15% commission. Without confirmation or report from the buyer within 14 days of payment, the seller is paid automatically. If a problem is reported (item not received or not as described), LOCKR reviews the case with both parties and decides whether to pay the seller or refund the buyer." },
         { h: "Article 5 — Reviews", p: "Published reviews are moderated in accordance with article L.111-7-2 of the French Consumer Code. Only clients who actually received a service may post a review." },
         { h: "Article 6 — Platform liability", p: "LOCKR is a technical connecting intermediary and is NOT a party to the service contract concluded between the client and the craftsman. LOCKR uses all reasonable means to ensure service availability and verification of listed professionals (SIRET, liability insurance, qualifications), without an obligation of result. LOCKR shall not be liable for the performance, non-performance, poor performance or any damage resulting from the service carried out by the craftsman, who bears sole and full responsibility." },
         { h: "Article 7 — Craftsmen's liability and recourse", p: "The craftsman acts as an independent professional under his sole responsibility. He is solely liable for the quality, compliance, deadlines and any damage related to his interventions, covered by his mandatory professional liability insurance (and 10-year guarantee where applicable). Any claim, compensation request or action relating to a service must be directed exclusively against the intervening craftsman and his insurer, whose details appear on the quote and invoice. By accepting these Terms, the craftsman undertakes to indemnify and hold LOCKR harmless against any judgment, claim or costs related to his interventions. This clause does not deprive consumers of their statutory rights against the service provider." },
@@ -9004,7 +9251,7 @@ const LEGAL_DOCS = {
       articles: [
         { h: "Article 1 — Prices", p: "All prices are in euros, all taxes included (TTC). \"From\" prices are indicative minimums; a precise quote is provided before any intervention. No work is invoiced without the client's prior agreement on price (Order of 24 January 2017 on repair services)." },
         { h: "Article 2 — Mandatory quote", p: "In accordance with the Order of 24 January 2017, a detailed quote is mandatory before any building repair or maintenance service: hourly rate, travel costs, parts, estimated duration. Quotes are free unless expressly stated otherwise." },
-        { h: "Article 3 — Payment", p: "Payment is made securely online (PCI-DSS compliant provider, PSD2 strong customer authentication / 3-D Secure). At booking, the quote amount is held on the client's card (no charge); only the final invoice amount is charged after the service. The hold is released free of charge if the booking is cancelled before the craftsman leaves." },
+        { h: "Article 3 — Payment", p: "Payment is made securely online (PCI-DSS compliant provider, PSD2 strong customer authentication / 3-D Secure). At booking, the quote amount is held on the client's card (no charge); only the final invoice amount is charged after the service. The hold is released free of charge if the booking is cancelled before the craftsman leaves. If the client cancels while the craftsman is on the way, or is absent at the appointment (after 10 minutes of waiting on site), a fixed travel fee, shown on the quote before booking, is due and charged to the registered card." },
         { h: "Article 4 — Right of withdrawal", p: "Under article L.221-18 of the French Consumer Code, clients have 14 days to withdraw from a distance contract without reason or penalty. EXCEPTIONS: urgent repair or maintenance work at the client's home expressly requested by them (art. L.221-28 8°), and services fully performed before the end of the period with the client's express prior consent (art. L.221-28 1°). Withdrawal form available at: retractation@lockr.fr." },
         { h: "Article 5 — Legal guarantees", p: "Clients benefit from the legal guarantee of conformity (2 years) and the guarantee against hidden defects on supplied parts, as well as construction guarantees where applicable (perfect completion, 2-year, 10-year — art. 1792 French Civil Code)." },
         { h: "Article 6 — Consumer mediation", p: "In accordance with articles L.612-1 et seq., unresolved disputes may be submitted free of charge to the consumer mediator: CNPM Médiation Consommation — cnpm-mediation-consommation.eu. EU ODR platform: ec.europa.eu/consumers/odr." },
@@ -9392,7 +9639,7 @@ function applyPayment({ setBookings, setAccounts, setSales, setListings }, { typ
     setSales(p => p.map(sv => {
       if (sv.id !== ref) return sv;
       listingId = sv.listingId;
-      return sv.statut === "payée" ? sv : { ...sv, statut: "payée", ...stamp };
+      return sv.statut === "payée" ? sv : { ...sv, statut: "payée", ...stamp, liberationAuto: new Date(Date.now() + MARKETPLACE_RELEASE_DAYS * 86400000).toISOString() };
     }));
     // listingId est connu après l'exécution de la mise à jour ci-dessus
     setTimeout(() => { if (listingId && setListings) setListings(p => p.map(l => l.id === listingId ? { ...l, sold: true } : l)); }, 0);
@@ -9567,19 +9814,30 @@ function authErrorText(code, lang) {
 }
 
 /* Confirmation de l'adresse e-mail (production) — affichée dans le profil,
-   jamais par-dessus l'application. */
-function EmailVerifyNotice({ lang = "fr" }) {
+   jamais par-dessus l'application. Obligatoire pour les professionnels :
+   l'admin ne peut valider leur dossier qu'une fois l'adresse confirmée. */
+function EmailVerifyNotice({ lang = "fr", account, setAccounts, required = false }) {
   const fr = lang !== "en";
   const [user, setUser] = useState(() => currentUser());
   const [sent, setSent] = useState(false);
-  if (!live || !user || user.emailVerified) return null;
+  const [notYet, setNotYet] = useState(false);
+  if (!live || !user || user.emailVerified || account?.emailVerified) return null;
+  const check = async () => {
+    setNotYet(false);
+    const ok = await refreshEmailVerified();
+    if (!ok) { setNotYet(true); return; }
+    if (account && setAccounts) setAccounts(p => p.map(a => a.id === account.id ? { ...a, emailVerified: true } : a));
+    setUser({ email: user.email, emailVerified: true });
+  };
   return (
     <div style={{ background: "rgba(37,99,235,.06)", border: "1px solid rgba(37,99,235,.2)", borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, color: T.textMid, lineHeight: 1.5 }}>
       {fr ? `Adresse e-mail non confirmée : un lien a été envoyé à ${user.email}.` : `E-mail not confirmed yet: a link was sent to ${user.email}.`}
+      {required && <div style={{ fontWeight: 700, color: "#2563eb", marginTop: 4 }}>{fr ? "Obligatoire pour la validation de votre dossier." : "Required before your application can be approved."}</div>}
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button onClick={async () => { if (await sendVerification()) setSent(true); }} disabled={sent} className="lk-ghost" style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}>{sent ? (fr ? "Lien envoyé ✓" : "Link sent ✓") : (fr ? "Renvoyer le lien" : "Resend link")}</button>
-        <button onClick={async () => { const u = await reloadUser(); setUser(u ? { email: u.email, emailVerified: u.emailVerified } : null); }} className="lk-ghost" style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}>{fr ? "J'ai confirmé" : "I confirmed"}</button>
+        <button onClick={check} className="lk-ghost" style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}>{fr ? "J'ai confirmé" : "I confirmed"}</button>
       </div>
+      {notYet && <div role="status" style={{ fontSize: 11.5, color: T.warn, marginTop: 6 }}>{fr ? "Pas encore confirmée : ouvrez le lien reçu par e-mail (pensez aux courriers indésirables)." : "Not confirmed yet: open the link in the e-mail (check your spam folder)."}</div>}
     </div>
   );
 }
@@ -9658,6 +9916,10 @@ export default function App() {
 
   // Ordre de priorité des techniciens (défini par l'admin, partagé avec tous les pros)
   const priorityOrder = settings.find(x => x.id === "priorityOrder")?.order || [];
+  // Forfait de frais de déplacement (annulation tardive, client absent), réglé par l'admin
+  const tarifs = settings.find(x => x.id === "tarifs");
+  const fraisDep = fraisDeplacementFrom(tarifs);
+  const setFraisDep = v => setSettings(p => [...p.filter(x => x.id !== "tarifs"), { ...(tarifs || {}), id: "tarifs", fraisDeplacement: v, createdAt: tarifs?.createdAt || "2000-01-01T00:00:00.000Z" }]);
   const setPriorityOrder = order => setSettings(p => [...p.filter(x => x.id !== "priorityOrder"), { id: "priorityOrder", order: Array.isArray(order) ? order : [], createdAt: "2000-01-01T00:00:00.000Z" }]);
 
   /* Le compte affiché est TOUJOURS la version à jour de la base (validation
@@ -9698,10 +9960,26 @@ export default function App() {
   // Dernière connexion (une fois par session)
   const lastLoginDone = useRef(null);
   useEffect(() => {
-    if (!account || lastLoginDone.current === account.id) return;
+    if (!account || !accountsReady || lastLoginDone.current === account.id) return;
     lastLoginDone.current = account.id;
     setAccounts(p => p.map(a => a.id === account.id ? { ...a, lastLoginAt: ts() } : a));
-  }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [account?.id, accountsReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* E-mail confirmé (production) : recopié sur le compte, car l'admin ne peut
+     valider un professionnel qu'avec une adresse confirmée. Vérifié à la
+     connexion et au retour dans l'application (après le clic sur le lien). */
+  useEffect(() => {
+    // On attend que la fiche du compte soit chargée (sinon la mise à jour n'aurait rien à modifier)
+    if (!live || !account?.id || account.emailVerified || !accountsReady) return;
+    let stop = false;
+    const check = async () => {
+      if (await refreshEmailVerified() && !stop) setAccounts(p => p.map(a => a.id === account.id && !a.emailVerified ? { ...a, emailVerified: true } : a));
+    };
+    check();
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { stop = true; document.removeEventListener("visibilitychange", onVisible); };
+  }, [account?.id, account?.emailVerified, accountsReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Langue préférée enregistrée sur le compte
   useEffect(() => { if (account?.lang && account.lang !== lang) setLangState(account.lang); }, [account?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -9903,11 +10181,11 @@ export default function App() {
   // Session en cours de restauration
   if (live && (authUser === undefined || (userId && (!selfReady || (!me && registering))))) return wrapper(<LoadingScreen lang={lang} />);
 
-  const common = { account, accounts, setAccounts, bookings, setBookings, bons, setBons, onLogout: logout, lang, setLang, setters, openLegal: setLegalOpen };
+  const common = { account, accounts, setAccounts, bookings, setBookings, bons, setBons, onLogout: logout, lang, setLang, setters, openLegal: setLegalOpen, fraisDep };
   if (account) {
     if (account.role === "client") return wrapper(<ClientApp {...common} pros={proDirectory} stripeRequired={stripeRequired} interventionChats={interventionChats} setInterventionChats={setInterventionChats} />);
     if (account.role === "pro") return wrapper(<ProApp {...common} stripeRequired={stripeRequired} chatMessages={chatMessages} setChatMessages={setChatMessages} interventionChats={interventionChats} setInterventionChats={setInterventionChats} listings={listings} setListings={setListings} sales={sales} setSales={setSales} priorityOrder={priorityOrder} />);
-    if (account.role === "admin") return wrapper(<AdminApp {...common} listings={listings} setListings={setListings} sales={sales} setSales={setSales} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} factures={factures} setFactures={setFactures} techs={techs} demoTotal={demoTotal} onCleanupDemo={cleanupDemo} />);
+    if (account.role === "admin") return wrapper(<AdminApp {...common} listings={listings} setListings={setListings} sales={sales} setSales={setSales} bannedList={bannedList} setBannedList={setBannedList} priorityOrder={priorityOrder} setPriorityOrder={setPriorityOrder} factures={factures} setFactures={setFactures} techs={techs} demoTotal={demoTotal} onCleanupDemo={cleanupDemo} setFraisDep={setFraisDep} />);
     if (account.role === "partenaire") return wrapper(<PartenaireApp {...common} techs={techs} setTechs={setTechs} listings={listings} setListings={setListings} sales={sales} setSales={setSales} />);
   }
   const regProps = { onBack: () => setScreen("register-choice"), onRegister: registerAccount, lang, openLegal: setLegalOpen };

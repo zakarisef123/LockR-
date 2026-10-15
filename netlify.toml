@@ -8,6 +8,11 @@
   # SDK Admin Firebase : installé tel quel (non regroupé) dans les fonctions
   external_node_modules = ["firebase-admin"]
 
+# Marketplace : versement automatique au vendeur 14 jours après le paiement
+# (si l'acheteur n'a ni confirmé la réception ni signalé de problème)
+[functions."marketplace-auto-release"]
+  schedule = "@daily"
+
 # Variables d'environnement nécessaires (Site configuration → Environment variables) :
 #   FIREBASE_SERVICE_ACCOUNT   clé JSON du compte de service Firebase (accès serveur)
 #   STRIPE_SECRET_KEY          sk_test_… puis sk_live_…

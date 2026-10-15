@@ -40,6 +40,13 @@ export async function releaseHold(bookingId, reason) {
   return r.ok ? { ok: true, ...r.data } : { ok: false, error: r.data?.error || "unavailable" };
 }
 
+/* Marketplace : réception confirmée (versement au vendeur), problème signalé,
+   décision de l'admin (liberer | rembourser) */
+export async function marketplaceAction(saleId, action, motif) {
+  const r = await callFunction("marketplace-release", { saleId, action, motif });
+  return r.ok ? { ok: true, ...r.data } : { ok: false, error: r.data?.error || "unavailable" };
+}
+
 /* Onboarding Stripe Connect (virements automatiques de l'artisan) */
 export async function startConnectOnboarding() {
   const r = await callFunction("connect-onboard", {});

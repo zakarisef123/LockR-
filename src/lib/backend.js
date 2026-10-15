@@ -137,6 +137,23 @@ export async function reloadUser() {
   return auth?.currentUser || null;
 }
 
+/* Adresse e-mail confirmée ? Recharge l'utilisateur et, si oui, renouvelle le
+   jeton de connexion (les règles de la base y lisent la confirmation). */
+export async function refreshEmailVerified() {
+  const u = auth?.currentUser;
+  if (!u) return false;
+  try {
+    if (!u.emailVerified) await u.reload();
+    const cur = auth.currentUser;
+    if (!cur?.emailVerified) return false;
+    const t = await cur.getIdTokenResult();
+    if (!t.claims.email_verified) await cur.getIdToken(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function reauth(password) {
   const u = auth?.currentUser;
   if (!u) return { error: "unknown" };

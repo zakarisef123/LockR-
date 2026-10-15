@@ -7,6 +7,7 @@
 //   empreinte    — le client enregistre sa carte : le montant du devis est
 //                  réservé (capture différée), débité après l'intervention
 //   prestation   — règlement du reste à payer d'une intervention terminée
+//                  (ou des frais de déplacement non débités)
 //   lien_client  — idem, lien envoyé par l'artisan au client
 //   marketplace  — achat d'un article
 //   abonnement   — abonnement Entreprise (mensuel / annuel)
@@ -14,7 +15,7 @@ import { preflight, json, parseBody, siteOrigin } from "../lib/http.mjs";
 import { adminReady, db, requestUser, isAdmin } from "../lib/admin.mjs";
 import { stripeReady, stripeClient } from "../lib/stripe.mjs";
 import { connectDestination } from "../lib/payments.mjs";
-import { bookingTotal, resteAPayer, commissionCents, SUB_PRICES, empreinteActive } from "../../src/lib/business.js";
+import { bookingTotal, resteAPayer, commissionCents, SUB_PRICES, empreinteActive, isBillable } from "../../src/lib/business.js";
 
 const TYPES = ["empreinte", "prestation", "lien_client", "marketplace", "abonnement"];
 const isWorker = (b, uid) => b.artisanAccountId === uid || b.partenaireId === uid;
@@ -51,7 +52,8 @@ export const handler = async (event) => {
       } else {
         const allowed = b.clientId === user.uid || isWorker(b, user.uid) || isAdmin(user);
         if (!allowed) return json(403, { error: "forbidden" });
-        if (b.statut !== "terminée") return json(409, { error: "not_finished" });
+        // Intervention terminée, ou frais de déplacement restés dus
+        if (!isBillable(b)) return json(409, { error: "not_finished" });
         amount = resteAPayer(b);
         label = "Intervention LOCKR";
       }
@@ -86,6 +88,8 @@ export const handler = async (event) => {
       statement_descriptor_suffix: "LOCKR",
       metadata: { type, ref: refId },
       ...(capture === "manual" ? { capture_method: "manual" } : {}),
+      // Marketplace : l'argent attend la réception de l'article, puis est viré au vendeur
+      ...(type === "marketplace" ? { transfer_group: `sale_${refId}` } : {}),
       ...(destination ? { application_fee_amount: fee, transfer_data: { destination } } : {}),
     };
     const origin = siteOrigin(event);

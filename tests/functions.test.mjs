@@ -249,6 +249,144 @@ test("marketplace et abonnement entreprise", async () => {
   assert.ok(new Date(sub.until) > new Date(Date.now() + 360 * 86400000));
 });
 
+// ── Frais de déplacement ────────────────────────────────────────────────────
+const onboard = async (token, uid) => {
+  await call("connect-onboard", {}, token);
+  stripe.finishOnboarding((await get(`accounts/${uid}`)).stripeAccountId);
+  await call("connect-status", {}, token);
+  return (await get(`accounts/${uid}`)).stripeAccountId;
+};
+const holdCard = async () => {
+  await call("create-checkout", { type: "empreinte", ref: "b1" }, tClient);
+  const sid = lastSessionId();
+  stripe.completeSession(sid);
+  await call("verify-session", { sessionId: sid });
+};
+
+test("frais de déplacement : annulation alors que l'artisan est en route → 30 € débités, partagés 85 / 15", async () => {
+  await onboard(tPro, "pro1");
+  await holdCard();
+  // Avant le départ : l'annulation est gratuite, pas de frais possibles
+  assert.equal((await call("cancel-hold", { bookingId: "b1", reason: "annulation_tardive" }, tClient)).data.error, "invalid_state");
+  await db().doc("bookings/b1").update({ statut: "en_route", departAt: new Date().toISOString() });
+  // Plus d'annulation gratuite ; seul le client (ou l'admin) annule
+  assert.equal((await call("cancel-hold", { bookingId: "b1", reason: "annulation_client" }, tClient)).status, 409);
+  assert.equal((await call("cancel-hold", { bookingId: "b1", reason: "annulation_tardive" }, tPro)).status, 403);
+  const r = await call("cancel-hold", { bookingId: "b1", reason: "annulation_tardive" }, tClient);
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.deepEqual([r.data.frais, r.data.captured, r.data.du], [30, 30, 0]);
+  const cap = stripe.calls.find(c => c[0] === "paymentIntents.capture")[2];
+  assert.deepEqual(cap, { amount_to_capture: 3000, application_fee_amount: 450 });
+  const b = await get("bookings/b1");
+  assert.equal(b.statut, "annulée_client");
+  assert.equal(b.annulationRaison, "annulation_tardive");
+  assert.deepEqual([b.fraisDeplacement, b.montantFinal, b.montantEncaisse, b.proVerseAuto], [30, 30, 30, 25.5]);
+  assert.equal(b.statutPaiement, "payé");
+  assert.equal(b.empreinte.statut, "débitée");
+});
+
+test("frais de déplacement : client absent sans carte → frais dus, réglés par lien ; montant fixé par l'admin", async () => {
+  await db().doc("settings/tarifs").set({ id: "tarifs", fraisDeplacement: 25 });
+  const ago = min => new Date(Date.now() - min * 60000).toISOString();
+  await db().doc("bookings/b1").update({ statut: "en_cours", arriveAt: ago(3) });
+  // Attente minimale de 10 minutes sur place
+  const early = await call("cancel-hold", { bookingId: "b1", reason: "client_absent" }, tPro);
+  assert.deepEqual([early.status, early.data.error], [409, "wait"]);
+  await db().doc("bookings/b1").update({ arriveAt: ago(12) });
+  assert.equal((await call("cancel-hold", { bookingId: "b1", reason: "client_absent" }, tClient)).status, 403);
+  assert.equal((await call("cancel-hold", { bookingId: "b1", reason: "client_absent" }, tPro2)).status, 403);
+  const r = await call("cancel-hold", { bookingId: "b1", reason: "client_absent" }, tPro);
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.deepEqual([r.data.frais, r.data.captured, r.data.du], [25, 0, 25]);
+  let b = await get("bookings/b1");
+  assert.deepEqual([b.statut, b.annulationRaison, b.fraisDeplacement, b.montantFinal], ["annulée", "client_absent", 25, 25]);
+  assert.notEqual(b.statutPaiement, "payé");
+  // Les frais restent réglables : lien envoyé par l'artisan (montant calculé par le serveur)
+  assert.equal((await call("create-checkout", { type: "lien_client", ref: "b1" }, tPro)).status, 200);
+  assert.equal(stripe.calls.filter(x => x[0] === "checkout.sessions.create").pop()[1].line_items[0].price_data.unit_amount, 2500);
+  const sid = lastSessionId();
+  stripe.completeSession(sid);
+  await call("verify-session", { sessionId: sid });
+  b = await get("bookings/b1");
+  assert.equal(b.statutPaiement, "payé");
+});
+
+// ── Marketplace : argent conservé jusqu'à la réception ──────────────────────
+const buy = async (saleId, prix = 95.5) => {
+  await db().doc(`listings/l_${saleId}`).set({ id: `l_${saleId}`, proId: "pro2", prix, titre: "Outil" });
+  await db().doc(`sales/${saleId}`).set({ id: saleId, listingId: `l_${saleId}`, acheteurId: "pro1", vendeurId: "pro2", participants: ["pro1", "pro2"], prix, statut: "en_attente_paiement" });
+  assert.equal((await call("create-checkout", { type: "marketplace", ref: saleId }, tPro)).status, 200);
+  const sid = lastSessionId();
+  stripe.completeSession(sid);
+  await call("verify-session", { sessionId: sid });
+  return get(`sales/${saleId}`);
+};
+
+test("marketplace : paiement conservé, versé au vendeur (85 %) quand l'acheteur confirme la réception", async () => {
+  const dest = await onboard(tPro2, "pro2");
+  const sale = await buy("s1");
+  const params = stripe.calls.filter(x => x[0] === "checkout.sessions.create").pop()[1];
+  assert.equal(params.payment_intent_data.transfer_group, "sale_s1");
+  assert.equal(params.payment_intent_data.transfer_data, undefined, "rien n'est versé au paiement");
+  assert.equal(sale.statut, "payée");
+  assert.match(sale.paymentIntentId, /^pi_/);
+  assert.match(sale.chargeId, /^ch_/);
+  const days = (new Date(sale.liberationAuto) - Date.now()) / 86400000;
+  assert.ok(days > 13.9 && days < 14.1, `versement automatique à 14 jours (${days})`);
+  // Seul l'acheteur confirme la réception
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "recu" }, tPro2)).status, 403);
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "recu" }, tPartner)).status, 403);
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "liberer" }, tPro)).status, 403);
+  const r = await call("marketplace-release", { saleId: "s1", action: "recu" }, tPro);
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.equal(r.data.transferred, 81.17);
+  const t = stripe.calls.find(c => c[0] === "transfers.create");
+  assert.deepEqual([t[1].amount, t[1].destination, t[1].source_transaction, t[1].transfer_group], [8117, dest, sale.chargeId, "sale_s1"]);
+  const after = await get("sales/s1");
+  assert.deepEqual([after.statut, after.vendeurPaye, after.vendeurVerse, after.liberation], ["terminée", true, 81.17, "recu"]);
+  // Une seule fois
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "recu" }, tPro)).status, 409);
+  assert.equal(stripe.calls.filter(c => c[0] === "transfers.create").length, 1);
+});
+
+test("marketplace : problème signalé → décision de l'admin ; vendeur sans Stripe ; versement automatique à 14 jours", async () => {
+  await buy("s1");
+  // Problème signalé par l'acheteur : motif obligatoire, versement bloqué
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "probleme", motif: "?" }, tPro)).status, 400);
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "probleme", motif: "Article non reçu" }, tPro2)).status, 403);
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "probleme", motif: "Article non reçu" }, tPro)).status, 200);
+  assert.equal((await get("sales/s1")).statut, "litige");
+  // L'admin rembourse l'acheteur
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "rembourser" }, tPro)).status, 403);
+  const rf = await call("marketplace-release", { saleId: "s1", action: "rembourser" }, tAdmin);
+  assert.equal(rf.status, 200, JSON.stringify(rf.data));
+  assert.equal(stripe.calls.find(c => c[0] === "refunds.create")[1].payment_intent, (await get("sales/s1")).paymentIntentId);
+  assert.equal((await get("sales/s1")).statut, "remboursée");
+  assert.equal((await call("marketplace-release", { saleId: "s1", action: "liberer" }, tAdmin)).status, 409);
+
+  // Ventes payées : l'une depuis plus de 14 jours, l'autre récente, la troisième en litige
+  const old = new Date(Date.now() - 86400000).toISOString();
+  await db().doc("sales/s2").set({ id: "s2", acheteurId: "pro1", vendeurId: "pro2", participants: ["pro1", "pro2"], prix: 40, commission: 6, statut: "payée", liberationAuto: old });
+  await db().doc("sales/s3").set({ id: "s3", acheteurId: "pro1", vendeurId: "pro2", participants: ["pro1", "pro2"], prix: 40, commission: 6, statut: "payée", liberationAuto: new Date(Date.now() + 86400000).toISOString() });
+  await db().doc("sales/s4").set({ id: "s4", acheteurId: "pro1", vendeurId: "pro2", participants: ["pro1", "pro2"], prix: 40, commission: 6, statut: "litige", liberationAuto: old });
+  const { handler } = await import("../netlify/functions/marketplace-auto-release.mjs");
+  const auto = await handler({});
+  assert.equal(JSON.parse(auto.body).released, 1);
+  const s2 = await get("sales/s2");
+  // Vendeur sans virements Stripe : vente close, versement manuel par l'admin
+  assert.deepEqual([s2.statut, s2.liberation, s2.vendeurPaye], ["terminée", "auto", undefined]);
+  assert.equal((await get("sales/s3")).statut, "payée");
+  assert.equal((await get("sales/s4")).statut, "litige");
+
+  // Le vendeur active ses virements : l'admin relance le versement
+  const dest = await onboard(tPro2, "pro2");
+  const again = await call("marketplace-release", { saleId: "s2", action: "liberer" }, tAdmin);
+  assert.deepEqual([again.status, again.data.transferred], [200, 34]);
+  const t = stripe.calls.filter(c => c[0] === "transfers.create").pop();
+  assert.deepEqual([t[1].amount, t[1].destination, t[1].source_transaction], [3400, dest, undefined]);
+  assert.equal((await get("sales/s2")).vendeurPaye, true);
+});
+
 test("configuration de la plateforme", async () => {
   const r = await call("platform-config", {});
   assert.deepEqual(r.data, { stripe: true, mode: "test", server: true });

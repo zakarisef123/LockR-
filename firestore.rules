@@ -37,6 +37,8 @@ service cloud.firestore {
 
     // Part de l'artisan sur une intervention standard (100 − commission LOCKR 15 %)
     function PCT_DEFAULT() { return 85; }
+    // Bon transmis : part minimale de l'intervenant (apporteur plafonné à 50 %)
+    function TECH_PCT_MIN() { return 35; }
 
     // ── Comptes (données privées) ───────────────────────────────────────────
     // Champs réservés à l'admin / au serveur
@@ -56,11 +58,15 @@ service cloud.firestore {
             : request.resource.data.dossierStatus == 'pending')
         && (request.resource.data.role != 'pro' || request.resource.data.artisanId == uid())
         && !request.resource.data.keys().hasAny(['subscription', 'internalAccess', 'banned',
-              'stripeAccountId', 'stripeOnboarded', 'stripeMode', 'isDemo', 'migratedAt']);
+              'stripeAccountId', 'stripeOnboarded', 'stripeMode', 'isDemo', 'migratedAt'])
+        && (!('emailVerified' in request.resource.data) || request.auth.token.email_verified == true);
       allow update: if isAdmin() || (
         accountId == uid() && notBanned()
         && unchanged(accountPrivileged())
         && request.resource.data.get('email', '') == request.auth.token.email
+        // « E-mail confirmé » : uniquement si Firebase Auth le confirme
+        && (unchanged(['emailVerified']) || (request.resource.data.emailVerified == true
+              && request.auth.token.email_verified == true))
         // Un dossier refusé peut être renvoyé (retour à « pending »), rien d'autre
         && (unchanged(['dossierStatus']) || request.resource.data.dossierStatus == 'pending'));
       allow delete: if signedIn() && (accountId == uid() || isAdmin());
@@ -97,7 +103,8 @@ service cloud.firestore {
       return ['statutPaiement', 'paiementVerifie', 'payeLe', 'stripeSessionId',
               'acompteClientPaye', 'acompteStatut', 'acomptePayeLe', 'stripeAcompteSession',
               'empreinte', 'proPaid', 'proPaidAt', 'posterPaid', 'posterPaidAt',
-              'proVerseAuto', 'paiementDemo', 'rembourseLe'];
+              'proVerseAuto', 'paiementDemo', 'rembourseLe', 'montantEncaisse',
+              'fraisDeplacement'];
     }
     function bookingFrozen() {
       return ['participants', 'clientId', 'artisanId', 'artisanAccountId', 'partenaireId',
@@ -155,6 +162,13 @@ service cloud.firestore {
         && unchanged(paymentFields())
         // Seul l'intervenant fixe le montant final
         && (unchanged(['montant', 'montantFinal']) || isWorkerOn(resource.data))
+        // Seul l'intervenant fait avancer la mission. Le client peut seulement
+        // annuler (ou confirmer sans carte) avant le départ de l'artisan ;
+        // après, l'annulation passe par le serveur (frais de déplacement).
+        && (unchanged(['statut']) || isWorkerOn(resource.data)
+            || (resource.data.get('clientId', '') == uid()
+                && resource.data.statut in ['en_attente_paiement', 'assignée']
+                && request.resource.data.statut in ['annulée_client', 'assignée']))
         // Le client peut seulement demander le remboursement d'un ancien acompte
         && (unchanged(['remboursementAcompte']) || request.resource.data.remboursementAcompte == 'à_traiter'));
       allow delete: if isAdmin();
@@ -171,7 +185,7 @@ service cloud.firestore {
             && request.resource.data.techPct == PCT_DEFAULT())
           // Bon transmis par un professionnel
           || (isActivePro() && request.resource.data.postedBy == uid()
-            && request.resource.data.techPct > 0 && request.resource.data.techPct <= PCT_DEFAULT())
+            && request.resource.data.techPct >= TECH_PCT_MIN() && request.resource.data.techPct <= PCT_DEFAULT())
           // Mission refusée par l'artisan : la demande du client est republiée
           || (isActivePro() && request.resource.data.postedBy == 'platform'
             && 'fromBookingId' in request.resource.data

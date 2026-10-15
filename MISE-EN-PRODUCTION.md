@@ -70,6 +70,10 @@ Commence en **mode test** (aucun argent réel) :
    Les artisans devront refaire leur inscription Stripe une fois en mode live
    (l'application le leur redemande automatiquement).
 
+La fonction planifiée `marketplace-auto-release` (versement automatique des
+ventes marketplace après 14 jours) est déclarée dans `netlify.toml` : Netlify
+l'active tout seul au déploiement (visible dans **Logs → Functions**).
+
 Dès que Stripe est configuré, **un artisan doit avoir activé ses virements
 (Stripe Connect) pour être proposé aux clients** : un encart le lui demande sur
 son accueil. ⚠️ Préviens tes artisans avant d'activer Stripe : tant qu'aucun
@@ -103,9 +107,18 @@ plus.
    converti automatiquement (même mot de passe ; s'il était trop court ou par
    défaut, l'application leur en demande un nouveau ou les envoie vers « Mot de
    passe oublié »).
-4. Test complet en mode Stripe test : inscris un client et un artisan, valide
-   l'artisan (admin), active ses virements, réserve avec la carte 4242…,
-   termine la mission, débite la carte.
+4. Test complet en mode Stripe test : inscris un client et un artisan,
+   **confirme l'e-mail de l'artisan** (lien reçu), valide-le (admin), active
+   ses virements, réserve avec la carte 4242…, termine la mission, débite la
+   carte. Teste aussi une annulation alors que l'artisan est en route (frais
+   de déplacement) et un achat marketplace (« J'ai reçu l'article »).
+5. Admin → **Finances → Comptabilité → Frais de déplacement** : vérifie le
+   montant (30 € par défaut).
+
+⚠️ Un artisan ou une entreprise ne peut être validé qu'**après avoir confirmé
+son adresse e-mail** (lien envoyé à l'inscription, renvoyable depuis son
+espace). Les dossiers déjà validés ne sont pas concernés. Pense à vérifier que
+les e-mails Firebase n'arrivent pas en indésirables (étape 1.4).
 
 ## 8. Site de démonstration (optionnel, 5 min)
 

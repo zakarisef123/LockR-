@@ -35,10 +35,10 @@ npm test                 # règles de sécurité + fonctions serveur (émulateur
 
 | Espace | Fonctions principales |
 |---|---|
-| **Client** | Demande d'intervention, devis, réservation avec **empreinte bancaire** (rien n'est débité avant l'intervention), suivi en direct de l'artisan, messagerie, paiement du complément éventuel, litige, annulation gratuite avant le départ, profil, RGPD. |
-| **Artisan** | Disponibilité, virements automatiques (Stripe Connect, obligatoires quand le paiement en ligne est actif), missions (départ → arrivée → clôture → **débit de la carte du client**), bons par métier et bons transmis (part d'apporteur), chat, marketplace, gains et apports, suivi auto-entrepreneur. |
+| **Client** | Demande d'intervention, devis, réservation avec **empreinte bancaire** (rien n'est débité avant l'intervention), suivi en direct de l'artisan, messagerie, paiement du complément éventuel, litige, annulation gratuite avant le départ (ensuite : frais de déplacement), profil, RGPD. |
+| **Artisan** | Disponibilité, virements automatiques (Stripe Connect, obligatoires quand le paiement en ligne est actif), missions (départ → arrivée → clôture → **débit de la carte du client**, ou « client absent »), bons par métier et bons transmis (apporteur : 50 % max.), chat, marketplace (paiement à la réception), gains et apports, suivi auto-entrepreneur. Validation du dossier après confirmation de l'e-mail. |
 | **Entreprise** | Abonnement (mensuel / annuel), demandes clients, techniciens, flotte, RH, facturation, statistiques. |
-| **Administration** | « À traiter », validation des dossiers, interventions, litiges, versements (artisans, apporteurs, vendeurs), remboursements, facturation numérotée, marketplace, bannissement, nettoyage des anciennes données de démo. |
+| **Administration** | « À traiter », validation des dossiers (e-mail confirmé), interventions, litiges, versements (artisans, apporteurs, vendeurs), frais de déplacement, remboursements, facturation numérotée, marketplace (problèmes signalés : verser ou rembourser), bannissement, nettoyage des anciennes données de démo. |
 
 Commission LOCKR : **15 %** (5 % pour les entreprises partenaires abonnées) —
 voir [PAIEMENTS.md](PAIEMENTS.md).
@@ -57,7 +57,8 @@ src/
   lib/auth.js        Mots de passe en mode démonstration, session locale
   lib/images.js      Compression des photos
 netlify/
-  functions/         Paiements, empreinte, Stripe Connect, webhook, migration des comptes
+  functions/         Paiements, empreinte, frais de déplacement, Stripe Connect, webhook,
+                     marketplace (versement après réception), migration des comptes
   lib/               Accès Firebase Admin, Stripe, enregistrement des paiements
 firestore.rules      Règles de sécurité (chacun ne voit que ses données)
 tests/               Tests des règles et des fonctions serveur
@@ -75,7 +76,7 @@ tests/               Tests des règles et des fonctions serveur
 | `chat` | chat régional des pros | les professionnels validés |
 | `listings` / `sales` | marketplace | professionnels / acheteur et vendeur |
 | `techs` | techniciens d'une entreprise | l'entreprise |
-| `banned`, `settings`, `factures` | administration | l'admin (lecture limitée de `settings`) |
+| `banned`, `settings`, `factures` | administration (`settings/tarifs` : frais de déplacement) | l'admin (lecture de `settings` pour les connectés) |
 | `payments`, `authAttempts` | registre des paiements, limite de tentatives | serveur uniquement |
 
 ## Documentation
