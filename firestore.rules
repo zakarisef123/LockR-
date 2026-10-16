@@ -128,8 +128,30 @@ service cloud.firestore {
              (bon.get('postedBy', 'platform') == 'platform' || bon.get('techPct', PCT_DEFAULT()) >= PCT_DEFAULT() ? 0 : PCT_DEFAULT() - bon.get('techPct', PCT_DEFAULT()))
         && participantsOf(request.resource.data).hasOnly([uid(), bon.get('clientId', 'ext'), bon.get('postedBy', 'platform')]);
     }
+    // Demande « à la Uber » en attente d'un artisan : le premier professionnel
+    // validé qui accepte la prend (une seule écriture possible : la suivante
+    // ne trouve plus le statut « recherche »).
+    function acceptsDemande() {
+      return isActivePro() && resource.data.statut == 'recherche'
+        && !('artisanAccountId' in resource.data) && !('partenaireId' in resource.data)
+        && request.resource.data.statut == 'assignée'
+        && request.resource.data.participants == [resource.data.clientId, uid()]
+        && (
+          (me().role == 'pro'
+            && request.resource.data.artisanAccountId == uid()
+            && request.resource.data.artisanId == me().artisanId
+            && changed().hasOnly(['statut', 'artisanAccountId', 'artisanId', 'artisanNom', 'artisanTel',
+                                  'participants', 'accepteLe', 'artisanPos', 'artisanPosAt']))
+          || (me().role == 'partenaire'
+            && request.resource.data.partenaireId == uid()
+            && changed().hasOnly(['statut', 'partenaireId', 'partenaireNom', 'artisanNom', 'artisanTel',
+                                  'technicienId', 'technicienNom', 'participants', 'accepteLe']))
+        );
+    }
     match /bookings/{bookingId} {
-      allow read: if isAdmin() || (signedIn() && uid() in participantsOf(resource.data));
+      allow read: if isAdmin() || (signedIn() && uid() in participantsOf(resource.data))
+        // Demandes en attente d'un artisan : visibles par les professionnels validés
+        || (isActivePro() && resource.data.statut == 'recherche');
       allow create: if isAdmin() || (
         isActiveUser() && request.resource.data.id == bookingId
         && uid() in participantsOf(request.resource.data)
@@ -144,6 +166,12 @@ service cloud.firestore {
             && exists(path('profiles', request.resource.data.artisanAccountId))
             && get(path('profiles', request.resource.data.artisanAccountId)).data.artisanId == request.resource.data.artisanId
             && participantsOf(request.resource.data).hasOnly([uid(), request.resource.data.artisanAccountId]))
+          // Client qui commande sans choisir d'artisan (demande « à la Uber »)
+          || (request.resource.data.clientId == uid()
+            && request.resource.data.statut == 'en_attente_paiement'
+            && request.resource.data.techPct == PCT_DEFAULT()
+            && !request.resource.data.keys().hasAny(['artisanAccountId', 'artisanId', 'partenaireId', 'posterPct', 'postedBy'])
+            && participantsOf(request.resource.data).hasOnly([uid()]))
           // Artisan qui prend un bon
           || (isActivePro() && me().role == 'pro'
             && request.resource.data.artisanAccountId == uid()
@@ -167,10 +195,14 @@ service cloud.firestore {
         // après, l'annulation passe par le serveur (frais de déplacement).
         && (unchanged(['statut']) || isWorkerOn(resource.data)
             || (resource.data.get('clientId', '') == uid()
-                && resource.data.statut in ['en_attente_paiement', 'assignée']
-                && request.resource.data.statut in ['annulée_client', 'assignée']))
+                && resource.data.statut in ['en_attente_paiement', 'assignée', 'recherche']
+                && (request.resource.data.statut in ['annulée_client', 'assignée']
+                    // Demande sans carte enregistrée : envoyée aux artisans
+                    || (request.resource.data.statut == 'recherche' && !('artisanAccountId' in resource.data)
+                        && !('partenaireId' in resource.data)))))
         // Le client peut seulement demander le remboursement d'un ancien acompte
-        && (unchanged(['remboursementAcompte']) || request.resource.data.remboursementAcompte == 'à_traiter'));
+        && (unchanged(['remboursementAcompte']) || request.resource.data.remboursementAcompte == 'à_traiter'))
+        || acceptsDemande();
       allow delete: if isAdmin();
     }
 

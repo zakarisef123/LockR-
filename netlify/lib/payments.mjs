@@ -55,7 +55,8 @@ export async function applyCheckoutSession(session) {
             statut: "autorisée", montant: (pi.amount_capturable || pi.amount || 0) / 100,
             paymentIntentId: pi.id, autoriseeLe: nowIso(), split: session.metadata?.split === "auto",
           },
-          ...(b.statut === "en_attente_paiement" ? { statut: "assignée" } : {}),
+          // Demande sans artisan choisi : elle part aux artisans (premier qui accepte)
+          ...(b.statut === "en_attente_paiement" ? { statut: b.artisanAccountId || b.partenaireId ? "assignée" : "recherche" } : {}),
           garantie: FieldValue.delete(),
         });
       } else {
@@ -139,7 +140,25 @@ export async function captureFromHold(bookingId, b, cents, extra = {}, by = "") 
     ...(split ? { application_fee_amount: fee } : {}),
   });
   const amount = (done.amount_received || toCapture) / 100;
-  const transferred = split ? (toCapture - fee) / 100 : 0;
+  let transferred = split ? (toCapture - fee) / 100 : 0;
+  // Carte enregistrée avant qu'un artisan accepte (demande « à la Uber ») :
+  // pas de partage automatique possible au paiement, sa part lui est virée ici.
+  if (!split) {
+    const dest = await connectDestination({ ...b, ...extra });
+    const charge = typeof done.latest_charge === "string" ? done.latest_charge : done.latest_charge?.id;
+    if (dest && charge) {
+      const net = toCapture - commissionCents(toCapture);
+      try {
+        await stripe.transfers.create({
+          amount: net, currency: "eur", destination: dest, source_transaction: charge,
+          transfer_group: `booking_${bookingId}`, metadata: { type: "intervention", ref: bookingId },
+        }, { idempotencyKey: `capture_transfer_${pi.id}` });
+        transferred = net / 100;
+      } catch (err) {
+        console.error("capture transfer:", err.message); // versé par l'admin
+      }
+    }
+  }
   await db().runTransaction(async tx => {
     const pRef = db().doc(`payments/capture_${pi.id}`);
     if ((await tx.get(pRef)).exists) return;

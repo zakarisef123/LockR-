@@ -17,15 +17,20 @@ La configuration pas à pas est dans [MISE-EN-PRODUCTION.md](MISE-EN-PRODUCTION.
 
 ## Le parcours d'une intervention
 
-1. **Réservation — empreinte bancaire.** Le client accepte le devis puis
-   enregistre sa carte : le montant du devis est **réservé** sur sa carte
-   (capture différée), **rien n'est débité**.
+1. **Réservation — empreinte bancaire.** Le client appuie sur
+   **« Commander »** (prix fixe de la grille LOCKR, +40 € en urgence) ou
+   accepte le devis d'un artisan choisi, puis enregistre sa carte : le montant
+   est **réservé** sur sa carte (capture différée), **rien n'est débité**.
+   Sans artisan choisi, la demande passe au statut `recherche` et est proposée
+   aux artisans en ligne (métier, 25 km) ; le premier qui accepte l'obtient.
+   Le versement à l'artisan se fait alors à la capture par un transfert
+   Stripe Connect (`source_transaction`), moins la commission.
 2. **Annulation avant le départ de l'artisan** : la réservation est simplement
-   libérée (aucun remboursement à gérer). Idem si l'artisan refuse la mission
-   (la demande est republiée pour les autres artisans).
+   libérée (aucun remboursement à gérer). Idem si l'artisan refuse la mission :
+   la demande repart aux autres artisans et la réservation est conservée.
 3. **Fin d'intervention.** L'artisan clôture (montant final + photo de la
-   facture) puis appuie sur **« Débiter la carte du client »** : le serveur
-   débite le montant final, dans la limite du montant réservé.
+   facture) : la carte du client est **débitée automatiquement** du montant
+   final, dans la limite du montant réservé.
 4. **Si la facture dépasse la réservation**, le complément est réglé par lien
    de paiement (SMS, e-mail ou QR code) ou depuis l'application du client.
 5. **Réservation expirée** (Stripe garde une empreinte environ 7 jours) :

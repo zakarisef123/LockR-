@@ -10,12 +10,12 @@
 // défaut, réglage admin) est débité de l'empreinte et partagé comme une
 // intervention. Sans carte enregistrée, il reste dû (visible par l'admin).
 import { preflight, json, parseBody, nowIso } from "../lib/http.mjs";
-import { adminReady, db, requestUser, isAdmin } from "../lib/admin.mjs";
+import { adminReady, db, requestUser, isAdmin, FieldValue } from "../lib/admin.mjs";
 import { stripeReady, stripeClient } from "../lib/stripe.mjs";
 import { captureFromHold, fraisDeplacement } from "../lib/payments.mjs";
 import { CLIENT_ABSENT_WAIT_MIN } from "../../src/lib/business.js";
 
-const FREE_STATES = ["en_attente_paiement", "assignée"];
+const FREE_STATES = ["en_attente_paiement", "assignée", "recherche"];
 
 export const handler = async (event) => {
   const stop = preflight(event);
@@ -43,6 +43,16 @@ export const handler = async (event) => {
   } else if (reason === "refus_pro") {
     if (!isWorker) return json(403, { error: "forbidden" });
     if (!FREE_STATES.includes(b.statut)) return json(409, { error: "too_late" });
+    if (b.demande) {
+      // Demande « à la Uber » : elle repart aux autres artisans, la carte reste enregistrée
+      await ref.update({
+        statut: "recherche", participants: [b.clientId], relanceeLe: nowIso(),
+        refusePar: FieldValue.arrayUnion(user.uid),
+        ...Object.fromEntries(["artisanAccountId", "artisanId", "artisanNom", "artisanTel", "partenaireId", "partenaireNom",
+          "technicienId", "technicienNom", "accepteLe", "artisanPos", "artisanPosAt"].map(k => [k, FieldValue.delete()])),
+      });
+      return json(200, { ok: true, relancee: true });
+    }
     patch = { statut: "annulée", annulationRaison: "refusée_pro", annuleeLe: nowIso() };
   } else if (reason === "annulation_tardive") {
     if (!isClient && !isAdmin(user)) return json(403, { error: "forbidden" });

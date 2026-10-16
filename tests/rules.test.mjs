@@ -153,6 +153,52 @@ test("interventions : le client annule seulement avant le départ ; frais et enc
   await assertSucceeds(updateDoc(doc(client, "bookings", "b1"), { statut: "annulée_client", annuleeLe: "2026-01-01" }));
 });
 
+// ── Demandes « à la Uber » ───────────────────────────────────────────────
+const demande = over => ({
+  id: "d1", clientId: ids.client, clientNom: "Client", participants: [ids.client], techPct: 85, montant: 130,
+  probleme: "ouverture", metier: "serrurier", statut: "en_attente_paiement", demande: true, ...over,
+});
+test("demande sans artisan : le client commande, le premier artisan validé l'accepte", async () => {
+  const client = as(ids.client);
+  // Création : sans artisan, sans part négociée, taux standard
+  await assertFails(setDoc(doc(client, "bookings", "d1"), demande({ techPct: 95 })));
+  await assertFails(setDoc(doc(client, "bookings", "d1"), demande({ participants: [ids.client, ids.pro] })));
+  await assertFails(setDoc(doc(client, "bookings", "d1"), demande({ postedBy: ids.pro2 })));
+  await assertSucceeds(setDoc(doc(client, "bookings", "d1"), demande()));
+  // Pas encore visible des artisans (carte pas enregistrée)
+  await assertFails(getDoc(doc(as(ids.pro), "bookings", "d1")));
+  // Sans carte (paiement en ligne indisponible) : la demande part aux artisans
+  await assertSucceeds(updateDoc(doc(client, "bookings", "d1"), { statut: "recherche", garantie: "aucune" }));
+  await assertSucceeds(getDoc(doc(as(ids.pro), "bookings", "d1")));
+  await assertSucceeds(getDocs(query(collection(as(ids.partner), "bookings"), where("statut", "==", "recherche"))));
+  await assertFails(getDoc(doc(as(ids.pending), "bookings", "d1")));
+  await assertFails(getDoc(doc(as(ids.client2), "bookings", "d1")));
+  const accept = (who, over = {}) => updateDoc(doc(as(who), "bookings", "d1"), {
+    statut: "assignée", artisanAccountId: who, artisanId: who === ids.pro2 ? "a-legacy" : who, artisanNom: who,
+    participants: [ids.client, who], accepteLe: "2026-01-01", ...over,
+  });
+  // Un artisan en attente de validation ne peut pas accepter ; on ne peut pas modifier le prix en acceptant
+  await assertFails(accept(ids.pending));
+  await assertFails(accept(ids.pro, { montant: 500 }));
+  await assertFails(accept(ids.pro, { participants: [ids.client, ids.pro, ids.pro2] }));
+  await assertSucceeds(accept(ids.pro));
+  // Déjà prise : le second artisan est refusé
+  await assertFails(accept(ids.pro2));
+  const d = (await getDoc(doc(as(ids.pro), "bookings", "d1"))).data();
+  if (d.artisanAccountId !== ids.pro) throw new Error("mauvais artisan");
+  await assertFails(getDoc(doc(as(ids.pro2), "bookings", "d1")));
+});
+
+test("demande : une entreprise partenaire peut l'accepter ; le client ne peut pas la remettre en recherche", async () => {
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), "bookings", "d2"), demande({ id: "d2", statut: "recherche" })));
+  await assertSucceeds(updateDoc(doc(as(ids.partner), "bookings", "d2"), {
+    statut: "assignée", partenaireId: ids.partner, partenaireNom: "BâtiPro", participants: [ids.client, ids.partner], accepteLe: "2026-01-01",
+  }));
+  // Mission attribuée : le client ne peut pas la remettre en recherche (b1 a un artisan)
+  await assertFails(updateDoc(doc(as(ids.client), "bookings", "b1"), { statut: "recherche" }));
+  await assertSucceeds(updateDoc(doc(as(ids.client), "bookings", "d2"), { statut: "annulée_client" }));
+});
+
 // ── Bons ───────────────────────────────────────────────────────────────────
 test("bons : un seul artisan peut prendre un bon (opération atomique)", async () => {
   const take = async (who, artisanId) => {

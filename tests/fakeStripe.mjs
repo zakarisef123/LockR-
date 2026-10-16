@@ -130,7 +130,7 @@ export function createFakeStripe({ baseUrl = "http://localhost:5173" } = {}) {
       const s = sessions.get(sid);
       const pi = intents.get(s.payment_intent);
       s.status = "complete";
-      if (pi.capture_method === "manual") { pi.status = "requires_capture"; pi.amount_capturable = pi.amount; }
+      if (pi.capture_method === "manual") { pi.status = "requires_capture"; pi.amount_capturable = pi.amount; pi.latest_charge = id("ch"); }
       else { pi.status = "succeeded"; pi.amount_received = pi.amount; pi.latest_charge = id("ch"); s.payment_status = "paid"; }
       return s;
     },
