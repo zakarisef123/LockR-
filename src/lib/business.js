@@ -37,6 +37,18 @@ export const fraisDeplacementFrom = tarifs => {
   return Number.isFinite(v) && v >= 0 && v <= FRAIS_DEPLACEMENT_MAX ? v : FRAIS_DEPLACEMENT_DEFAULT;
 };
 
+/* ─── DEMANDES « À LA UBER » ───
+   Le client commande au prix de la grille LOCKR ; la demande part aux
+   artisans en ligne dans un rayon de 25 km ; le premier qui accepte la prend.
+   Le prix est un prix de départ : sur place, l'artisan peut proposer un devis
+   pour un travail plus important (le complément est réglé par lien). */
+export const DEMANDE_RAYON_KM = 25;
+export const DEMANDE_ACCEPT_S = 30;            // temps pour accepter une demande affichée
+export const DEMANDE_PRIORITE_MS = 60 * 1000;  // avance des artisans prioritaires (réglage admin)
+export const URGENCE_SUPPLEMENT = 40;
+export const PRIX_BASE = { serrurier: 90, plombier: 90, electricien: 90, chauffagiste: 110, fermetures: 110 };
+export const prixDemande = (metier, urgence) => (PRIX_BASE[metier] || 90) + (urgence ? URGENCE_SUPPLEMENT : 0);
+
 /* Marketplace : l'argent est conservé jusqu'à la réception de l'article,
    puis versé au vendeur (85 %). Sans réponse de l'acheteur, versement
    automatique après MARKETPLACE_RELEASE_DAYS jours. */

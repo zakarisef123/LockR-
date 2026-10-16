@@ -12,7 +12,7 @@ import {
   posterOwed, proAutoPaid, proOwed, acomptePaid, resteAPayer, marketCommission,
   bookingParticipants, empreinteActive, empreinteMontant, montantEncaisse,
   TECH_PCT_MIN, APPORTEUR_MAX_PCT, CLIENT_ABSENT_WAIT_MIN, fraisDeplacementFrom, isBillable,
-  FRAIS_DEPLACEMENT_DEFAULT,
+  FRAIS_DEPLACEMENT_DEFAULT, DEMANDE_RAYON_KM, DEMANDE_ACCEPT_S, DEMANDE_PRIORITE_MS, URGENCE_SUPPLEMENT, prixDemande,
   MARKETPLACE_RELEASE_DAYS, marketSellerNet,
 } from "./lib/business.js";
 import { compressImage, readImageInput } from "./lib/images.js";
@@ -74,7 +74,6 @@ const AE = {
   seuilTvaMajore: 41250,      // dépassé en cours d'année → TVA due dès le jour du dépassement
   plafondMicro: 83600,        // plafond de CA du régime micro (2026-2028)
 };
-const URGENCE_SUPPLEMENT = 40;    // majoration affichée pour une urgence
 /* État de l'empreinte bancaire d'une intervention, en clair */
 const EMPREINTE_TXT = (b, lang = "fr") => {
   const fr = lang !== "en";
@@ -333,7 +332,7 @@ const TRANS = {
     clientDesc: "Trouvez un artisan qualifié rapidement. Suivi en temps réel de votre intervention.",
     getStarted: "Commencer",
     proDesc: "Recevez des missions près de chez vous. Gérez votre activité et vos revenus.",
-    proDocsRequired: "Documents professionnels requis (SIRET, assurance, pièce d'identité)",
+    proDocsRequired: "Inscription en 1 minute — vos documents (SIRET, assurance…) ensuite, depuis l'application",
     entrepriseChoice: "Entreprise / Partenaire",
     entrepriseDesc: "Gérez votre flotte de techniciens, publiez des bons de travail et bénéficiez d'un tableau de bord entreprise complet.",
     entrepriseDocsRequired: "Documents entreprise requis (SIRET, Kbis, RC Pro, IBAN)",
@@ -733,7 +732,7 @@ const TRANS = {
     clientDesc: "Find a qualified craftsman quickly. Real-time tracking of your intervention.",
     getStarted: "Get started",
     proDesc: "Receive missions near you. Manage your activity and revenue.",
-    proDocsRequired: "Professional documents required (SIRET, insurance, ID)",
+    proDocsRequired: "Sign up in 1 minute — add your documents (SIRET, insurance…) afterwards in the app",
     // RegisterClientScreen
     clientRegisterTitle: "Individual Registration", clientRegisterSubtitle: "Find a craftsman in seconds",
     createMyAccount: "Create my account", repeatPassword: "Repeat your password",
@@ -1350,6 +1349,7 @@ body{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;backgroun
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 @keyframes checkPop{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes lkRadar{0%{transform:scale(.4);opacity:.9}100%{transform:scale(3.2);opacity:0}}
 @keyframes notif{0%{transform:translateY(-80px);opacity:0}15%{transform:translateY(0);opacity:1}80%{transform:translateY(0);opacity:1}100%{transform:translateY(-80px);opacity:0}}
 .lk-btn{background:linear-gradient(135deg,#c9a030,#a87820);border:none;border-radius:12px;padding:14px 20px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;font-family:'Inter',sans-serif;box-shadow:0 2px 12px rgba(201,160,48,.35)}
 .lk-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,160,48,.45)}
@@ -2113,288 +2113,94 @@ function RegisterClientScreen({ onBack, onRegister, lang = "fr", openLegal }) {
 /* ─── REGISTER PRO ─── */
 function RegisterProScreen({ onBack, onRegister, lang = "fr", openLegal }) {
   const tr = TRANS[lang] || TRANS.fr;
-  const w = useWindowSize();
-  const isDesktop = w >= BP;
-  const [step, setStep] = useState(1);
+  const fr = lang !== "en";
   const [prenom, setPrenom] = useState("");
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
   const [tel, setTel] = useState("");
   const [ville, setVille] = useState("");
   const [pass, setPass] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [transport, setTransport] = useState("voiture");
-  const [metiers, setMetiers] = useState(["serrurier"]); // plusieurs secteurs possibles
-  const [siret, setSiret] = useState("");
-  const [iban, setIban] = useState("");
-  const [certif, setCertif] = useState("aucune");
-  const [idCardFile, setIdCardFile] = useState(null);
-  const [insuranceFile, setInsuranceFile] = useState(null);
-  const [kbisFile, setKbisFile] = useState(null);
-  const [errs, setErrs] = useState({});
-  const [saving, setSaving] = useState(false);
+  const [metiers, setMetiers] = useState([]);
   const [cguOk, setCguOk] = useState(false);
   const [liabOk, setLiabOk] = useState(false);
-  const idRef = useRef(null);
-  const insRef = useRef(null);
-  const kbisRef = useRef(null);
-
+  const [errs, setErrs] = useState({});
+  const [saving, setSaving] = useState(false);
   const clr = k => setErrs(p => { const e = { ...p }; delete e[k]; return e; });
 
-  /* Vérification automatique d'un document : format accepté (photo/PDF) et
-     taille max 10 Mo. Renvoie null si valide, sinon le message d'erreur. */
-  const checkDoc = (f) => {
-    if (!f) return lang === "en" ? "File missing" : "Fichier manquant";
-    const okType = /\.(jpe?g|png|webp|heic|pdf)$/i.test(f.name) || /^image\/|pdf$/.test(f.type);
-    if (!okType) return lang === "en" ? "Invalid format — photo or PDF only" : "Format invalide — photo ou PDF uniquement";
-    if (f.size > 10 * 1024 * 1024) return lang === "en" ? "File too large (max 10 MB)" : "Fichier trop lourd (max 10 Mo)";
-    return null;
-  };
-
-  const validateStep1 = () => {
+  /* Inscription en un écran (comme les chauffeurs Uber) : le compte est créé
+     tout de suite ; SIRET, assurance, Kbis et virements se complètent ensuite
+     depuis l'application, à son rythme (liste à cocher sur l'accueil). */
+  const submit = async () => {
     const e = {};
     if (!prenom.trim()) e.prenom = tr.firstnameRequired;
     if (!nom.trim()) e.nom = tr.lastnameRequired;
     if (!EMAIL_RE.test(email.trim())) e.email = tr.invalidEmail;
     if (!tel || tel.replace(/\D/g, "").length < 9) e.tel = tr.invalidPhone;
-    if (!ville.trim()) e.ville = lang === "en" ? "City required (used to show you nearby jobs)" : "Ville requise (sert à vous proposer les interventions proches)";
+    if (!ville.trim()) e.ville = fr ? "Ville requise (pour vous proposer les demandes proches)" : "City required (to show you nearby requests)";
+    if (metiers.length === 0) e.metiers = fr ? "Choisissez au moins un métier" : "Choose at least one trade";
     if (pass.length < MIN_PASS) e.pass = tr.minChars;
-    if (pass !== confirm) e.confirm = tr.passMismatch;
-    setErrs(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const validateStep2 = () => {
-    const e = {};
-    if (metiers.length === 0) e.metiers = lang === "en" ? "Select at least one sector" : "Sélectionnez au moins un secteur d'activité";
-    if (!siretValid(siret)) e.siret = tr.siretInvalid;
-    const idErr = checkDoc(idCardFile); if (idErr) e.idCard = idCardFile ? idErr : tr.idCardRequired;
-    const insErr = checkDoc(insuranceFile); if (insErr) e.insurance = insuranceFile ? insErr : tr.insuranceRequired;
-    const kbisErr = checkDoc(kbisFile); if (kbisErr) e.kbis = kbisFile ? kbisErr : (lang === "en" ? "Kbis / INSEE certificate required" : "Kbis ou avis de situation INSEE requis");
-    if (iban.trim() && !ibanValid(iban)) e.iban = lang === "en" ? "Invalid IBAN" : "IBAN invalide";
     if (!cguOk) e.cgu = tr.cguRequired;
     if (!liabOk) e.liab = tr.liabRequired;
     setErrs(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const goStep2 = () => { if (validateStep1()) setStep(2); };
-
-  const submit = async () => {
-    if (!validateStep2()) return;
+    if (Object.keys(e).length) return;
     setSaving(true);
     const geo = await geocodeAddress(ville.trim());
     const r = await onRegister({
-      role: "pro",
-      nom: `${prenom.trim()} ${nom.trim()}`, email,
-      photo: null, ville: ville.trim(), tel, transport, metier: metiers[0], metiers, siret: siret.replace(/\s/g, ""), iban: iban.replace(/\s/g, ""), certif,
+      role: "pro", nom: `${prenom.trim()} ${nom.trim()}`, email, photo: null, ville: ville.trim(), tel,
+      transport: "voiture", metier: metiers[0], metiers, certif: "aucune",
       ...(geo ? { lat: geo[0], lng: geo[1] } : {}),
-      hasIdCard: !!idCardFile, hasInsurance: !!insuranceFile, hasKbis: !!kbisFile,
-      docNames: { idCard: idCardFile?.name || "", insurance: insuranceFile?.name || "", kbis: kbisFile?.name || "" },
-      dossierStatus: "pending", dispo: true,
-      cguAcceptedAt: ts(), liabAcceptedAt: ts(),
+      dossierStatus: "pending", dispo: false, cguAcceptedAt: ts(), liabAcceptedAt: ts(),
     }, pass);
-    if (!r.ok) {
-      setSaving(false);
-      const e = registerErrors(r.error, lang);
-      setErrs(e);
-      if (e.email || e.pass) setStep(1);
-    }
+    if (!r.ok) { setSaving(false); setErrs(registerErrors(r.error, lang)); }
   };
 
+  const trades = [
+    { id: "serrurier", l: tr.metierSerrurier }, { id: "plombier", l: tr.metierPlombier },
+    { id: "electricien", l: tr.metierElectricien }, { id: "chauffagiste", l: tr.metierChauffagiste },
+    { id: "fermetures", l: fr ? "Volets, rideaux, portails" : "Shutters & gates" },
+  ];
+  const errTxt = k => errs[k] && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs[k]}</div>;
   return (
-    <div style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", overflowY: "auto", display: "flex", flexDirection: isDesktop ? "row" : "column" }}>
+    <div style={{ minHeight: "100vh", background: "#fff", fontFamily: "'Inter',sans-serif", overflowY: "auto" }}>
       <style>{CSS}</style>
-      {isDesktop && (
-        <div style={{ width: 320, flexShrink: 0, background: "linear-gradient(135deg,#1c1c1c,#2e2e2e)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 40px", minHeight: "100vh", position: "sticky", top: 0, alignSelf: "flex-start" }}>
-          <div style={{ marginBottom: 20 }}>
-<LockrWordmark height={56} />
-          </div>
-          <div style={{ color: "rgba(255,255,255,.5)", fontSize: 14, textAlign: "center", lineHeight: 1.7 }}>{tr.joinProLockr}</div>
+      <div style={{ maxWidth: 460, margin: "0 auto", padding: "22px 18px 60px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <button onClick={onBack} className="lk-ghost" aria-label={fr ? "Retour" : "Back"} style={{ padding: "9px 13px" }}>{Icon.back()}</button>
+          <LockrWordmark height={18} light={false} />
         </div>
-      )}
-      <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-      <div style={{ maxWidth: isDesktop ? 520 : 480, width: "100%", margin: "0 auto", padding: "28px 18px 80px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-          <button onClick={step === 1 ? onBack : () => setStep(1)} className="lk-ghost" style={{ padding: "9px 13px" }}>{Icon.back()}</button>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: T.textHi }}>{tr.proRegisterTitle}</div>
-            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{tr.stepWord} {step} {tr.ofWord} 2</div>
-          </div>
+        <div style={{ fontSize: 26, fontWeight: 900, color: T.textHi, lineHeight: 1.15 }}>{fr ? "Devenez artisan LOCKR" : "Become a LOCKR craftsman"}</div>
+        <div style={{ fontSize: 14, color: T.textMid, margin: "6px 0 20px" }}>{fr ? "1 minute pour créer votre compte. Vos documents se complètent ensuite depuis l'application." : "1 minute to create your account. Your documents can be added later in the app."}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div><input className="lk-input" value={prenom} placeholder={tr.firstname} aria-label={tr.firstname} onChange={e => { setPrenom(e.target.value); clr("prenom"); }} />{errTxt("prenom")}</div>
+          <div><input className="lk-input" value={nom} placeholder={tr.lastname} aria-label={tr.lastname} onChange={e => { setNom(e.target.value); clr("nom"); }} />{errTxt("nom")}</div>
         </div>
-
-        {/* Barre de progression */}
-        <div style={{ height: 4, background: "rgba(0,0,0,.07)", borderRadius: 2, marginBottom: 24 }}>
-          <div style={{ height: "100%", borderRadius: 2, background: T.grad, width: step === 1 ? "50%" : "100%", transition: "width .4s ease" }} />
+        <div style={{ marginBottom: 12 }}><input className="lk-input" type="email" autoComplete="email" value={email} placeholder={tr.email} aria-label={tr.email} onChange={e => { setEmail(e.target.value); clr("email"); }} />{errTxt("email")}</div>
+        <div style={{ marginBottom: 12 }}><PhoneInput value={tel} onChange={v => { setTel(v); clr("tel"); }} />{errTxt("tel")}</div>
+        <div style={{ marginBottom: 12 }}><input className="lk-input" value={ville} placeholder={fr ? "Ville où vous intervenez" : "City where you work"} aria-label={tr.city} onChange={e => { setVille(e.target.value); clr("ville"); }} />{errTxt("ville")}</div>
+        <div style={{ marginBottom: 12 }}><input className="lk-input" type="password" autoComplete="new-password" value={pass} placeholder={`${tr.password} (${MIN_PASS} ${fr ? "caractères min." : "chars min."})`} aria-label={tr.password} onChange={e => { setPass(e.target.value); clr("pass"); }} />{errTxt("pass")}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: T.textHi, margin: "16px 0 8px" }}>{fr ? "Vos métiers" : "Your trades"}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {trades.map(m => {
+            const on = metiers.includes(m.id);
+            return <button key={m.id} type="button" onClick={() => { setMetiers(p => on ? p.filter(x => x !== m.id) : [...p, m.id]); clr("metiers"); }} style={{ background: on ? "#1c1c1c" : "#fff", color: on ? "#fff" : T.textMid, border: `1.5px solid ${on ? "#1c1c1c" : T.border}`, borderRadius: 22, padding: "10px 16px", fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{on ? "✓ " : ""}{m.l}</button>;
+          })}
         </div>
-
-        {step === 1 && (
-          <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}>
-              {Icon.user(T.accent, 16)} {tr.personalInfo}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-              <div>
-                <label className="lk-label">{tr.firstname}</label>
-                <input className="lk-input" value={prenom} placeholder="Jean" autoComplete="off" onChange={e => { setPrenom(e.target.value); clr("prenom"); }} style={{ borderColor: errs.prenom ? "rgba(220,38,38,.4)" : "" }} />
-                {errs.prenom && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.prenom}</div>}
-              </div>
-              <div>
-                <label className="lk-label">{tr.lastname}</label>
-                <input className="lk-input" value={nom} placeholder="Dupont" autoComplete="off" onChange={e => { setNom(e.target.value); clr("nom"); }} style={{ borderColor: errs.nom ? "rgba(220,38,38,.4)" : "" }} />
-                {errs.nom && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.nom}</div>}
-              </div>
-            </div>
-            <Field label={tr.email} value={email} onChange={e => { setEmail(e.target.value); clr("email"); }} placeholder="pro@email.fr" type="email" err={errs.email} autoComplete="email" />
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.phone}</label>
-              <PhoneInput value={tel} onChange={v => { setTel(v); clr("tel"); }} />
-              {errs.tel && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.tel}</div>}
-            </div>
-            <Field label={tr.city} value={ville} onChange={e => { setVille(e.target.value); clr("ville"); }} placeholder="Paris" err={errs.ville} />
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.transport}</label>
-              <select className="lk-input" value={transport} onChange={e => setTransport(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="voiture">{tr.car}</option>
-                <option value="scooter">{tr.scooter}</option>
-                <option value="moto">{tr.motorcycle}</option>
-                <option value="velo">{tr.bicycle}</option>
-                <option value="pied">{tr.onFoot}</option>
-              </select>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.selectMetier} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({lang === "en" ? "several possible" : "plusieurs possibles"})</span></label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {[
-                  { id: "serrurier", l: tr.metierSerrurier },
-                  { id: "plombier", l: tr.metierPlombier },
-                  { id: "electricien", l: tr.metierElectricien },
-                  { id: "chauffagiste", l: tr.metierChauffagiste },
-                  { id: "fermetures", l: lang === "en" ? "Shutters & gates" : "Fermetures (volets, rideaux, portails)" },
-                ].map(m => {
-                  const on = metiers.includes(m.id);
-                  return (
-                    <button key={m.id} type="button"
-                      onClick={() => { setMetiers(p => on ? p.filter(x => x !== m.id) : [...p, m.id]); clr("metiers"); }}
-                      style={{ background: on ? "rgba(201,160,48,.1)" : "#fff", border: `1.5px solid ${on ? T.accent : T.border}`, borderRadius: 20, padding: "9px 16px", fontSize: 13, fontWeight: 700, color: on ? T.accent : T.textMid, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
-                      {on && Icon.check(T.accent, 13)} {m.l}
-                    </button>
-                  );
-                })}
-              </div>
-              {errs.metiers && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.metiers}</div>}
-            </div>
-            <div style={{ borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: 18, marginBottom: 8 }}>
-              <Field label={tr.password} value={pass} onChange={e => { setPass(e.target.value); clr("pass"); }} placeholder={tr.minChars} type="password" err={errs.pass} autoComplete="new-password" />
-              <Field label={tr.confirmPassword} value={confirm} onChange={e => { setConfirm(e.target.value); clr("confirm"); }} placeholder={tr.repeatPassword} type="password" err={errs.confirm} />
-            </div>
-            <button onClick={goStep2} className="lk-btn">{tr.nextStepDocs} {Icon.arrow("#fff", 14)}</button>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="lk-card" style={{ padding: "22px 18px", marginBottom: 16 }}>
-            <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-              {Icon.shield(T.accent, 16)} {tr.proDocuments}
-            </div>
-            <div style={{ color: T.textLo, fontSize: 12, marginBottom: 20, lineHeight: 1.5 }}>
-              {tr.proDocsLegalNote}
-            </div>
-
-            {/* SIRET */}
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.siretLabel}</label>
-              <input className="lk-input" value={siret} onChange={e => { setSiret(e.target.value); clr("siret"); }} placeholder="123 456 789 00015" maxLength={17} style={{ borderColor: errs.siret ? "rgba(220,38,38,.4)" : "" }} />
-              {errs.siret && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.siret}</div>}
-            </div>
-
-            {/* Certification */}
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.certifLabel}</label>
-              <select className="lk-input" value={certif} onChange={e => setCertif(e.target.value)} style={{ cursor: "pointer" }}>
-                <option value="aucune">{tr.noCertif}</option>
-                <option value="rge">{tr.certifRgeFull}</option>
-                <option value="qualibat">Qualibat</option>
-                <option value="qualifelec">Qualifelec</option>
-                <option value="artisan_agree">Artisan Agréé</option>
-              </select>
-            </div>
-
-            {/* Carte d'identité */}
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.idCardLabel}</label>
-              <input type="file" accept="image/*,.pdf" ref={idRef} onChange={e => { const f = e.target.files?.[0]; if (!f) return; const err = checkDoc(f); if (err) { setIdCardFile(null); setErrs(p => ({ ...p, idCard: err })); } else { setIdCardFile(f); clr("idCard"); } }} style={{ display: "none" }} />
-              <button type="button" onClick={() => idRef.current?.click()} style={{ width: "100%", background: idCardFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.idCard ? "rgba(220,38,38,.5)" : idCardFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
-                {idCardFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
-                <span style={{ color: idCardFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {idCardFile ? `${idCardFile.name} — ✓` : tr.uploadIdCard}
-                </span>
-              </button>
-              {errs.idCard && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.idCard}</div>}
-            </div>
-
-            {/* Assurance RC Pro */}
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.insuranceLabel}</label>
-              <input type="file" accept="image/*,.pdf" ref={insRef} onChange={e => { const f = e.target.files?.[0]; if (!f) return; const err = checkDoc(f); if (err) { setInsuranceFile(null); setErrs(p => ({ ...p, insurance: err })); } else { setInsuranceFile(f); clr("insurance"); } }} style={{ display: "none" }} />
-              <button type="button" onClick={() => insRef.current?.click()} style={{ width: "100%", background: insuranceFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${errs.insurance ? "rgba(220,38,38,.5)" : insuranceFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
-                {insuranceFile ? Icon.check(T.success, 18) : Icon.shield(T.textLo, 18)}
-                <span style={{ color: insuranceFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {insuranceFile ? `${insuranceFile.name} — ✓` : tr.uploadInsurance}
-                </span>
-              </button>
-              {errs.insurance && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.insurance}</div>}
-            </div>
-
-            {/* Kbis (optionnel) */}
-            <div style={{ marginBottom: 14 }}>
-              <label className="lk-label">{tr.kbisLabel} *</label>
-              <input type="file" accept="image/*,.pdf" ref={kbisRef} onChange={e => { const f = e.target.files?.[0]; if (!f) return; const err = checkDoc(f); if (err) { setKbisFile(null); setErrs(p => ({ ...p, kbis: err })); } else { setKbisFile(f); clr("kbis"); } }} style={{ display: "none" }} />
-              <button type="button" onClick={() => kbisRef.current?.click()} style={{ width: "100%", background: kbisFile ? "rgba(30,158,107,.06)" : "rgba(0,0,0,.02)", border: `1.5px dashed ${kbisFile ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "14px 18px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, fontFamily: "'Inter',sans-serif" }}>
-                {kbisFile ? Icon.check(T.success, 18) : Icon.file(T.textLo, 18)}
-                <span style={{ color: kbisFile ? T.success : T.textMid, fontSize: 13, fontWeight: 600 }}>
-                  {kbisFile ? `${kbisFile.name} — ✓` : tr.uploadKbis}
-                </span>
-              </button>
-              {errs.kbis && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.kbis}</div>}
-            </div>
-
-            {/* IBAN */}
-            <div style={{ marginBottom: 20 }}>
-              <label className="lk-label">{tr.ibanLabel} <span style={{ color: T.textLo, fontWeight: 400, textTransform: "none" }}>({tr.optionalWord})</span></label>
-              <input className="lk-input" value={iban} onChange={e => { setIban(e.target.value.toUpperCase()); clr("iban"); }} placeholder="FR76 XXXX XXXX XXXX XXXX XXXX XXX" />
-              {errs.iban && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.iban}</div>}
-            </div>
-
-            {/* Avertissement légal */}
-            <div style={{ background: "rgba(201,160,48,.06)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12, padding: "12px 14px", marginBottom: 20 }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                {Icon.warning(T.warn, 16)}
-                <div style={{ color: T.textMid, fontSize: 12, lineHeight: 1.6 }}>
-                  {tr.legalWarning}
-                </div>
-              </div>
-            </div>
-
-            <CguCheckbox checked={cguOk} onChange={v => { setCguOk(v); clr("cgu"); }} err={errs.cgu} tr={tr} openLegal={openLegal} />
-            {/* Clause de responsabilité professionnelle — engagement d'indemnisation */}
-            <div style={{ marginBottom: 14, padding: "12px 14px", background: "rgba(201,160,48,.05)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 12 }}>
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
-                <input type="checkbox" checked={liabOk} onChange={e => { setLiabOk(e.target.checked); clr("liab"); }} style={{ marginTop: 3, accentColor: T.accent }} />
-                <span style={{ fontSize: 11, color: T.textMid, lineHeight: 1.55 }}>{tr.liabProAccept}</span>
-              </label>
-              {errs.liab && <div style={{ color: T.danger, fontSize: 11, marginTop: 4 }}>{errs.liab}</div>}
-            </div>
-            <FormError err={errs.form} />
-            <button onClick={submit} disabled={saving} className="lk-btn">{saving ? "…" : <>{tr.submitDossier} {Icon.check("#fff", 14)}</>}</button>
-          </div>
-        )}
-
-        <div style={{ textAlign: "center", marginTop: 16 }}>
+        {errTxt("metiers")}
+        <div style={{ marginTop: 18 }}>
+          <CguCheckbox checked={cguOk} onChange={v => { setCguOk(v); clr("cgu"); }} err={errs.cgu} tr={tr} openLegal={openLegal} />
+          <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 6 }}>
+            <input type="checkbox" checked={liabOk} onChange={e => { setLiabOk(e.target.checked); clr("liab"); }} style={{ marginTop: 3, accentColor: T.accent }} />
+            <span style={{ fontSize: 11.5, color: T.textMid, lineHeight: 1.55 }}>{tr.liabProAccept}</span>
+          </label>
+          {errTxt("liab")}
+        </div>
+        <FormError err={errs.form} />
+        <button onClick={submit} disabled={saving} style={{ width: "100%", marginTop: 16, background: "#1c1c1c", color: "#fff", border: "none", borderRadius: 14, padding: "16px", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{saving ? "…" : (fr ? "Créer mon compte artisan" : "Create my craftsman account")}</button>
+        <div style={{ fontSize: 12, color: T.textLo, textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>{fr ? "Ensuite : SIRET, assurance RC Pro, Kbis et virements. LOCKR vérifie votre dossier sous 48 h." : "Next: SIRET, liability insurance, Kbis and payouts. LOCKR reviews your file within 48h."}</div>
+        <div style={{ textAlign: "center", marginTop: 14 }}>
           <span style={{ color: T.textLo, fontSize: 13 }}>{tr.alreadyMember} </span>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{tr.connectAs}</button>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: T.accent, cursor: "pointer", fontSize: 13, fontWeight: 700, fontFamily: "'Inter',sans-serif", padding: "12px 6px" }}>{tr.connectAs}</button>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -3034,7 +2840,7 @@ function MonthlyReportModal({ bookings, artisanId, lang = "fr", onClose }) {
    L'artisan ne peut plus se déclarer « payé » lui-même : seul Stripe (ou
    l'administrateur) confirme un paiement. */
 
-function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }) {
+function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr", autoCapture = false, onRate = null }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const [montant, setMontant] = useState(String(mission?.montantFinal || mission?.montant || ""));
@@ -3053,6 +2859,7 @@ function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }
   const hold = empreinteMontant(mission);
   const aDebiter = Math.min(reste, hold);
   const [captured, setCaptured] = useState(null);
+  const [rating, setRating] = useState(0);
 
   const handleFile = async e => {
     const data = await readImageInput(e, { maxSize: 1400, quality: 0.72 });
@@ -3064,6 +2871,8 @@ function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }
     setErr("");
     onConfirm(montantNum, factureImg);
     setStep("paiement");
+    // Comme Uber : la carte enregistrée est débitée automatiquement à la fin
+    if (autoCapture && hold > 0 && aDebiter > 0) setTimeout(capture, live ? 900 : 0);
   };
   const capture = async () => {
     setPaying(true); setErr("");
@@ -3072,7 +2881,12 @@ function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }
       setCaptured(aDebiter); setPaying(false);
       return;
     }
-    const r = await captureHold(mission.id);
+    let r = await captureHold(mission.id);
+    // La clôture vient d'être enregistrée : on laisse à la base le temps de la recevoir
+    for (let i = 0; i < 3 && !r.ok && r.error === "not_finished"; i++) {
+      await new Promise(res => setTimeout(res, 1200));
+      r = await captureHold(mission.id);
+    }
     setPaying(false);
     if (r.ok) { setCaptured(r.captured); return; }
     setErr(r.error === "expired"
@@ -3152,7 +2966,7 @@ function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }
               <div style={{ width: 64, height: 64, background: "rgba(62,207,142,.1)", border: "1.5px solid rgba(62,207,142,.3)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>{Icon.check(T.success, 28)}</div>
               <div style={{ color: T.success, fontWeight: 800, fontSize: 17 }}>{fr ? "Mission clôturée" : "Mission closed"}</div>
               <div style={{ color: T.textMid, fontSize: 13, marginTop: 6 }}>
-                {reste > 0 ? (fr ? <>Reste à encaisser : <b>{fmt(reste)}</b></> : <>Remaining to collect: <b>{fmt(reste)}</b></>) : (fr ? "Rien à encaisser : la prestation est déjà réglée." : "Nothing to collect: already paid.")}
+                {captured != null ? (fr ? "Paiement encaissé automatiquement — rien à faire." : "Payment collected automatically — nothing to do.") : reste > 0 ? (fr ? <>Reste à encaisser : <b>{fmt(reste)}</b></> : <>Remaining to collect: <b>{fmt(reste)}</b></>) : (fr ? "Rien à encaisser : la prestation est déjà réglée." : "Nothing to collect: already paid.")}
               </div>
             </div>
             {captured != null && (
@@ -3165,7 +2979,7 @@ function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }
                 <div style={{ fontSize: 12, color: T.textMid, textAlign: "center", marginBottom: 10, lineHeight: 1.5 }}>
                   {fr ? `💳 Le client a enregistré sa carte (${fmt(hold)} réservés).` : `💳 The client registered a card (${fmt(hold)} held).`}
                 </div>
-                <button onClick={capture} disabled={paying} className="lk-btn" style={{ marginBottom: 10 }}>{paying ? "…" : (fr ? `Débiter la carte du client — ${fmt(aDebiter)}` : `Charge the client's card — ${fmt(aDebiter)}`)}</button>
+                <button onClick={capture} disabled={paying} className="lk-btn" style={{ marginBottom: 10 }}>{paying ? (fr ? "Débit de la carte en cours…" : "Charging the card…") : (fr ? `Débiter la carte du client — ${fmt(aDebiter)}` : `Charge the client's card — ${fmt(aDebiter)}`)}</button>
                 {reste > hold && <div style={{ fontSize: 11.5, color: T.warn, textAlign: "center", marginBottom: 10 }}>{fr ? `Le montant final dépasse la réservation : ${fmt(reste - hold)} resteront à régler par lien de paiement.` : `The final amount exceeds the hold: ${fmt(reste - hold)} will remain to be paid by link.`}</div>}
               </>
             )}
@@ -3179,6 +2993,12 @@ function ClotureModal({ mission, onConfirm, onCancel, setBookings, lang = "fr" }
               </>
             )}
             {err && <div role="alert" style={{ color: T.danger, fontSize: 12, marginBottom: 12, textAlign: "center" }}>{err}</div>}
+            {onRate && (
+              <div style={{ textAlign: "center", margin: "6px 0 16px" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.textHi, marginBottom: 8 }}>{fr ? "Notez le client" : "Rate the client"}</div>
+                <StarRating value={rating} onChange={n => { setRating(n); onRate(n); }} />
+              </div>
+            )}
             <button onClick={onCancel} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Terminer" : "Done"}</button>
           </>
         )}
@@ -5140,7 +4960,6 @@ function FactuElecTab({ lang = "fr" }) {
   );
 }
 
-/* ─── CARTE LIVE PRO — position du technicien, clients, km et temps de trajet ─── */
 const haversineKm = (a, b) => {
   const R = 6371, toRad = d => d * Math.PI / 180;
   const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
@@ -5148,197 +4967,198 @@ const haversineKm = (a, b) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-function ProLiveMap({ account, bookings, bons, priorityOrder = [], lang = "fr", onSelect = () => {} }) {
-  const fr = lang !== "en";
-  const artisan = DEMO_ARTISANS.find(a => a.id === account.artisanId);
-  const fallback = { lat: artisan?.lat || 48.8566, lng: artisan?.lng || 2.3522 };
-  const [myPos, setMyPos] = useState(fallback);
-  const mapRef = useRef(null);
-  const mapObj = useRef(null);
-  const meMarker = useRef(null);
-  const targetLayer = useRef(null);
-  const didFit = useRef(false);
-  const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
-
-  // Position réelle du technicien si le GPS est autorisé
-  useEffect(() => {
-    if (!navigator.geolocation) return;
-    const watch = navigator.geolocation.watchPosition(
-      p => setMyPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => {}, { enableHighAccuracy: true, maximumAge: 10000 }
-    );
-    return () => navigator.geolocation.clearWatch(watch);
-  }, []);
-
-  // Cibles : missions en cours + bons disponibles (avec coordonnées)
-  const active = bookings.filter(b => b.artisanId === account.artisanId && ["assignée", "en_route", "en_cours"].includes(b.statut));
-  const myRegion = account.ville || "Paris";
-  const bonsDispo = bons.filter(b => b.region === myRegion && bonVisibleForPro(b, account.artisanId, priorityOrder));
-  const targets = [
-    ...active.map((b, i) => ({ id: b.id, type: "mission", label: b.clientNom || "Client", adresse: b.adresse, lat: b.lat || 48.8566 + (i + 1) * 0.006, lng: b.lng || 2.3522 + (i + 1) * 0.006, urgence: false })),
-    ...bonsDispo.filter(b => b.lat && b.lng).map(b => ({ id: b.id, type: "bon", label: b.titre, adresse: b.adresse, lat: b.lat, lng: b.lng, urgence: b.urgence, montant: b.montantEstime })),
-  ].map(t => {
-    const km = haversineKm(myPos, t);
-    // Vitesse moyenne urbaine ~25 km/h → minutes de trajet estimées
-    const mins = Math.max(2, Math.round(km / 25 * 60));
-    return { ...t, km, mins };
-  }).sort((a, b) => a.km - b.km);
-
-  // Carte Leaflet — créée UNE SEULE FOIS (jamais recréée : le zoom de
-  // l'utilisateur est conservé quand la position ou les cibles changent)
+/* ─── CARTE (fond de carte + points) ───
+   Fond neutre dessiné en CSS (visible tout de suite, même sans réseau), puis
+   carte Leaflet par-dessus quand elle est chargée. */
+function MapCanvas({ center, points = [], height = 260, rounded = 0 }) {
+  const ref = useRef(null);
+  const map = useRef(null);
+  const layer = useRef(null);
+  const c = center || { lat: 48.8566, lng: 2.3522 };
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const L = await loadLeaflet();
-      if (!L || cancelled || !mapRef.current || mapObj.current) return;
-      const map = L.map(mapRef.current, { zoomControl: true, attributionControl: false }).setView([fallback.lat, fallback.lng], 12);
-      mapObj.current = map;
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd" }).addTo(map);
-      targetLayer.current = L.layerGroup().addTo(map);
+      if (!L || cancelled || !ref.current || map.current) return;
+      map.current = L.map(ref.current, { zoomControl: false, attributionControl: false }).setView([c.lat, c.lng], 13);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { maxZoom: 19, subdomains: "abcd" }).addTo(map.current);
+      layer.current = L.layerGroup().addTo(map.current);
     })();
-    return () => { cancelled = true; if (mapObj.current) { mapObj.current.remove(); mapObj.current = null; meMarker.current = null; targetLayer.current = null; didFit.current = false; } };
-  }, []);
-
-  // Mise à jour des marqueurs SANS toucher au zoom ni recréer la carte
+    return () => { cancelled = true; if (map.current) { map.current.remove(); map.current = null; layer.current = null; } };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const key = JSON.stringify([c.lat, c.lng, points.map(p => [p.lat, p.lng, p.color])]);
   useEffect(() => {
     (async () => {
       const L = await loadLeaflet();
-      const map = mapObj.current;
-      if (!L || !map || !targetLayer.current) return;
-      // Marqueur technicien (doré) — déplacé, pas recréé
-      if (!meMarker.current) {
-        meMarker.current = L.marker([myPos.lat, myPos.lng], { icon: L.divIcon({ className: "", html: `<div style="width:18px;height:18px;border-radius:50%;background:#c9a030;border:3px solid #fff;box-shadow:0 0 0 6px rgba(201,160,48,.25)"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(map).bindPopup(fr ? "Vous êtes ici" : "You are here");
-      } else {
-        meMarker.current.setLatLng([myPos.lat, myPos.lng]);
-      }
-      // Marqueurs interventions — cliquables : popup avec bouton « Ouvrir »
-      targetLayer.current.clearLayers();
-      targets.forEach(t => {
-        const color = t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b";
-        const m = L.marker([t.lat, t.lng], { icon: L.divIcon({ className: "", html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35);cursor:pointer"></div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(targetLayer.current);
-        const btnId = `lkmap_${t.type}_${t.id}`;
-        m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><b style="font-size:13px">${t.label}</b><br/><span style="font-size:11px;color:#666">${t.type === "mission" ? (t.adresse || "") : maskAddress(t.adresse)}</span><br/><span style="font-size:11px">${t.km.toFixed(1)} km · ~${t.mins} min${t.montant ? ` · <b>${fr ? "À partir de" : "From"} ${Math.round(t.montant)} €</b>` : ""}</span><br/><button id="${btnId}" style="margin-top:7px;width:100%;background:linear-gradient(135deg,#c9a030,#8a6b1a);color:#fff;border:none;border-radius:8px;padding:8px;font-weight:700;font-size:12px;cursor:pointer;font-family:Inter,sans-serif">${t.type === "mission" ? (fr ? "Ouvrir la mission" : "Open mission") : (fr ? "Voir le bon" : "View voucher")}</button></div>`);
-        m.on("popupopen", () => {
-          const btn = document.getElementById(btnId);
-          if (btn) btn.onclick = () => { map.closePopup(); onSelectRef.current(t); };
-        });
-      });
-      // Cadrage automatique UNE SEULE FOIS au premier affichage
-      if (!didFit.current && targets.length) {
-        const grp = L.featureGroup(targets.map(t => L.marker([t.lat, t.lng])).concat(L.marker([myPos.lat, myPos.lng])));
-        map.fitBounds(grp.getBounds().pad(0.25));
-        didFit.current = true;
-      }
+      if (!L || !map.current || !layer.current) return;
+      layer.current.clearLayers();
+      L.marker([c.lat, c.lng], { icon: L.divIcon({ className: "", html: `<div style="width:18px;height:18px;border-radius:50%;background:#1c1c1c;border:3px solid #fff;box-shadow:0 0 0 8px rgba(28,28,28,.15)"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] }) }).addTo(layer.current);
+      points.filter(p => p.lat && p.lng).forEach(p => L.marker([p.lat, p.lng], { icon: L.divIcon({ className: "", html: `<div style="width:20px;height:20px;border-radius:50%;background:${p.color || "#c9a030"};border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.35)"></div>`, iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(layer.current));
+      map.current.setView([c.lat, c.lng], map.current.getZoom());
     })();
-  }, [myPos.lat, myPos.lng, JSON.stringify(targets.map(t => t.type + t.id))]);
-
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div style={{ padding: "14px" }}>
-      <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi, marginBottom: 3, display: "flex", alignItems: "center", gap: 8 }}>{Icon.map(T.accent, 18)} {fr ? "Carte live" : "Live map"}</div>
-      <div style={{ color: T.textLo, fontSize: 11.5, marginBottom: 12 }}>{fr ? "Votre position, vos clients, la distance et le temps de trajet estimé." : "Your position, your clients, distance and estimated travel time."}</div>
-      <div ref={mapRef} style={{ height: 300, borderRadius: 16, overflow: "hidden", border: `1px solid ${T.border}`, marginBottom: 14 }} />
-      {/* Légende */}
-      <div style={{ display: "flex", gap: 14, marginBottom: 12, fontSize: 10.5, color: T.textMid, flexWrap: "wrap" }}>
-        <span>🟡 {fr ? "Vous" : "You"}</span><span>🔵 {fr ? "Mission en cours" : "Ongoing mission"}</span><span>🟢 {fr ? "Bon disponible" : "Available voucher"}</span><span>🔴 {fr ? "Bon urgent" : "Urgent voucher"}</span>
+    <div style={{ position: "relative", height, borderRadius: rounded, overflow: "hidden", background: "#e9e6df" }}>
+      {/* Fond de secours : rues stylisées */}
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, backgroundColor: "#ece9e2", backgroundImage: "linear-gradient(90deg, rgba(255,255,255,.9) 6px, transparent 6px), linear-gradient(rgba(255,255,255,.9) 6px, transparent 6px), linear-gradient(90deg, rgba(255,255,255,.55) 2px, transparent 2px), linear-gradient(rgba(255,255,255,.55) 2px, transparent 2px)", backgroundSize: "140px 140px, 140px 140px, 35px 35px, 35px 35px", backgroundPosition: "-20px -40px, -20px -40px, 0 0, 0 0" }} />
+      <div aria-hidden="true" style={{ position: "absolute", left: "-10%", top: "38%", width: "120%", height: 16, background: "#f5d98b", opacity: .7, transform: "rotate(-14deg)" }} />
+      <div aria-hidden="true" style={{ position: "absolute", left: "55%", top: "-10%", width: 14, height: "120%", background: "#f5d98b", opacity: .6, transform: "rotate(18deg)" }} />
+      <div aria-hidden="true" style={{ position: "absolute", right: "8%", bottom: "12%", width: 90, height: 60, borderRadius: 18, background: "#cfe6c4" }} />
+      <div aria-hidden="true" style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)" }}>
+        <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#1c1c1c", border: "3px solid #fff", boxShadow: "0 0 0 10px rgba(28,28,28,.12)" }} />
       </div>
-      {/* Liste triée par distance */}
-      {targets.length === 0 && <div style={{ textAlign: "center", color: T.textLo, fontSize: 13, padding: "24px 0" }}>{fr ? "Aucun client ni bon à proximité." : "No client or voucher nearby."}</div>}
-      {targets.map(t => (
-        <div key={t.type + t.id} onClick={() => onSelect(t)} className="lk-card" style={{ padding: "12px 15px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, borderLeft: `4px solid ${t.type === "mission" ? "#2563eb" : t.urgence ? "#dc2626" : "#1e9e6b"}`, cursor: "pointer" }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.urgence ? "🔴 " : ""}{t.label}</div>
-            <div style={{ fontSize: 11, color: T.textLo, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.type === "mission" ? t.adresse : maskAddress(t.adresse)}</div>
-          </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: T.accent }}>{t.km < 1 ? `${Math.round(t.km * 1000)} m` : `${t.km.toFixed(1)} km`}</div>
-            <div style={{ fontSize: 11, color: T.textMid, fontWeight: 600 }}>⏱ ~{t.mins} min</div>
-          </div>
-          <div style={{ flexShrink: 0 }}>{Icon.arrow(T.textLo, 14)}</div>
+      <div ref={ref} style={{ position: "absolute", inset: 0 }} />
+    </div>
+  );
+}
+
+/* Tampon de note (1 à 5 étoiles) */
+function StarRating({ value = 0, onChange, size = 30 }) {
+  return (
+    <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <button key={n} type="button" onClick={() => onChange(n)} aria-label={`${n}/5`} style={{ background: "none", border: "none", cursor: "pointer", fontSize: size, lineHeight: 1, color: n <= value ? "#f5a623" : "rgba(0,0,0,.15)", padding: 2 }}>★</button>
+      ))}
+    </div>
+  );
+}
+
+/* ─── DOSSIER DE L'ARTISAN : liste à cocher (comme l'inscription chauffeur
+   Uber). Chaque élément se complète quand l'artisan veut, depuis l'appli. ─── */
+const DOC_FIELDS = {
+  assurance: { fr: "Assurance RC Pro", en: "Professional liability insurance", legacy: "hasInsurance" },
+  kbis: { fr: "Kbis ou avis de situation INSEE", en: "Kbis or INSEE certificate", legacy: "hasKbis" },
+  identite: { fr: "Pièce d'identité", en: "ID document", legacy: "hasIdCard" },
+};
+const hasDoc = (a, k) => !!(a?.docs?.[k] || a?.[DOC_FIELDS[k].legacy]);
+function proChecklistItems(account, stripeRequired) {
+  // Dossier déjà validé par l'admin (ancien parcours ou comptes démo) : pièces considérées comme vérifiées
+  const ok = account.dossierStatus === "approved";
+  return [
+    { id: "email", fr: "Adresse e-mail confirmée", en: "E-mail confirmed", done: IS_DEMO || account.emailVerified === true },
+    { id: "siret", fr: "Numéro SIRET", en: "SIRET number", done: ok || siretValid(account.siret) },
+    { id: "assurance", fr: DOC_FIELDS.assurance.fr, en: DOC_FIELDS.assurance.en, done: ok || hasDoc(account, "assurance") },
+    { id: "kbis", fr: DOC_FIELDS.kbis.fr, en: DOC_FIELDS.kbis.en, done: ok || hasDoc(account, "kbis") },
+    stripeRequired
+      ? { id: "stripe", fr: "Virements activés (identité et IBAN vérifiés par Stripe)", en: "Payouts enabled (ID and IBAN checked by Stripe)", done: !!account.stripeOnboarded }
+      : { id: "identite", fr: DOC_FIELDS.identite.fr, en: DOC_FIELDS.identite.en, done: ok || hasDoc(account, "identite") },
+  ];
+}
+
+function ProChecklist({ account, setAccounts, stripeRequired = false, lang = "fr" }) {
+  const fr = lang !== "en";
+  const items = proChecklistItems(account, stripeRequired);
+  const doneCount = items.filter(i => i.done).length;
+  const [open, setOpen] = useState(() => items.find(i => !i.done)?.id || null);
+  const [siret, setSiret] = useState(account.siret || "");
+  const [err, setErr] = useState("");
+  const status = account.dossierStatus || "approved";
+  const save = patch => setAccounts(p => p.map(a => a.id === account.id ? { ...a, ...patch, ...(status === "rejected" ? { dossierStatus: "pending" } : {}) } : a));
+  const upload = k => async e => {
+    const data = await readImageInput(e, { maxSize: 1100, quality: 0.55 });
+    if (!data) { setErr(fr ? "Photo illisible : réessayez (JPEG ou PNG)." : "Unreadable photo: please retry (JPEG or PNG)."); return; }
+    setErr("");
+    save({ docs: { ...(account.docs || {}), [k]: data }, [DOC_FIELDS[k].legacy]: true, docsUpdatedAt: ts() });
+  };
+  return (
+    <div className="lk-card" style={{ padding: "16px 16px 8px", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: T.textHi }}>{status === "approved" ? (fr ? "Mon dossier" : "My file") : (fr ? "Pour recevoir des missions" : "To receive jobs")}</div>
+        <div style={{ fontWeight: 800, fontSize: 13, color: doneCount === items.length ? T.success : T.accent }}>{doneCount}/{items.length}</div>
+      </div>
+      <div style={{ height: 6, background: "rgba(0,0,0,.07)", borderRadius: 3, margin: "10px 0 6px" }}>
+        <div style={{ height: "100%", width: `${(doneCount / items.length) * 100}%`, background: doneCount === items.length ? T.success : T.grad, borderRadius: 3, transition: "width .3s" }} />
+      </div>
+      {status === "rejected" && <div style={{ fontSize: 12, color: T.danger, margin: "6px 0" }}>{fr ? "Dossier refusé" : "File rejected"}{account.rejectReason ? ` : ${account.rejectReason}` : ""}. {fr ? "Corrigez l'élément concerné : le dossier repart automatiquement en vérification." : "Fix the item: the file goes back to review automatically."}</div>}
+      {status === "pending" && doneCount === items.length && <div style={{ fontSize: 12.5, color: T.success, fontWeight: 600, margin: "6px 0" }}>✓ {fr ? "Dossier complet : LOCKR le vérifie sous 48 h. Vous serez prévenu par e-mail." : "File complete: LOCKR reviews it within 48h. You'll be notified by e-mail."}</div>}
+      {err && <div role="alert" style={{ fontSize: 12, color: T.danger, margin: "6px 0" }}>{err}</div>}
+      {items.map(it => (
+        <div key={it.id} style={{ borderTop: `1px solid ${T.border}` }}>
+          <button onClick={() => setOpen(o => (o === it.id ? null : it.id))} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "left" }}>
+            <span style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: it.done ? T.success : "rgba(0,0,0,.06)", color: "#fff", fontSize: 13, fontWeight: 800 }}>{it.done ? "✓" : ""}</span>
+            <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: it.done ? T.textMid : T.textHi }}>{fr ? it.fr : it.en}</span>
+            {!it.done && <span style={{ fontSize: 12, fontWeight: 700, color: T.accent }}>{fr ? "Compléter" : "Complete"}</span>}
+          </button>
+          {open === it.id && (
+            <div style={{ paddingBottom: 12 }}>
+              {it.id === "email" && (it.done ? <div style={{ fontSize: 12, color: T.textLo }}>{account.email}</div> : <EmailVerifyNotice lang={lang} account={account} setAccounts={setAccounts} required />)}
+              {it.id === "siret" && (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input className="lk-input" value={siret} onChange={e => { setSiret(e.target.value); setErr(""); }} placeholder="123 456 789 00015" inputMode="numeric" maxLength={17} aria-label="SIRET" style={{ flex: 1 }} />
+                  <button className="lk-btn" style={{ width: "auto", padding: "10px 16px" }} onClick={() => { if (!siretValid(siret)) { setErr(fr ? "SIRET invalide (14 chiffres)." : "Invalid SIRET (14 digits)."); return; } save({ siret: siret.replace(/\s/g, "") }); setOpen(null); }}>{fr ? "OK" : "OK"}</button>
+                </div>
+              )}
+              {DOC_FIELDS[it.id] && (
+                <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.18)", borderRadius: 12, padding: "12px 14px" }}>
+                  <input type="file" accept="image/*" capture="environment" onChange={upload(it.id)} style={{ display: "none" }} />
+                  {account.docs?.[it.id] ? <img src={account.docs[it.id]} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 8 }} /> : Icon.cam(T.accent, 22)}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: T.textMid }}>{account.docs?.[it.id] ? (fr ? "Remplacer la photo" : "Replace the photo") : (fr ? "Prendre en photo le document" : "Take a photo of the document")}</span>
+                </label>
+              )}
+              {it.id === "stripe" && <StripeConnectCard lang={lang} account={account} compact />}
+            </div>
+          )}
         </div>
       ))}
     </div>
   );
 }
 
+/* ─── ESPACE ARTISAN — logique « Uber » ───
+   Accueil : bouton En ligne / Hors ligne sur la carte. En ligne, les demandes
+   proches arrivent en plein écran (30 s pour accepter, le premier qui accepte
+   prend la mission). Pendant une mission : un seul gros bouton par étape.
+   3 onglets : Accueil, Gains, Compte (le reste est dans Compte → Plus). */
 function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, setBons, chatMessages, setChatMessages, interventionChats, setInterventionChats, listings, setListings, sales, setSales, onLogout, lang = "fr", setLang, priorityOrder = [], stripeRequired = false, openLegal, fraisDep = FRAIS_DEPLACEMENT_DEFAULT, setters }) {
   const tr = TRANS[lang] || TRANS.fr;
   const fr = lang !== "en";
   const w = useWindowSize();
   const isDesktop = w >= BP;
-  const [tab, setTab] = useState("accueil");
+  const [tab, setTab] = useState("accueil"); // accueil | gains | compte
+  const [sub, setSub] = useState(null);      // vue ouverte depuis Compte
   const [activeMissionId, setActiveMissionId] = useState(null);
-  const [recapMission, setRecapMission] = useState(null); // récap d'une mission terminée (depuis l'Accueil)
-  const [histMonth, setHistMonth] = useState("all"); // filtre historique par mois
-  // Disponibilité enregistrée sur le compte : les clients la voient en direct
-  const dispo = account.dispo !== false;
-  const setDispo = fn => setAccounts(p => p.map(a => a.id === account.id ? { ...a, dispo: typeof fn === "function" ? fn(a.dispo !== false) : fn } : a));
   const [clotureModal, setClotureModal] = useState(false);
   const [chatMission, setChatMission] = useState(null);
   const [monthlyModal, setMonthlyModal] = useState(false);
-  // Photos et justificatifs de la mission en cours (compressés avant enregistrement)
+  const [notice, setNotice] = useState(null);
+  const [dismissed, setDismissed] = useState([]);
+  const [accepting, setAccepting] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
   const photoAvantRef = useRef(null);
-  const photoApresRef = useRef(null);
-  const photoDevisRef = useRef(null);
-  const matInvoiceRef = useRef(null);
-  const [swipeTouchX, setSwipeTouchX] = useState(0);
+  const [showExtras, setShowExtras] = useState(false);
+  const say = (msg, ok = true) => { setNotice({ msg, ok }); setTimeout(() => setNotice(null), 5000); };
+
+  // Disponibilité (= « En ligne ») enregistrée sur le compte : les clients la voient en direct
   const approved = (account.dossierStatus || "approved") === "approved";
+  const needsConnect = stripeRequired && !account.stripeOnboarded;
+  const canWork = approved && !needsConnect;
+  const dispo = account.dispo !== false;
+  const online = canWork && dispo;
+  const setOnline = v => setAccounts(p => p.map(a => a.id === account.id ? { ...a, dispo: v } : a));
+
   const artisan = DEMO_ARTISANS.find(a => a.id === account.artisanId);
   const myM = visibleFor(account, bookings).filter(b => b.artisanId === account.artisanId);
   const active = myM.filter(b => ["assignée", "en_route", "en_cours"].includes(b.statut))
-    .sort((x, y) => String(x.rdvDate || x.createdAt).localeCompare(String(y.rdvDate || y.createdAt)));
-  // Missions terminées + déplacements facturés (annulation tardive, client absent)
-  const done = myM.filter(isBillable);
-  const activeMission = activeMissionId ? (myM.find(b => b.id === activeMissionId) || null) : null;
-  const setActiveMission = b => setActiveMissionId(b ? b.id : null);
+    .sort((x, y) => String(x.accepteLe || x.rdvDate || x.createdAt).localeCompare(String(y.accepteLe || y.rdvDate || y.createdAt)));
+  const done = myM.filter(isBillable); // terminées + déplacements facturés
+  const current = (activeMissionId && active.find(b => b.id === activeMissionId)) || active[0] || null;
+  // La fenêtre de clôture reste ouverte après « terminée » (débit de la carte + note du client)
+  const closing = clotureModal ? myM.find(b => b.id === clotureModal) || null : null;
   const updateMission = (id, patch) => setBookings(p => p.map(x => x.id === id ? { ...x, ...(typeof patch === "function" ? patch(x) : patch) } : x));
   const clientTelOf = b => b?.clientTel || (accounts || []).find(a => a.id === b?.clientId)?.tel || "";
-  // Paiement en ligne actif : l'artisan doit avoir activé ses virements Stripe pour recevoir des missions
-  const needsConnect = stripeRequired && !account.stripeOnboarded;
-  const earnings = done.reduce((s, b) => s + proShare(b), 0);
+  const openItineraire = b => openGpsRoute({ lat: b?.lat, lng: b?.lng, adresse: b?.adresse });
 
-  // Bons disponibles pour moi : ma ville, mes métiers, dispatch prioritaire respecté
-  const myTrades = proMetiers(account);
-  const bonsDispoList = approved ? visibleFor(account, bons).filter(b =>
-    sameCity(b.region, account.ville || "Paris") && b.postedBy !== account.id &&
-    bonVisibleForPro(b, account.artisanId, priorityOrder) &&
-    (!myTrades.length || !metierOf(b) || myTrades.includes(metierOf(b)))) : [];
-  const bonsDispoCount = bonsDispoList.length;
-  // Mission actuellement démarrée (barre « Reprendre » persistante)
-  const missionEnCours = active.find(b => b.statut === "en_cours" || b.statut === "en_route");
-  // RDV du jour (résumé matinal sur l'accueil)
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const rdvToday = myM.filter(b => (b.rdvDate || "").slice(0, 10) === todayStr && ["assignée", "en_route", "en_cours"].includes(b.statut))
-    .sort((a, b) => new Date(a.rdvDate) - new Date(b.rdvDate));
-  // Mode sombre (persisté)
-  const [darkMode, setDarkMode] = useState(() => { try { return localStorage.getItem("lk_dark") === "1"; } catch { return false; } });
-  useEffect(() => { try { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); } catch { /* ignore */ } }, [darkMode]);
-  // Publier un bon pour un autre artisan (accès rapide depuis l'Accueil)
-  const [autoOpenPostBon, setAutoOpenPostBon] = useState(false);
-  const goPublierBon = () => { setAutoOpenPostBon(true); goView("bons"); };
-  // Écran de bienvenue au premier lancement
-  const [onboard, setOnboard] = useState(() => { try { return !localStorage.getItem("lk_pro_onboarded"); } catch { return false; } });
-  const [onboardStep, setOnboardStep] = useState(0);
-  // Pull-to-refresh (mobile)
-  const [refreshing, setRefreshing] = useState(false);
-  const pullStart = useRef(null);
-  // Itinéraire GPS vers le client
-  const openItineraire = (booking) => openGpsRoute(typeof booking === "string" ? { adresse: booking } : { lat: booking?.lat, lng: booking?.lng, adresse: booking?.adresse });
+  // Gains par période
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(dayStart); weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const monthStart = new Date(dayStart.getFullYear(), dayStart.getMonth(), 1);
+  const doneAt = b => new Date(b.termineeLe || b.annuleeLe || b.createdAt).getTime();
+  const sumSince = d => done.filter(b => doneAt(b) >= d.getTime()).reduce((s, b) => s + proShare(b), 0);
+  const countSince = d => done.filter(b => doneAt(b) >= d.getTime()).length;
+  const aEncaisser = done.filter(b => b.statutPaiement !== "payé" && resteAPayer(b) > 0);
 
-  // Feature 2: payment block check (unpaid > 7 days)
-  const sevenDaysAgo = Date.now() - 7 * 86400000;
-  // (les frais de déplacement impayés sont recouvrés par LOCKR : ils ne bloquent pas l'artisan)
-  const hasPaymentBlock = done.some(b => b.statut === "terminée" && b.statutPaiement !== "payé" && resteAPayer(b) > 0 && new Date(b.termineeLe || b.createdAt).getTime() < sevenDaysAgo);
-
-  // ── ALERTE INTERVENTION < 25 KM : notification téléphone + vibration + jingle LOCKR ──
-  const NOTIF_RADIUS_KM = 25;
-  const proPos = useRef({ lat: account.lat || artisan?.lat || 48.8566, lng: account.lng || artisan?.lng || 2.3522 });
-  const notifiedIds = useRef(new Set());
-  const firstScan = useRef(true);
-
-  // Permission de notification demandée dès la connexion + suivi de la position.
-  // Pendant un trajet (mission « en route »), la position est partagée avec le
-  // client toutes les ~20 s : c'est elle qu'il voit bouger sur sa carte.
+  // Position de l'artisan (GPS, sinon sa ville)
+  const [pos, setPos] = useState({ lat: account.lat || artisan?.lat || 48.8566, lng: account.lng || artisan?.lng || 2.3522 });
   const enRouteIds = active.filter(b => b.statut === "en_route").map(b => b.id).join(",");
   const lastShare = useRef({ t: 0, lat: null, lng: null });
   useEffect(() => {
@@ -5346,795 +5166,470 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
       try { Notification.requestPermission(); } catch { /* navigateur sans notifications */ }
     }
     if (!navigator.geolocation) return undefined;
-    const watch = navigator.geolocation.watchPosition(
-      p => {
-        const lat = p.coords.latitude, lng = p.coords.longitude;
-        proPos.current = { lat, lng };
-        if (!enRouteIds) return;
-        const prev = lastShare.current;
-        const movedKm = prev.lat == null ? 1 : haversineKm({ lat: prev.lat, lng: prev.lng }, { lat, lng });
-        if (Date.now() - prev.t < 20000 && movedKm < 0.1) return;
-        lastShare.current = { t: Date.now(), lat, lng };
-        const ids = enRouteIds.split(",");
-        setBookings(list => list.map(x => ids.includes(x.id) ? { ...x, artisanPos: [lat, lng], artisanPosAt: ts() } : x));
-      },
-      () => {}, { enableHighAccuracy: !!enRouteIds, maximumAge: enRouteIds ? 10000 : 60000 }
-    );
+    const watch = navigator.geolocation.watchPosition(p => {
+      const lat = p.coords.latitude, lng = p.coords.longitude;
+      setPos({ lat, lng });
+      // Pendant un trajet, la position est partagée avec le client (~20 s)
+      if (!enRouteIds) return;
+      const prev = lastShare.current;
+      const movedKm = prev.lat == null ? 1 : haversineKm({ lat: prev.lat, lng: prev.lng }, { lat, lng });
+      if (Date.now() - prev.t < 20000 && movedKm < 0.1) return;
+      lastShare.current = { t: Date.now(), lat, lng };
+      const ids = enRouteIds.split(",");
+      setBookings(list => list.map(x => ids.includes(x.id) ? { ...x, artisanPos: [lat, lng], artisanPosAt: ts() } : x));
+    }, () => {}, { enableHighAccuracy: !!enRouteIds, maximumAge: enRouteIds ? 10000 : 60000 });
     return () => navigator.geolocation.clearWatch(watch);
   }, [enRouteIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Jingle LOCKR reconnaissable : 5 notes montantes puis rappel grave
-  const playLockrJingle = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const playTone = (freq, start, dur, vol = 0.4) => {
-        const o = ctx.createOscillator(); const g = ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.frequency.value = freq; o.type = "triangle";
-        g.gain.setValueAtTime(0, ctx.currentTime + start);
-        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.02);
-        g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
-        o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur + 0.05);
-      };
-      // Signature sonore LOCKR : do-mi-sol-do aigu ×2 + note grave finale
-      playTone(523, 0, 0.11); playTone(659, 0.12, 0.11); playTone(784, 0.24, 0.11); playTone(1046, 0.36, 0.22);
-      playTone(523, 0.65, 0.11); playTone(659, 0.77, 0.11); playTone(784, 0.89, 0.11); playTone(1046, 1.01, 0.22);
-      playTone(392, 1.35, 0.35, 0.3);
-    } catch { /* Audio non disponible */ }
-  };
-
-  useEffect(() => {
-    const trades = proMetiers(account);
-    const proRegion = (account.ville || "").toLowerCase().trim();
-    if (!dispo || !approved) { firstScan.current = false; return; }
-
-    // Interventions candidates : nouvelles missions qui me sont attribuées + bons visibles de mes métiers
-    const candidates = [
-      ...myM.filter(b => b.statut === "assignée")
-        .map(b => ({ id: "bk_" + b.id, label: pLabel(PROBLEMES.find(p => p.id === b.probleme), lang) || "Intervention", adresse: maskAddress(b.adresse), lat: b.lat, lng: b.lng, region: b.region })),
-      ...visibleFor(account, bons).filter(b => b.postedBy !== account.id && bonVisibleForPro(b, account.artisanId, priorityOrder) && (!trades.length || !metierOf(b) || trades.includes(metierOf(b))))
-        .map(b => ({ id: "bon_" + b.id, label: b.titre, adresse: maskAddress(b.adresse), lat: b.lat, lng: b.lng, region: b.region })),
-    ];
-
-    // Filtre distance : < 25 km si coordonnées connues, sinon même région
-    const nearby = candidates.filter(c => {
-      if (c.lat && c.lng) return haversineKm(proPos.current, c) <= NOTIF_RADIUS_KM;
-      return !proRegion || !c.region || c.region.toLowerCase().includes(proRegion) || proRegion.includes(c.region.toLowerCase());
-    });
-
-    const fresh = nearby.filter(c => !notifiedIds.current.has(c.id));
-    fresh.forEach(c => notifiedIds.current.add(c.id));
-
-    // Pas d'alerte au premier chargement — uniquement pour les nouvelles interventions
-    if (firstScan.current) { firstScan.current = false; return; }
-    if (fresh.length === 0) return;
-
-    const c = fresh[0];
-    const km = c.lat && c.lng ? haversineKm(proPos.current, c) : null;
-    const kmTxt = km != null ? (km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`) : "";
-
-    // 1. Jingle sonore reconnaissable
-    playLockrJingle();
-    // 2. Vibration longue et distinctive (motif LOCKR)
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
-    // 3. Notification téléphone/navigateur
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      new Notification("⚡ LOCKR — Intervention à proximité !", {
-        body: `${c.label}${kmTxt ? ` · à ${kmTxt} de vous` : ""}${c.adresse ? `\n${c.adresse}` : ""}`,
-        icon: "/apple-touch-icon.png",
-        tag: c.id,
-        vibrate: [300, 100, 300, 100, 600],
-      });
+  /* Demandes proches (statut « recherche ») : mes métiers, 25 km, pas déjà
+     refusées. Les artisans prioritaires (réglage admin) les voient 1 min avant. */
+  const myTrades = proMetiers(account);
+  const kmTo = b => (b.lat && b.lng ? haversineKm(pos, { lat: b.lat, lng: b.lng }) : null);
+  const demandes = !online ? [] : visibleFor(account, bookings).filter(b => {
+    if (b.statut !== "recherche" || b.artisanAccountId || b.partenaireId) return false;
+    if (dismissed.includes(b.id) || (b.refusePar || []).includes(account.id)) return false;
+    if (myTrades.length && metierOf(b) && !myTrades.includes(metierOf(b))) return false;
+    const km = kmTo(b);
+    if (km != null ? km > DEMANDE_RAYON_KM : !sameCity(b.region, account.ville || "Paris")) return false;
+    if (priorityOrder.length && !priorityOrder.includes(account.artisanId)) {
+      const age = now - new Date(b.relanceeLe || b.createdAt).getTime();
+      if (age < DEMANDE_PRIORITE_MS) return false;
     }
-  }, [bookings, bons]);
+    return true;
+  }).sort((a, b) => (kmTo(a) ?? 99) - (kmTo(b) ?? 99));
+  const incoming = demandes[0] || null;
+  // Bons transmis par d'autres artisans (onglet Compte → Plus)
+  const bonsDispo = approved ? visibleFor(account, bons).filter(b => sameCity(b.region, account.ville || "Paris") && b.postedBy !== account.id
+    && bonVisibleForPro(b, account.artisanId, priorityOrder) && (!myTrades.length || !metierOf(b) || myTrades.includes(metierOf(b)))) : [];
 
-  /* Étapes réelles de la mission (synchronisées avec le client) :
-     assignée → « Je pars » (en_route) → « Je suis arrivé » (en_cours) → clôture */
+  // Horloge (avance des artisans prioritaires) tant qu'on est en ligne
+  useEffect(() => {
+    if (!online) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [online]);
+  // Compte à rebours de la demande affichée : 30 s, puis elle disparaît pour cet artisan
+  const [countdown, setCountdown] = useState({ id: null, r: DEMANDE_ACCEPT_S });
+  useEffect(() => {
+    if (!incoming) return undefined;
+    const id = incoming.id, start = Date.now();
+    const t = setInterval(() => {
+      const r = Math.max(0, DEMANDE_ACCEPT_S - Math.floor((Date.now() - start) / 1000));
+      setCountdown({ id, r });
+      if (r === 0) { clearInterval(t); setDismissed(d => [...d, id]); }
+    }, 250);
+    return () => clearInterval(t);
+  }, [incoming?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const remaining = incoming && countdown.id === incoming.id ? countdown.r : DEMANDE_ACCEPT_S;
+
+  // Sonnerie + vibration + notification à chaque nouvelle demande
+  const ringed = useRef(new Set());
+  useEffect(() => {
+    if (!incoming || ringed.current.has(incoming.id)) return;
+    ringed.current.add(incoming.id);
+    playLockrJingle();
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 600]);
+    if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState !== "visible") {
+      try { new Notification("⚡ LOCKR — Nouvelle demande", { body: `${pLabel(PROBLEMES.find(p => p.id === incoming.probleme), "fr")} · ${maskAddress(incoming.adresse)}`, icon: "/apple-touch-icon.png", tag: incoming.id }); } catch { /* ignore */ }
+    }
+  }, [incoming?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Accepter : le premier qui accepte prend la mission (la base refuse les suivants) */
+  const accept = async b => {
+    if (accepting) return;
+    setAccepting(true);
+    const patch = { statut: "assignée", artisanAccountId: account.id, artisanId: account.artisanId, artisanNom: account.nom, artisanTel: account.tel || "", participants: [b.clientId, account.id], accepteLe: ts() };
+    if (live) {
+      try {
+        await runBatch([{ collection: "bookings", id: b.id, data: patch, merge: true }]);
+      } catch {
+        setAccepting(false);
+        setDismissed(d => [...d, b.id]);
+        say(fr ? "Trop tard : un autre artisan a accepté cette demande." : "Too late: another craftsman took this request.", false);
+        return;
+      }
+    } else {
+      updateMission(b.id, patch);
+    }
+    setAccepting(false);
+    setActiveMissionId(b.id);
+    setTab("accueil");
+    if (navigator.vibrate) navigator.vibrate(80);
+  };
+  const decline = b => setDismissed(d => [...d, b.id]);
+
+  /* Étapes de la mission (synchronisées avec le client) */
   const departMission = b => {
-    updateMission(b.id, { statut: "en_route", departAt: ts() });
-    setActiveMission(b); setTab("active");
-    if (navigator.geolocation) navigator.geolocation.getCurrentPosition(p => updateMission(b.id, { artisanPos: [p.coords.latitude, p.coords.longitude], artisanPosAt: ts() }), () => {});
+    updateMission(b.id, { statut: "en_route", departAt: ts(), ...(pos ? { artisanPos: [pos.lat, pos.lng], artisanPosAt: ts() } : {}) });
+    openItineraire(b);
   };
-  const arriveMission = b => {
-    updateMission(b.id, x => ({ statut: "en_cours", arriveAt: ts(), rdvDate: x.rdvDate || ts() }));
-    setActiveMission(b); setTab("active");
+  const arriveMission = b => updateMission(b.id, x => ({ statut: "en_cours", arriveAt: ts(), rdvDate: x.rdvDate || ts() }));
+  const savePhoto = (b, field) => async e => {
+    const data = await readImageInput(e, { maxSize: 1200, quality: 0.7 });
+    if (data) updateMission(b.id, { [field]: data });
   };
-  const [absentMsg, setAbsentMsg] = useState(null);
   const clientAbsent = async b => {
     const r = await declareClientAbsent(b, { setBookings, setters, fraisDep, lang });
-    if (!r) return;
-    setAbsentMsg(r);
-    if (r.ok) { setActiveMissionId(null); setTimeout(() => setAbsentMsg(null), 6000); }
+    if (r) say(r.msg, r.ok);
   };
-  const finishMission = (montantFinal, factureImg) => {
-    if (!activeMission) return;
-    updateMission(activeMission.id, { statut: "terminée", termineeLe: ts(), montantFinal, factureImg });
-  };
-  /* Refus : la mission est annulée pour ce pro (l'empreinte bancaire du
-     client est libérée) et sa demande est republiée pour les autres artisans. */
+  /* Refus (avant le départ) : la demande repart aux autres artisans */
   const refuseMission = async b => {
     if (!window.confirm(fr ? "Refuser cette mission ? Elle sera proposée à d'autres artisans." : "Decline this mission? It will be offered to other craftsmen.")) return;
-    if (live && empreinteActive(b)) {
+    if (live && (b.demande || empreinteActive(b))) {
       const r = await releaseHold(b.id, "refus_pro");
-      if (!r.ok) { alert(fr ? "Refus impossible pour le moment, réessayez dans un instant." : "Cannot decline right now, please retry in a moment."); return; }
+      if (!r.ok) { say(fr ? "Refus impossible pour le moment, réessayez dans un instant." : "Cannot decline right now, please retry.", false); return; }
+    } else if (b.demande) {
+      updateMission(b.id, x => ({ statut: "recherche", participants: [x.clientId], refusePar: [...(x.refusePar || []), account.id], relanceeLe: ts(), artisanAccountId: undefined, artisanId: undefined, artisanNom: undefined, artisanTel: undefined, accepteLe: undefined }));
     } else {
       updateMission(b.id, { statut: "annulée", annulationRaison: "refusée_pro", annuleeLe: ts() });
       if (empreinteActive(b)) applyPayment({ setBookings }, { type: "liberation", ref: b.id, demo: true });
     }
-    if (b.clientId && b.clientId !== "ext") {
-      setBons(p => [...p, {
-        id: uid(), titre: `${pLabel(PROBLEMES.find(x => x.id === b.probleme), "fr") || "Intervention"} — ${b.clientNom}`,
-        adresse: b.adresse, probleme: b.probleme, metier: metierOf(b), urgence: !!b.urgence,
-        montantEstime: Number(b.montant) || 0, postedBy: "platform", postedByNom: "LOCKR",
-        region: b.region || account.ville || "Paris", createdAt: ts(), techPct: b.techPct || PCT_DEFAULT,
-        clientId: b.clientId, clientNom: b.clientNom, clientTel: b.clientTel || "", openPartner: true, fromBookingId: b.id,
-        ...(b.lat && b.lng ? { lat: b.lat, lng: b.lng } : b.clientPos ? { lat: b.clientPos[0], lng: b.clientPos[1] } : {}),
-        ...(b.isDemo ? { isDemo: true } : {}),
-      }]);
-    }
-    if (activeMissionId === b.id) setActiveMissionId(null);
-  };
-  const savePhoto = (field, opts) => async e => {
-    const data = await readImageInput(e, opts);
-    if (data && activeMission) updateMission(activeMission.id, { [field]: data });
+    setActiveMissionId(null);
   };
 
-  const bk = activeMission;
-  const acomptesPending = []; // acomptes gérés par LOCKR — aucune action requise du pro
+  // Écran de bienvenue (premier lancement)
+  const [onboard, setOnboard] = useState(() => { try { return !localStorage.getItem("lk_pro_onboarded_v2"); } catch { return false; } });
+  const [onboardStep, setOnboardStep] = useState(0);
+  const endOnboard = () => { try { localStorage.setItem("lk_pro_onboarded_v2", "1"); } catch { /* ignore */ } setOnboard(false); };
+  const [darkMode, setDarkMode] = useState(() => { try { return localStorage.getItem("lk_dark") === "1"; } catch { return false; } });
+  useEffect(() => { try { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); } catch { /* ignore */ } }, [darkMode]);
 
-  /* Navigation ultra-simple : 3 sections. Tout le travail (bons, missions,
-     carte, calendrier, historique) se pilote depuis l'Accueil ; chaque vue
-     détaillée s'ouvre avec un bouton « ← Accueil » pour revenir. */
-  const tabs = [
-    { id: "accueil", icon: Icon.home || Icon.list, l: lang === "en" ? "Home" : "Accueil" },
-    { id: "marketplace", icon: Icon.card, l: tr.marketplace },
-    { id: "compte_group", icon: Icon.user, l: lang === "en" ? "My account" : "Mon compte" },
-  ];
-  // Vues de travail : accessibles uniquement depuis l'Accueil
-  const workViews = {
-    bons: tr.bonuses,
-    active: tr.inProgress,
-    carte: lang === "en" ? "Live map" : "Carte live",
-    missions: tr.missions,
-    calendar: tr.calendarTab,
-    history: tr.history,
-    chat: lang === "en" ? "Pros chat" : "Chat des pros",
-  };
-  const compteSubs = [
-    { id: "profil", l: tr.proProfile },
-    { id: "stats", l: tr.stats },
-    { id: "auto", l: tr.autoTab },
-    { id: "factu", l: tr.factuTab },
-  ];
-  const [compteSub, setCompteSub] = useState("profil");
-  // Vue effective affichée
-  const view = tab === "compte_group" ? compteSub : tab;
-  const inWorkView = Object.keys(workViews).includes(tab);
-  // Navigation directe vers une vue précise (depuis l'accueil)
-  const goView = (id) => {
-    if (compteSubs.some(s => s.id === id)) { setCompteSub(id); setTab("compte_group"); }
-    else setTab(id);
-  };
+  const pill = (bg, color) => ({ background: bg, color, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 800, border: "none", fontFamily: "'Inter',sans-serif" });
+  const bigBtn = (extra = {}) => ({ width: "100%", border: "none", borderRadius: 16, padding: "18px 20px", fontSize: 17, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter',sans-serif", color: "#fff", background: "#1c1c1c", ...extra });
 
-  return (
-    <div className={darkMode ? "lk-dark" : ""} style={{ height: "100vh", overflow: "hidden", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex" }}>
-      <style>{CSS}</style>
-
-      {/* SIDEBAR DESKTOP */}
-      {isDesktop && (
-        <div style={{ width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0, background: "#fff", borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-          {/* Logo */}
-          <div style={{ padding: "20px 18px 16px", borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <LockrWordmark height={20} light={false} />
-            </div>
-          </div>
-          {/* Pro info */}
-          <div style={{ padding: "16px 18px", borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ position: "relative" }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                  {account.photo ? <img src={account.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontWeight: 700, fontSize: 15, color: T.accent }}>{initial(account.nom)}</span>}
-                </div>
-                <input type="file" accept="image/*" style={{ display: "none" }} id="proPhotoInput" onChange={async e => { const data = await readImageInput(e, { maxSize: 400, quality: 0.75 }); if (data) setAccounts(p => p.map(a => a.id === account.id ? { ...a, photo: data } : a)); }} />
-                <label htmlFor="proPhotoInput" title={tr.uploadProfilePhoto} style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: T.accent, border: "1.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 8 }}>📷</label>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{artisan?.nom || account.nom}</div>
-                <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || tr.artisanPro}</div>
-              </div>
-            </div>
-            <button onClick={() => setDispo(d => !d)} style={{ width: "100%", marginTop: 10, background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 8, padding: "6px 10px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: dispo ? T.success : T.danger, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: dispo ? T.success : T.danger }} />
-              {dispo ? tr.available : tr.unavailable}
-            </button>
-          </div>
-          {/* Stats rapides */}
-          <div style={{ padding: "14px 18px", borderBottom: `1px solid ${T.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <div style={{ background: "rgba(28,28,28,.03)", borderRadius: 10, padding: "8px 10px" }}>
-              <div style={{ color: T.accent, fontWeight: 800, fontSize: 18 }}>{active.length}</div>
-              <div style={{ color: T.textLo, fontSize: 10 }}>{tr.pending}</div>
-            </div>
-            <div style={{ background: "rgba(30,158,107,.06)", borderRadius: 10, padding: "8px 10px" }}>
-              <div style={{ color: T.success, fontWeight: 800, fontSize: 15 }}>{fmt(earnings)}</div>
-              <div style={{ color: T.textLo, fontSize: 10 }}>{tr.gains}</div>
-            </div>
-          </div>
-          {/* Navigation */}
-          <nav style={{ flex: 1, padding: "8px 10px" }}>
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{ width: "100%", border: "none", background: tab === t.id ? "rgba(28,28,28,.06)" : "transparent", borderRadius: 10, padding: "11px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, marginBottom: 2, fontFamily: "'Inter',sans-serif", transition: "all .15s" }}>
-                <div style={{ position: "relative" }}>
-                  {t.icon(tab === t.id ? T.accent : T.textLo, 16)}
-                  {t.id === "accueil" && acomptesPending.length > 0 && (
-                    <div style={{ position: "absolute", top: -4, right: -5, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #fff" }} />
-                  )}
-                </div>
-                <span style={{ color: tab === t.id ? T.accent : T.textMid, fontWeight: tab === t.id ? 700 : 500, fontSize: 13 }}>{t.l}</span>
-                {t.id === "accueil" && acomptesPending.length > 0 && (
-                  <div style={{ marginLeft: "auto", background: T.warn, borderRadius: 10, padding: "1px 6px", minWidth: 18, textAlign: "center" }}>
-                    <span style={{ color: "#fff", fontSize: 10, fontWeight: 700 }}>{acomptesPending.length}</span>
-                  </div>
-                )}
-              </button>
-            ))}
-          </nav>
-          {/* Logout */}
-          <div style={{ padding: "12px 10px", borderTop: `1px solid ${T.border}` }}>
-            <button onClick={onLogout} style={{ width: "100%", border: "none", background: "transparent", borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
-              {Icon.sign(T.danger, 16)}
-              <span style={{ color: T.danger, fontWeight: 600, fontSize: 13 }}>{tr.logout}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* MAIN CONTENT */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, height: "100vh", overflow: "hidden" }}>
-        {/* Header mobile uniquement */}
-        {!isDesktop && (
-          <div style={{ background: "#fff", padding: "14px 16px", borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {account.photo ? <img src={account.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} /> : <span style={{ color: T.accent, fontWeight: 700, fontSize: 15 }}>{initial(account.nom)}</span>}
-                </div>
-                <div>
-                  <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{artisan?.nom || account.nom}</div>
-                  <div style={{ color: T.textLo, fontSize: 11 }}>{artisan?.certif || tr.artisanPro}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setDispo(d => !d)} style={{ background: dispo ? "rgba(30,158,107,.08)" : "rgba(220,38,38,.08)", border: `1px solid ${dispo ? "rgba(30,158,107,.25)" : "rgba(220,38,38,.25)"}`, borderRadius: 20, padding: "6px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: dispo ? T.success : T.danger, fontSize: 11, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: dispo ? T.success : T.danger }} />{dispo ? tr.dispoShort : tr.indispoShort}
-                </button>
-                <button onClick={() => setDarkMode(d => !d)} aria-label={darkMode ? "Mode clair" : "Mode sombre"} title={darkMode ? "Mode clair" : "Mode sombre"} style={{ background: "none", border: `1px solid ${T.border}`, borderRadius: 20, padding: "6px 10px", cursor: "pointer", fontFamily: "'Inter',sans-serif", fontSize: 13 }}>{darkMode ? "☀️" : "🌙"}</button>
-                <button onClick={onLogout} className="lk-ghost" aria-label={tr.logout} title={tr.logout} style={{ padding: "6px 10px" }}>{Icon.sign()}</button>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* Bannière hors ligne — visible tant que le pro est indisponible */}
-        {!dispo && (
-          <div style={{ background: "rgba(107,114,128,.95)", color: "#fff", padding: "9px 16px", fontSize: 12, fontWeight: 700, textAlign: "center", fontFamily: "'Inter',sans-serif" }}>
-            ⏸ {lang === "en" ? "You are offline — you will not receive any missions" : "Vous êtes hors ligne — vous ne recevez pas de missions"}
-          </div>
-        )}
-        {/* Barre persistante « Mission en cours » — visible partout sauf sur le suivi */}
-        {missionEnCours && view !== "active" && (
-          <button onClick={() => { setActiveMission(missionEnCours); setTab("active"); }} style={{ background: "linear-gradient(135deg,#2563eb,#1e40af)", color: "#fff", padding: "10px 16px", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "'Inter',sans-serif", width: "100%" }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700 }}>{missionEnCours.statut === "en_route" ? "🚗" : "🔧"} {missionEnCours.statut === "en_route" ? (lang === "en" ? "On the way" : "En route") : (lang === "en" ? "Ongoing mission" : "Mission en cours")} — {missionEnCours.clientNom}</span>
-            <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(255,255,255,.2)", borderRadius: 8, padding: "4px 12px" }}>{lang === "en" ? "Resume →" : "Reprendre →"}</span>
-          </button>
-        )}
-        {/* Stats bar mobile */}
-        {!isDesktop && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: T.border }}>
-            {[{ l: tr.pending, v: active.length, c: T.accent }, { l: tr.completedStat, v: done.filter(b => b.statut === "terminée").length, c: T.success }, { l: tr.netEarnings, v: fmt(earnings), c: T.success }].map(k => (
-              <div key={k.l} style={{ background: T.bg, padding: "12px 8px", textAlign: "center" }}>
-                <div style={{ color: k.c, fontWeight: 800, fontSize: k.l === "Gains net" ? 11 : 20 }}>{k.v}</div>
-                <div style={{ color: T.textLo, fontSize: 9, marginTop: 2, textTransform: "uppercase" }}>{k.l}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {/* Tabs mobile */}
-        {!isDesktop && (
-          <div style={{ display: "flex", background: T.bg, borderBottom: `1px solid ${T.border}`, overflowX: "auto" }}>
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: "0 0 auto", border: "none", background: "none", padding: "12px 14px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}`, transition: "all .15s", fontFamily: "'Inter',sans-serif", position: "relative" }}>
-                {t.icon(tab === t.id ? T.accent : T.textLo, 14)}
-                {t.id === "accueil" && acomptesPending.length > 0 && (
-                  <div style={{ position: "absolute", top: 8, right: 8, width: 8, height: 8, borderRadius: "50%", background: T.warn, border: "1.5px solid #f4f4f2" }} />
-                )}
-                <span style={{ color: tab === t.id ? T.accent : T.textLo, fontSize: 10, fontWeight: 600 }}>{t.l}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {/* Desktop header avec titre du tab */}
-        {isDesktop && (
-          <div style={{ background: "#fff", padding: "18px 32px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ color: T.textHi, fontWeight: 800, fontSize: 20 }}>{tabs.find(t => t.id === tab)?.l || ""}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button onClick={() => setDarkMode(d => !d)} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{darkMode ? "☀️" : "🌙"}</button>
-              {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ background: "none", border: "1px solid rgba(0,0,0,.12)", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: T.textMid, fontFamily: "'Inter',sans-serif" }}>{tr.lang}</button>}
-              <div style={{ color: T.success, fontWeight: 700, fontSize: 14 }}>{fmt(earnings)} {tr.earned}</div>
-            </div>
-          </div>
-        )}
-        {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", maxWidth: isDesktop ? 900 : undefined, width: "100%", margin: isDesktop ? "0 auto" : undefined, paddingBottom: isDesktop ? 0 : 74 }}
-          onTouchStart={e => {
-            if (isDesktop) return;
-            setSwipeTouchX(e.touches[0].clientX);
-            // Pull-to-refresh : mémorise le départ si on est tout en haut
-            pullStart.current = e.currentTarget.scrollTop <= 2 ? e.touches[0].clientY : null;
-          }}
-          onTouchEnd={e => {
-            if (isDesktop) return;
-            // Pull-to-refresh : tirer vers le bas depuis le haut de page
-            if (pullStart.current != null && e.changedTouches[0].clientY - pullStart.current > 90 && !refreshing) {
-              setRefreshing(true);
-              if (navigator.vibrate) navigator.vibrate(40);
-              setTimeout(() => setRefreshing(false), 900);
-            }
-            pullStart.current = null;
-            // Pas de swipe d'onglet sur la carte (le glissement sert à se déplacer dessus)
-            if (e.target.closest && e.target.closest(".leaflet-container")) return;
-            const dx = e.changedTouches[0].clientX - swipeTouchX;
-            if (Math.abs(dx) < 60) return;
-            const ids = tabs.map(t => t.id);
-            const cur = ids.indexOf(tab);
-            if (dx < 0 && cur < ids.length - 1) setTab(ids[cur + 1]);
-            if (dx > 0 && cur > 0) setTab(ids[cur - 1]);
-          }}>
-          {refreshing && (
-            <div style={{ textAlign: "center", padding: "10px 0", color: T.accent, fontSize: 12, fontWeight: 700, fontFamily: "'Inter',sans-serif" }}>
-              ⟳ {lang === "en" ? "Refreshing…" : "Actualisation…"}
+  /* ── Mission en cours : un seul bouton par étape ── */
+  const missionScreen = b => {
+    const pr = PROBLEMES.find(p => p.id === b.probleme);
+    const tel = clientTelOf(b);
+    const steps = [{ id: "assignée", l: fr ? "Acceptée" : "Accepted" }, { id: "en_route", l: fr ? "En route" : "On the way" }, { id: "en_cours", l: fr ? "Sur place" : "On site" }, { id: "terminée", l: fr ? "Terminée" : "Done" }];
+    const cur = steps.findIndex(s => s.id === b.statut);
+    const km = kmTo(b);
+    let main;
+    if (b.statut === "assignée") main = <button onClick={() => departMission(b)} style={bigBtn({ background: "#2563eb" })}>🚗 {fr ? "Démarrer le trajet" : "Start the trip"}</button>;
+    else if (b.statut === "en_route") main = <button onClick={() => arriveMission(b)} style={bigBtn({ background: "#2563eb" })}>📍 {fr ? "Je suis arrivé" : "I've arrived"}</button>;
+    else if (!b.photoAvant) main = (
+      <>
+        <input ref={photoAvantRef} type="file" accept="image/*" capture="environment" onChange={savePhoto(b, "photoAvant")} style={{ display: "none" }} />
+        <button onClick={() => photoAvantRef.current?.click()} style={bigBtn({ background: T.grad })}>📷 {fr ? "Photo avant intervention" : "Photo before work"}</button>
+      </>
+    );
+    else main = <button onClick={() => setClotureModal(b.id)} style={bigBtn({ background: "linear-gradient(135deg,#2aaf77,#1d8f5f)" })}>✓ {fr ? "Terminer et facturer" : "Finish and invoice"}</button>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+        <MapCanvas center={pos} points={[{ lat: b.lat, lng: b.lng, color: "#2563eb" }]} height={isDesktop ? 280 : 230} />
+        <div style={{ background: "#fff", borderRadius: "22px 22px 0 0", marginTop: -22, position: "relative", padding: "18px 16px 20px", boxShadow: "0 -6px 24px rgba(0,0,0,.08)", flex: 1 }}>
+          {active.length > 1 && (
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 12 }}>
+              {active.map(x => <button key={x.id} onClick={() => setActiveMissionId(x.id)} style={pill(x.id === b.id ? "#1c1c1c" : "rgba(0,0,0,.06)", x.id === b.id ? "#fff" : T.textMid)}>{x.clientNom || "Client"}</button>)}
             </div>
           )}
-          {/* Sous-onglets Mon compte */}
-          {tab === "compte_group" && (
-            <div style={{ display: "flex", gap: 6, padding: "12px 14px 0", overflowX: "auto", WebkitOverflowScrolling: "touch", flexShrink: 0 }}>
-              {compteSubs.map(s => {
-                const activeSub = compteSub === s.id;
-                return (
-                  <button key={s.id} onClick={() => setCompteSub(s.id)} style={{ flexShrink: 0, background: activeSub ? T.grad : "#fff", color: activeSub ? "#fff" : T.textMid, border: activeSub ? "none" : `1px solid ${T.border}`, borderRadius: 20, padding: "8px 15px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
-                    {s.l}
-                  </button>
-                );
-              })}
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#2563eb", textTransform: "uppercase", letterSpacing: .5 }}>{steps[cur]?.l || ""}{km != null && b.statut !== "en_cours" ? ` · ${km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`}` : ""}</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: T.textHi, marginTop: 2 }}>{pLabel(pr, lang) || b.probleme}</div>
+              <div style={{ fontSize: 13, color: T.textMid, marginTop: 2 }}>{b.clientNom} · {b.adresse}</div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 20, fontWeight: 900, color: T.textHi }}>{fmt(bookingTotal(b))}</div>
+              <div style={{ fontSize: 11.5, color: T.success, fontWeight: 700 }}>{fr ? "pour vous" : "for you"} {fmt(proShare(b))}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 4, margin: "14px 0" }}>
+            {steps.map((st, i) => <div key={st.id} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= cur ? "#2563eb" : "rgba(0,0,0,.08)" }} />)}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
+            <button onClick={() => openItineraire(b)} className="lk-ghost" style={{ padding: "11px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: "#2563eb" }}>{Icon.map("#2563eb", 18)}<span style={{ fontSize: 11.5 }}>{fr ? "Itinéraire" : "Directions"}</span></button>
+            <button onClick={() => tel && callPhone(tel)} disabled={!tel} className="lk-ghost" style={{ padding: "11px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: T.success, opacity: tel ? 1 : .4 }}>{Icon.phone(T.success, 18)}<span style={{ fontSize: 11.5 }}>{fr ? "Appeler" : "Call"}</span></button>
+            <button onClick={() => setChatMission(b)} disabled={!b.clientId || b.clientId === "ext"} className="lk-ghost" style={{ padding: "11px 4px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>{Icon.chat(T.accent, 18)}<span style={{ fontSize: 11.5 }}>Message</span></button>
+          </div>
+          {b.empreinte && <div style={{ fontSize: 12, color: T.textMid, marginBottom: 10 }}>{EMPREINTE_TXT(b, lang)}</div>}
+          {b.garantie === "aucune" && !b.empreinte && <div style={{ fontSize: 12, color: T.warn, fontWeight: 600, marginBottom: 10 }}>{fr ? "Carte non enregistrée : paiement par lien à la fin." : "No card registered: payment by link at the end."}</div>}
+          {main}
+          {b.statut === "en_cours" && b.photoAvant && (
+            <button onClick={() => setShowExtras(s => !s)} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12.5, fontWeight: 600, cursor: "pointer", width: "100%", marginTop: 10, padding: 8, fontFamily: "'Inter',sans-serif" }}>{showExtras ? "▲" : "▼"} {fr ? "Photo après, devis signé, matériel" : "After photo, signed quote, materials"}</button>
+          )}
+          {b.statut === "en_cours" && b.photoAvant && showExtras && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 4 }}>
+              {[["photoApres", fr ? "Photo après" : "After photo"], ["photoDevis", fr ? "Devis signé" : "Signed quote"], ["matInvoicePhoto", fr ? "Facture matériel" : "Material invoice"]].map(([f, l]) => (
+                <label key={f} style={{ border: `1.5px dashed ${b[f] ? "rgba(30,158,107,.4)" : "rgba(0,0,0,.15)"}`, borderRadius: 12, padding: "10px", fontSize: 12, fontWeight: 600, color: b[f] ? T.success : T.textMid, cursor: "pointer", textAlign: "center" }}>
+                  <input type="file" accept="image/*" capture="environment" onChange={savePhoto(b, f)} style={{ display: "none" }} />
+                  {b[f] ? "✓ " : "📷 "}{l}
+                </label>
+              ))}
             </div>
           )}
-          {/* Barre retour vers l'Accueil quand on est dans une vue de travail */}
-          {inWorkView && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px 0", flexShrink: 0 }}>
-              <button onClick={() => setTab("accueil")} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 20, padding: "8px 16px", fontSize: 13, fontWeight: 700, color: T.textHi, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
-                {Icon.back(T.textHi, 13)} {lang === "en" ? "Home" : "Accueil"}
-              </button>
-              <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi }}>{workViews[tab]}</span>
-            </div>
-          )}
-          {view === "accueil" && (() => {
-            const fr = lang !== "en";
-            const bonsDispo = bonsDispoList;
-            const doneRecent = done.slice(-5).reverse();
-            const Section = ({ color, title, count, children, goTab, goLabel }) => (
-              <div className="lk-card" style={{ padding: "16px 18px", marginBottom: 14, borderLeft: `4px solid ${color}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi }}>{title} <span style={{ color, fontWeight: 900 }}>({count})</span></div>
-                  {goTab && <button onClick={() => goView(goTab)} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>{goLabel || (fr ? "Tout voir →" : "See all →")}</button>}
-                </div>
-                {children}
-              </div>
-            );
-            return (
-              <div style={{ padding: "14px" }}>
-                {/* Salutation + dispo */}
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontWeight: 800, fontSize: 20, color: T.textHi }}>{fr ? "Bonjour" : "Hello"} {firstName(account.nom)} 👋</div>
-                  <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>
-                    {fr ? "Tout est là : vos bons, vos missions en cours et vos missions terminées." : "Everything is here: your vouchers, ongoing and completed missions."}
-                  </div>
-                </div>
-
-                {!approved && <PendingApprovalCard account={account} setAccounts={setAccounts} lang={lang} />}
-                {needsConnect && approved && (
-                  <div style={{ background: "rgba(99,91,255,.07)", border: "1px solid rgba(99,91,255,.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 4 }}>💶 {fr ? "Activez vos virements pour recevoir des missions" : "Enable payouts to receive jobs"}</div>
-                    <div style={{ fontSize: 12.5, color: T.textMid, lineHeight: 1.5, marginBottom: 10 }}>{fr ? "Les clients paient par carte sur LOCKR : votre part (85 %) est versée directement sur votre compte bancaire. Tant que ce n'est pas activé, vous n'apparaissez pas aux clients." : "Clients pay by card on LOCKR: your share (85%) is paid directly to your bank account. Until this is enabled, clients cannot see you."}</div>
-                    <StripeConnectCard lang={lang} account={account} compact />
-                  </div>
-                )}
-                {/* Résumé du jour */}
-                {rdvToday.length > 0 && (
-                  <div onClick={() => goView("calendar")} style={{ background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 14, padding: "12px 16px", marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
-                    {Icon.calendar(T.accent, 18)}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: 13, color: T.textHi }}>
-                        {fr ? `Aujourd'hui : ${rdvToday.length} RDV` : `Today: ${rdvToday.length} appointment${rdvToday.length > 1 ? "s" : ""}`}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: T.textMid, marginTop: 1 }}>
-                        {fr ? "Prochain à" : "Next at"} {new Date(rdvToday[0].rdvDate).toLocaleTimeString(fr ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" })} — {rdvToday[0].clientNom} · {rdvToday[0].adresse}
-                      </div>
-                    </div>
-                    {Icon.arrow(T.accent, 14)}
-                  </div>
-                )}
-
-                {/* Chiffres clés */}
-                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                  {[
-                    { n: fmt(earnings), l: fr ? "€ générés" : "€ earned", c: T.success, bg: "rgba(30,158,107,.07)" },
-                    { n: fmt(active.reduce((s, b) => s + proShare(b), 0)), l: fr ? "€ à venir" : "€ upcoming", c: T.warn, bg: "rgba(217,119,6,.07)" },
-                    { n: active.length, l: fr ? "missions en attente" : "pending missions", c: "#2563eb", bg: "rgba(37,99,235,.07)" },
-                  ].map((s, i) => (
-                    <div key={i} style={{ flex: 1, background: s.bg, borderRadius: 14, padding: "13px 10px", textAlign: "center" }}>
-                      <div style={{ fontWeight: 900, fontSize: 17, color: s.c, letterSpacing: "-.5px" }}>{s.n}</div>
-                      <div style={{ fontSize: 10, color: T.textMid, fontWeight: 600, marginTop: 2 }}>{s.l}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Publier un bon pour un autre artisan — accès rapide mis en avant */}
-                <button onClick={goPublierBon} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 16, padding: "14px 18px", marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "'Inter',sans-serif" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {Icon.plus("#fff", 18)}
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{fr ? "Publier un bon pour un autre artisan" : "Post a voucher for another craftsman"}</div>
-                      <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, marginTop: 1 }}>{fr ? "Intervention que vous ne pouvez pas faire — visible par tous, avec votre %" : "A job you can't take — visible to all, with your commission %"}</div>
-                    </div>
-                  </div>
-                  {Icon.arrow("#fff", 16)}
-                </button>
-
-                {!isDesktop && (
-                  <button onClick={() => goView("chat")} style={{ width: "100%", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "12px 16px", marginBottom: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, fontFamily: "'Inter',sans-serif" }}>
-                    {Icon.chat(T.accent, 18)}
-                    <span style={{ flex: 1, textAlign: "left", fontWeight: 700, fontSize: 13, color: T.textHi }}>{fr ? `Chat des pros — ${account.ville || "Paris"}` : `Pros chat — ${account.ville || "Paris"}`}</span>
-                    {Icon.arrow(T.textLo, 14)}
-                  </button>
-                )}
-                {/* Accès rapides — gros boutons SVG (desktop uniquement ; sur mobile ils sont dans la barre du bas) */}
-                {isDesktop && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8, marginBottom: 16 }}>
-                    {[
-                      { id: "carte", ic: Icon.map, l: fr ? "Carte" : "Map" },
-                      { id: "calendar", ic: Icon.calendar, l: fr ? "Calendrier" : "Calendar" },
-                      { id: "missions", ic: Icon.list, l: fr ? "Missions" : "Missions" },
-                      { id: "history", ic: Icon.hist, l: fr ? "Historique" : "History" },
-                      { id: "chat", ic: Icon.chat, l: fr ? "Chat des pros" : "Pros chat" },
-                    ].map(a => (
-                      <button key={a.id} onClick={() => goView(a.id)} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 4px", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                        {a.ic(T.accent, 20)}
-                        <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textMid }}>{a.l}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* 1. BONS À ACCEPTER */}
-                <Section color={T.accent} title={fr ? "🎯 Bons à accepter" : "🎯 Vouchers to accept"} count={bonsDispo.length} goTab="bons" goLabel={fr ? "Accepter →" : "Accept →"}>
-                  {bonsDispo.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucun bon disponible pour le moment." : "No voucher available right now."}</div>}
-                  {bonsDispo.slice(0, 3).map(b => (
-                    <div key={b.id} onClick={() => goView("bons")} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.urgence ? "🔴 " : ""}{b.titre}</div>
-                        <div style={{ fontSize: 11, color: T.textLo }}>📍 {maskAddress(b.adresse)}</div>
-                      </div>
-                      <div style={{ fontWeight: 800, fontSize: 12, color: T.accent, flexShrink: 0, marginLeft: 10 }}>{fmtFrom(b.montantEstime, lang)}</div>
-                    </div>
-                  ))}
-                </Section>
-
-                {/* 2. MISSIONS EN COURS — affichées tant que non validées/clôturées */}
-                <Section color="#2563eb" title={fr ? "🔧 Missions en cours" : "🔧 Ongoing missions"} count={active.length} goTab="missions" goLabel={fr ? "Continuer →" : "Continue →"}>
-                  {active.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune mission en cours." : "No ongoing mission."}</div>}
-                  {active.map(b => {
-                    const days = Math.floor((Date.now() - new Date(b.createdAt).getTime()) / 86400000);
-                    return (
-                      <div key={b.id} onClick={() => { setActiveMission(b); setTab(b.statut === "en_cours" ? "active" : "missions"); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 13, color: T.textHi }}>{b.clientNom} — {(PROBLEMES.find(p => p.id === b.probleme) || {}).label || b.probleme}</div>
-                          <div style={{ fontSize: 11, color: T.textLo }}>{b.adresse}</div>
-                          {days >= 1 && <div style={{ fontSize: 10.5, color: T.warn, fontWeight: 700, marginTop: 2 }}>⏳ {fr ? `En attente depuis ${days} jour${days > 1 ? "s" : ""} — à clôturer` : `Pending for ${days} day${days > 1 ? "s" : ""} — to close`}</div>}
-                        </div>
-                        <span style={{ fontSize: 10, fontWeight: 800, color: "#2563eb", background: "rgba(37,99,235,.08)", borderRadius: 7, padding: "4px 8px", flexShrink: 0, marginLeft: 10 }}>{{ assignée: tr.statusAssigned, en_route: tr.statusEnRoute, en_cours: tr.statusInProgress }[b.statut] || b.statut}</span>
-                      </div>
-                    );
-                  })}
-                </Section>
-
-                {/* 3. MISSIONS TERMINÉES */}
-                <Section color={T.success} title={fr ? "✅ Missions terminées" : "✅ Completed missions"} count={done.length} goTab="history">
-                  {done.length === 0 && <div style={{ color: T.textLo, fontSize: 12 }}>{fr ? "Aucune mission terminée." : "No completed mission."}</div>}
-                  {doneRecent.map(b => (
-                    <div key={b.id} onClick={() => setRecapMission(b)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,.04)", cursor: "pointer" }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: T.textHi }}>{b.clientNom}</div>
-                        <div style={{ fontSize: 11, color: T.textLo }}>{fmtDate(b.createdAt)}{b.statut !== "terminée" && b.fraisDeplacement > 0 ? (fr ? " · déplacement facturé" : " · travel fee") : ""}</div>
-                      </div>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: T.success }}>{fmt(proShare(b))}</div>
-                    </div>
-                  ))}
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(0,0,0,.06)", display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 12, color: T.textMid, fontWeight: 600 }}>{fr ? "Total gagné" : "Total earned"}</span>
-                    <span style={{ fontSize: 15, fontWeight: 900, color: T.success }}>{fmt(earnings)}</span>
-                  </div>
-                </Section>
-              </div>
-            );
-          })()}
-          {view === "missions" && (
-            <div style={{ padding: "14px" }}>
-              {hasPaymentBlock && (
-                <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 14, padding: "16px 18px", marginBottom: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
-                  {Icon.warning(T.danger, 20)}
-                  <div>
-                    <div style={{ color: T.danger, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{tr.paymentBlockTitle}</div>
-                    <div style={{ color: T.danger, fontSize: 13, opacity: .8 }}>{tr.paymentBlockMsg}</div>
-                  </div>
-                </div>
-              )}
-              {active.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noMissionPending}</div>}
-              {active.map(b => {
-                const pr = PROBLEMES.find(p => p.id === b.probleme);
-                const IC = PROB_ICONS[b.probleme] || Icon.tool;
-                const tel = clientTelOf(b);
-                const stLabel = { assignée: fr ? "À faire" : "To do", en_route: fr ? "En route" : "On the way", en_cours: fr ? "Sur place" : "On site" }[b.statut];
-                return (
-                  <div key={b.id} className="lk-card" style={{ padding: "14px", marginBottom: 10, borderLeft: `4px solid ${b.statut === "assignée" ? T.accent : "#2563eb"}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, gap: 10 }}>
-                      <div style={{ display: "flex", gap: 10, alignItems: "center", minWidth: 0 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(201,160,48,.06)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{IC(T.accent, 16)}</div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{pLabel(pr, lang) || b.probleme}</div>
-                          <div style={{ color: T.textLo, fontSize: 12 }}>{b.clientNom} · {stLabel}</div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div style={{ color: T.accent, fontWeight: 800, fontSize: 16 }}>{fmt(b.montant)}</div>
-                        <div style={{ color: T.success, fontSize: 11, fontWeight: 600 }}>{fr ? "Votre part" : "Your share"} {fmt(proShare(b))}</div>
-                      </div>
-                    </div>
-                    <div style={{ background: T.bg, borderRadius: 8, padding: "8px 10px", display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>{Icon.pin(T.textLo, 12)}<span style={{ color: T.textMid, fontSize: 12 }}>{b.adresse}</span></div>
-                    {b.rdvDate && (
-                      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                        <div style={{ background: "rgba(201,160,48,.07)", border: "1px solid rgba(201,160,48,.2)", borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center", gap: 5 }}>
-                          {Icon.calendar(T.gold, 12)}
-                          <span style={{ color: T.gold, fontSize: 11, fontWeight: 600 }}>{new Date(b.rdvDate).toLocaleDateString(fr ? "fr-FR" : "en-GB")} {fmtTime(b.rdvDate)}</span>
-                        </div>
-                        {acomptePaid(b) > 0 && (
-                          <div style={{ background: "rgba(30,158,107,.07)", border: "1px solid rgba(30,158,107,.15)", borderRadius: 8, padding: "5px 10px", fontSize: 11, color: T.success, fontWeight: 600 }}>
-                            {fr ? `Acompte client payé : ${fmt(acomptePaid(b))}` : `Client deposit paid: ${fmt(acomptePaid(b))}`}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {/* Action principale selon l'étape — un seul gros bouton */}
-                    {b.statut === "assignée" && <button onClick={() => departMission(b)} className="lk-btn" style={{ padding: "11px 0", fontSize: 13, marginBottom: 8 }}>🚗 {fr ? "Je pars chez le client" : "I'm leaving now"}</button>}
-                    {b.statut === "en_route" && <button onClick={() => arriveMission(b)} className="lk-btn" style={{ padding: "11px 0", fontSize: 13, marginBottom: 8 }}>📍 {fr ? "Je suis arrivé" : "I've arrived"}</button>}
-                    {b.statut === "en_cours" && <button onClick={() => { setActiveMission(b); setTab("active"); }} className="lk-btn" style={{ padding: "11px 0", fontSize: 13, marginBottom: 8 }}>{fr ? "Photos & clôture" : "Photos & close"} {Icon.arrow("#fff", 13)}</button>}
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => openItineraire(b)} style={{ flex: 1, padding: "9px 10px", background: "rgba(37,99,235,.08)", border: "1px solid rgba(37,99,235,.25)", borderRadius: 10, color: "#2563eb", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.pin("#2563eb", 13)} GPS</button>
-                      {tel && <button onClick={() => callPhone(tel)} style={{ flex: 1, padding: "9px 10px", background: "rgba(30,158,107,.08)", border: "1px solid rgba(30,158,107,.25)", borderRadius: 10, color: T.success, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.phone(T.success, 13)} {fr ? "Appeler" : "Call"}</button>}
-                      {b.clientId && b.clientId !== "ext" && <button onClick={() => setChatMission(b)} style={{ flex: 1, padding: "9px 10px", background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, color: T.gold, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{Icon.chat(T.gold, 13)} Chat</button>}
-                      {b.statut === "assignée" && <button onClick={() => refuseMission(b)} style={{ padding: "9px 12px", background: "rgba(220,38,38,.06)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, color: T.danger, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>{tr.refuse}</button>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {view === "active" && (
-            <div style={{ padding: "14px" }}>
-              {absentMsg && <div role="status" style={{ background: absentMsg.ok ? "rgba(30,158,107,.08)" : "rgba(217,119,6,.08)", border: `1px solid ${absentMsg.ok ? "rgba(30,158,107,.25)" : "rgba(217,119,6,.25)"}`, borderRadius: 12, padding: "10px 12px", marginBottom: 12, fontSize: 12.5, fontWeight: 600, color: absentMsg.ok ? T.success : T.warn }}>{absentMsg.msg}</div>}
-              {!bk ? (
-                <div style={{ textAlign: "center", padding: "52px 20px" }}>
-                  <div style={{ color: T.textLo, fontSize: 14, marginBottom: 18 }}>{tr.noMissionActive}</div>
-                  <button onClick={() => setTab("missions")} className="lk-btn">{tr.missions}</button>
-                </div>
-              ) : (() => {
-                const pr = PROBLEMES.find(p => p.id === bk.probleme);
-                const tel = clientTelOf(bk);
-                const steps = [
-                  { id: "assignée", l: fr ? "Acceptée" : "Accepted" },
-                  { id: "en_route", l: fr ? "En route" : "On the way" },
-                  { id: "en_cours", l: fr ? "Sur place" : "On site" },
-                  { id: "terminée", l: fr ? "Clôturée" : "Closed" },
-                ];
-                const cur = steps.findIndex(x => x.id === bk.statut);
-                const photoSlot = (field, label, inputRef, required = false) => (
-                  <div key={field} className="lk-card" style={{ padding: "12px 14px", marginBottom: 10, border: required && !bk[field] ? `1.5px solid ${T.accent}` : undefined }}>
-                    <div style={{ color: required && !bk[field] ? T.accent : T.textMid, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>📷 {label}</div>
-                    <input ref={inputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={savePhoto(field, { maxSize: 1200, quality: 0.7 })} />
-                    {!bk[field] ? (
-                      <button onClick={() => inputRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.2)", borderRadius: 10, padding: "14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontFamily: "'Inter',sans-serif", color: T.textMid, fontWeight: 600, fontSize: 13 }}>
-                        {Icon.cam(T.accent, 18)} {fr ? "Prendre ou choisir une photo" : "Take or choose a photo"}
-                      </button>
-                    ) : (
-                      <div style={{ position: "relative", borderRadius: 10, overflow: "hidden" }}>
-                        <img src={bk[field]} alt="" style={{ width: "100%", maxHeight: 140, objectFit: "cover" }} />
-                        <button onClick={() => updateMission(bk.id, { [field]: null })} aria-label={fr ? "Retirer la photo" : "Remove photo"} style={{ position: "absolute", top: 6, right: 6, background: "rgba(0,0,0,.6)", color: "#fff", border: "none", borderRadius: "50%", width: 26, height: 26, fontSize: 12, cursor: "pointer" }}>✕</button>
-                      </div>
-                    )}
-                  </div>
-                );
-                return (
-                  <>
-                    <div className="lk-card" style={{ padding: "14px", marginBottom: 12 }}>
-                      <div style={{ fontWeight: 800, fontSize: 16, color: T.textHi }}>{pLabel(pr, lang) || bk.probleme}</div>
-                      <div style={{ color: T.textMid, fontSize: 12, marginTop: 2 }}>{bk.clientNom} · {bk.adresse}</div>
-                      {/* Frise d'avancement — la même que celle vue par le client */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 14 }}>
-                        {steps.map((st, i) => (
-                          <div key={st.id} style={{ flex: 1, textAlign: "center" }}>
-                            <div style={{ height: 4, borderRadius: 2, background: i <= cur ? T.success : "rgba(0,0,0,.08)", marginBottom: 5 }} />
-                            <span style={{ fontSize: 10.5, fontWeight: 700, color: i <= cur ? T.success : T.textLo }}>{st.l}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {bk.statut === "en_route" && <div style={{ marginTop: 10, fontSize: 11.5, color: "#2563eb", fontWeight: 600 }}>📡 {fr ? "Votre position est partagée avec le client pendant le trajet." : "Your location is shared with the client during the trip."}</div>}
-                    </div>
-                    {bk.statut === "assignée" && <button onClick={() => departMission(bk)} className="lk-btn" style={{ marginBottom: 10 }}>🚗 {fr ? "Je pars chez le client" : "I'm leaving now"}</button>}
-                    {bk.statut === "en_route" && <button onClick={() => arriveMission(bk)} className="lk-btn" style={{ marginBottom: 10 }}>📍 {fr ? "Je suis arrivé" : "I've arrived"}</button>}
-                    {bk.statut === "en_cours" && (
-                      <>
-                        {photoSlot("photoAvant", fr ? "Photo avant intervention (obligatoire)" : "Photo before work (required)", photoAvantRef, true)}
-                        {photoSlot("photoApres", tr.photoApres, photoApresRef)}
-                        {photoSlot("photoDevis", fr ? "Devis signé par le client" : "Quote signed by the client", photoDevisRef)}
-                        <div className="lk-card" style={{ padding: "12px 14px", marginBottom: 10 }}>
-                          <div style={{ color: T.textMid, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{fr ? "Coût du matériel (facultatif)" : "Material cost (optional)"}</div>
-                          <input className="lk-input" type="number" inputMode="decimal" defaultValue={bk.matCost || ""} onBlur={e => updateMission(bk.id, { matCost: parseFloat(e.target.value) || 0 })} placeholder={fr ? "Montant matériel (€)" : "Material amount (€)"} style={{ marginBottom: 8 }} />
-                          <input ref={matInvoiceRef} type="file" accept="image/*" style={{ display: "none" }} onChange={savePhoto("matInvoicePhoto", { maxSize: 1200, quality: 0.7 })} />
-                          {!bk.matInvoicePhoto ? (
-                            <button onClick={() => matInvoiceRef.current?.click()} style={{ width: "100%", background: "rgba(0,0,0,.02)", border: "1.5px dashed rgba(28,28,28,.15)", borderRadius: 10, padding: "10px", cursor: "pointer", fontFamily: "'Inter',sans-serif", fontSize: 12, color: T.textMid, fontWeight: 600 }}>{fr ? "Ajouter la facture du matériel" : "Add material invoice"}</button>
-                          ) : (
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><img src={bk.matInvoicePhoto} alt="" style={{ width: 54, height: 54, objectFit: "cover", borderRadius: 8 }} /><span style={{ color: T.success, fontWeight: 600, fontSize: 12 }}>{Icon.check(T.success, 12)} {fr ? "Facture ajoutée" : "Invoice added"}</span></div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                      <button onClick={() => openItineraire(bk)} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px", color: "#2563eb" }}>{Icon.pin("#2563eb", 15)} GPS</button>
-                      {tel && <button onClick={() => callPhone(tel)} className="lk-ghost" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "12px" }}>{Icon.phone(T.success, 15)} {tr.callClient}</button>}
-                      {bk.statut === "en_cours" && (
-                        <button disabled={!bk.photoAvant} onClick={() => setClotureModal(true)} style={{ flex: 2, background: "linear-gradient(135deg,#2aaf77,#1d8f5f)", border: "none", borderRadius: 12, padding: "12px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: bk.photoAvant ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: "'Inter',sans-serif", opacity: bk.photoAvant ? 1 : .45 }}>
-                          {Icon.check("#fff", 15)} {tr.closeAndInvoice}
-                        </button>
-                      )}
-                    </div>
-                    {bk.statut === "en_cours" && !bk.photoAvant && <div style={{ fontSize: 11, color: T.textLo, textAlign: "center", marginTop: 8 }}>{fr ? "Ajoutez la photo « avant » pour pouvoir clôturer." : "Add the \"before\" photo to be able to close."}</div>}
-                    {bk.statut === "en_cours" && !bk.photoAvant && (
-                      <button onClick={() => clientAbsent(bk)} className="lk-ghost" style={{ width: "100%", marginTop: 12, fontSize: 12.5, color: T.textMid }}>🚪 {fr ? "Client absent ?" : "Client not there?"}</button>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-          {view === "bons" && (hasPaymentBlock ? (
-            <div style={{ padding: "14px" }}>
-              <div style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 14, padding: "20px 18px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                {Icon.warning(T.danger, 22)}
-                <div>
-                  <div style={{ color: T.danger, fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{tr.paymentBlockTitle}</div>
-                  <div style={{ color: T.danger, fontSize: 13, opacity: .8, lineHeight: 1.5 }}>{tr.paymentBlockMsg}</div>
-                </div>
-              </div>
-            </div>
-          ) : !approved ? (
-            <div style={{ padding: "14px" }}><PendingApprovalCard account={account} setAccounts={setAccounts} lang={lang} /></div>
-          ) : needsConnect ? (
-            <div style={{ padding: "14px" }}>
-              <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi, marginBottom: 6 }}>💶 {fr ? "Activez vos virements pour prendre des bons" : "Enable payouts to take jobs"}</div>
-              <StripeConnectCard lang={lang} account={account} />
-            </div>
-          ) : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} autoOpenPost={autoOpenPostBon} onAutoOpenHandled={() => setAutoOpenPostBon(false)} />)}
-          {view === "chat" && <div style={{ height: "calc(100vh - 230px)", minHeight: 380, display: "flex", flexDirection: "column" }}><ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} lang={lang} /></div>}
-          {view === "auto" && <AutoEntrepriseTab account={account} setAccounts={setAccounts} bookings={myM} artisanId={account.artisanId} lang={lang} />}
-          {view === "factu" && <FactuElecTab lang={lang} />}
-          {view === "profil" && <ProProfileTab account={account} setAccounts={setAccounts} accounts={accounts} bookings={myM} lang={lang} openLegal={openLegal} />}
-          {view === "marketplace" && <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />}
-          {view === "carte" && <ProLiveMap account={account} bookings={myM} bons={approved ? visibleFor(account, bons) : []} priorityOrder={priorityOrder} lang={lang}
-            onSelect={t => {
-              if (t.type === "mission") {
-                const b = bookings.find(x => x.id === t.id);
-                if (b) { setActiveMission(b); setTab(b.statut === "en_cours" ? "active" : "missions"); }
-              } else {
-                setTab("bons");
-              }
-            }} />}
-          {view === "calendar" && <CalendarScreen bookings={myM} artisanId={account.artisanId} lang={lang} />}
-          {view === "stats" && <div style={{ overflowY: "auto" }}><EarningsChart bookings={myM} artisanId={account.artisanId} apports={visibleFor(account, bookings).filter(b => b.postedBy === account.id && b.statut === "terminée" && posterShare(b) > 0)} lang={lang} /></div>}
-          {view === "history" && (() => {
-            const months = [...new Set(done.map(b => (b.createdAt || "").slice(0, 7)))].sort().reverse();
-            const shown = histMonth === "all" ? done : done.filter(b => (b.createdAt || "").slice(0, 7) === histMonth);
-            const monthLabel = m => new Date(m + "-02").toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { month: "long", year: "numeric" });
-            return (
-            <div style={{ padding: "14px" }}>
-              <button onClick={() => setMonthlyModal(true)} style={{ width: "100%", background: T.grad, border: "none", borderRadius: 12, padding: "12px 16px", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 12, fontFamily: "'Inter',sans-serif" }}>
-                {Icon.file("#fff", 15)} {tr.downloadMonthlyReport}
-              </button>
-              {/* Filtre par mois */}
-              {months.length > 1 && (
-                <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 14, WebkitOverflowScrolling: "touch" }}>
-                  <button onClick={() => setHistMonth("all")} style={{ flexShrink: 0, background: histMonth === "all" ? T.grad : "#fff", color: histMonth === "all" ? "#fff" : T.textMid, border: histMonth === "all" ? "none" : `1px solid ${T.border}`, borderRadius: 16, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{lang === "en" ? "All" : "Tout"}</button>
-                  {months.map(m => (
-                    <button key={m} onClick={() => setHistMonth(m)} style={{ flexShrink: 0, background: histMonth === m ? T.grad : "#fff", color: histMonth === m ? "#fff" : T.textMid, border: histMonth === m ? "none" : `1px solid ${T.border}`, borderRadius: 16, padding: "6px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif", textTransform: "capitalize" }}>{monthLabel(m)}</button>
-                  ))}
-                </div>
-              )}
-              {shown.length === 0 && <div style={{ textAlign: "center", padding: "52px 20px", color: T.textLo, fontSize: 14 }}>{tr.noCompletedMission}</div>}
-              {shown.map(b => {
-                const isPaid = b.statutPaiement === "payé";
-                const pr = PROBLEMES.find(p => p.id === b.probleme);
-                return (
-                  <HistoryCard key={b.id} b={b} isPaid={isPaid} pr={pr} tr={tr} setBookings={setBookings} lang={lang} />
-                );
-              })}
-            </div>
-            );
-          })()}
+          <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 14 }}>
+            {b.statut === "assignée" && <button onClick={() => refuseMission(b)} style={{ background: "none", border: "none", color: T.danger, fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: 8 }}>{fr ? "Refuser la mission" : "Decline the job"}</button>}
+            {b.statut === "en_cours" && !b.photoAvant && <button onClick={() => clientAbsent(b)} style={{ background: "none", border: "none", color: T.textMid, fontSize: 12.5, fontWeight: 700, cursor: "pointer", padding: 8 }}>🚪 {fr ? "Client absent ?" : "Client not there?"}</button>}
+          </div>
         </div>
       </div>
-      {/* Barre d'accès rapide mobile — SVG propres, fixée en bas de page */}
-      {!isDesktop && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,.06)" }}>
-          {[
-            { id: "accueil", ic: Icon.home, l: lang === "en" ? "Home" : "Accueil" },
-            { id: "carte", ic: Icon.map, l: lang === "en" ? "Map" : "Carte" },
-            { id: "calendar", ic: Icon.calendar, l: lang === "en" ? "Calendar" : "Calendrier" },
-            { id: "missions", ic: Icon.list, l: "Missions" },
-            { id: "history", ic: Icon.hist, l: lang === "en" ? "History" : "Historique" },
-          ].map(a => {
-            const on = tab === a.id;
+    );
+  };
+
+  /* ── Accueil : carte + bouton En ligne ── */
+  const homeScreen = (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100%" }}>
+      <div style={{ position: "relative" }}>
+        <MapCanvas center={pos} points={demandes.map(d => ({ lat: d.lat, lng: d.lng, color: d.urgence ? "#dc2626" : "#1e9e6b" }))} height={isDesktop ? 300 : 260} />
+        <div style={{ position: "absolute", top: 12, left: 0, right: 0, display: "flex", justifyContent: "center" }}>
+          <div style={{ background: "#fff", borderRadius: 24, padding: "8px 18px", boxShadow: "0 4px 18px rgba(0,0,0,.15)", textAlign: "center" }}>
+            <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, textTransform: "uppercase", letterSpacing: .6 }}>{fr ? "Aujourd'hui" : "Today"}</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: T.textHi }}>{fmt(sumSince(dayStart))}</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ background: "#fff", borderRadius: "22px 22px 0 0", marginTop: -22, position: "relative", padding: "20px 16px 24px", boxShadow: "0 -6px 24px rgba(0,0,0,.08)", flex: 1 }}>
+        {!approved ? (
+          <ProChecklist account={account} setAccounts={setAccounts} stripeRequired={stripeRequired} lang={lang} />
+        ) : needsConnect ? (
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ fontWeight: 900, fontSize: 18, color: T.textHi, marginBottom: 6 }}>{fr ? "Activez vos virements" : "Enable payouts"}</div>
+            <div style={{ fontSize: 13, color: T.textMid, lineHeight: 1.5, marginBottom: 12 }}>{fr ? "Dernière étape : vos gains (85 %) sont versés automatiquement sur votre compte bancaire." : "Last step: your earnings (85%) are paid automatically to your bank account."}</div>
+            <StripeConnectCard lang={lang} account={account} compact />
+          </div>
+        ) : (
+          <>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 19, fontWeight: 900, color: T.textHi }}>{online ? (fr ? "Vous êtes en ligne" : "You're online") : (fr ? "Vous êtes hors ligne" : "You're offline")}</div>
+              <div style={{ fontSize: 13, color: T.textMid, marginTop: 4 }}>
+                {online ? (fr ? `Recherche de demandes dans un rayon de ${DEMANDE_RAYON_KM} km…` : `Looking for requests within ${DEMANDE_RAYON_KM} km…`) : (fr ? "Passez en ligne pour recevoir des demandes." : "Go online to receive requests.")}
+              </div>
+            </div>
+            <button onClick={() => setOnline(!online)} style={bigBtn({ background: online ? "#fff" : "linear-gradient(135deg,#1e9e6b,#15805a)", color: online ? T.danger : "#fff", border: online ? "1.5px solid rgba(220,38,38,.3)" : "none", boxShadow: online ? "none" : "0 8px 24px rgba(30,158,107,.35)" })}>
+              {online ? (fr ? "Passer hors ligne" : "Go offline") : (fr ? "PASSER EN LIGNE" : "GO ONLINE")}
+            </button>
+            {online && <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}><div style={{ width: 10, height: 10, borderRadius: "50%", background: T.success, animation: "pulse 1.4s infinite" }} /></div>}
+          </>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
+          <button onClick={() => setTab("gains")} className="lk-card" style={{ padding: "12px 14px", textAlign: "left", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ fontSize: 11, color: T.textLo, fontWeight: 700 }}>{fr ? "Cette semaine" : "This week"}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: T.success }}>{fmt(sumSince(weekStart))}</div>
+          </button>
+          <button onClick={() => setTab("gains")} className="lk-card" style={{ padding: "12px 14px", textAlign: "left", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ fontSize: 11, color: T.textLo, fontWeight: 700 }}>{fr ? "Missions aujourd'hui" : "Jobs today"}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: T.textHi }}>{countSince(dayStart)}</div>
+          </button>
+        </div>
+        {bonsDispo.length > 0 && canWork && (
+          <button onClick={() => { setTab("compte"); setSub("bons"); }} style={{ width: "100%", marginTop: 10, background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 14, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.textHi }}>🎯 {fr ? `${bonsDispo.length} bon(s) transmis par des artisans` : `${bonsDispo.length} job(s) shared by craftsmen`}</span>
+            {Icon.arrow(T.accent, 14)}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  /* ── Gains ── */
+  const gainsScreen = (
+    <div style={{ padding: 16 }}>
+      <div style={{ background: "#1c1c1c", borderRadius: 20, padding: "20px 18px", color: "#fff", marginBottom: 14 }}>
+        <div style={{ fontSize: 12, opacity: .7, fontWeight: 700 }}>{fr ? "Cette semaine" : "This week"}</div>
+        <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: "-1px" }}>{fmt(sumSince(weekStart))}</div>
+        <div style={{ display: "flex", gap: 18, marginTop: 10, fontSize: 12.5 }}>
+          <span><b>{fmt(sumSince(dayStart))}</b> <span style={{ opacity: .7 }}>{fr ? "aujourd'hui" : "today"}</span></span>
+          <span><b>{fmt(sumSince(monthStart))}</b> <span style={{ opacity: .7 }}>{fr ? "ce mois" : "this month"}</span></span>
+          <span><b>{countSince(weekStart)}</b> <span style={{ opacity: .7 }}>{fr ? "missions" : "jobs"}</span></span>
+        </div>
+      </div>
+      <div className="lk-card" style={{ padding: "14px 16px", marginBottom: 14 }}>
+        <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 4 }}>💶 {fr ? "Virements" : "Payouts"}</div>
+        <div style={{ fontSize: 12.5, color: T.textMid, lineHeight: 1.5 }}>
+          {account.stripeOnboarded ? (fr ? "Vos gains sont versés automatiquement sur votre compte bancaire après chaque mission." : "Your earnings are paid automatically to your bank account after each job.") : (fr ? "Activez les virements automatiques pour recevoir vos gains sans attendre." : "Enable automatic payouts to receive your earnings without waiting.")}
+        </div>
+        {!account.stripeOnboarded && <div style={{ marginTop: 10 }}><StripeConnectCard lang={lang} account={account} compact /></div>}
+        {aEncaisser.length > 0 && <div style={{ fontSize: 12.5, color: T.warn, fontWeight: 700, marginTop: 10 }}>{fr ? `${aEncaisser.length} mission(s) en attente de paiement du client` : `${aEncaisser.length} job(s) awaiting client payment`}</div>}
+      </div>
+      <button onClick={() => setMonthlyModal(true)} className="lk-ghost" style={{ width: "100%", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>{Icon.file(T.accent, 15)} {tr.downloadMonthlyReport}</button>
+      <EarningsChart bookings={myM} artisanId={account.artisanId} apports={visibleFor(account, bookings).filter(b => b.postedBy === account.id && b.statut === "terminée" && posterShare(b) > 0)} lang={lang} />
+      <div style={{ fontWeight: 800, fontSize: 15, color: T.textHi, margin: "18px 0 10px" }}>{fr ? "Dernières missions" : "Latest jobs"}</div>
+      {done.length === 0 && <div style={{ color: T.textLo, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{tr.noCompletedMission}</div>}
+      {done.slice().sort((a, b) => doneAt(b) - doneAt(a)).slice(0, 20).map(b => (
+        <HistoryCard key={b.id} b={b} isPaid={b.statutPaiement === "payé"} pr={PROBLEMES.find(p => p.id === b.probleme)} tr={tr} setBookings={setBookings} lang={lang} />
+      ))}
+    </div>
+  );
+
+  /* ── Compte : profil, dossier, et « Plus » ── */
+  const menuGroups = [
+    { t: fr ? "Mon activité" : "My activity", items: [
+      { id: "calendar", ic: Icon.calendar, l: fr ? "Missions à venir" : "Upcoming jobs" },
+      { id: "history", ic: Icon.hist, l: fr ? "Historique" : "History" },
+      { id: "bons", ic: Icon.percent, l: fr ? "Bons entre artisans" : "Jobs between craftsmen", n: bonsDispo.length },
+      { id: "marketplace", ic: Icon.card, l: "Marketplace" },
+      { id: "chat", ic: Icon.chat, l: fr ? "Chat des pros" : "Pros chat" },
+    ] },
+    { t: fr ? "Mon compte" : "My account", items: [
+      { id: "profil", ic: Icon.user, l: fr ? "Mon profil" : "My profile" },
+      { id: "dossier", ic: Icon.shield, l: fr ? "Mon dossier et documents" : "My file and documents" },
+      { id: "virements", ic: Icon.euro, l: fr ? "Virements" : "Payouts" },
+      { id: "auto", ic: Icon.chart, l: fr ? "Auto-entrepreneur" : "Self-employed" },
+      { id: "factu", ic: Icon.file, l: fr ? "Facturation électronique" : "E-invoicing" },
+    ] },
+  ];
+  const subTitles = Object.fromEntries(menuGroups.flatMap(g => g.items.map(i => [i.id, i.l])));
+  const subView = id => {
+    switch (id) {
+      case "calendar": return <CalendarScreen bookings={myM} artisanId={account.artisanId} lang={lang} />;
+      case "history": return <div style={{ padding: 14 }}>{done.length === 0 ? <div style={{ textAlign: "center", color: T.textLo, padding: 30 }}>{tr.noCompletedMission}</div> : done.slice().sort((a, b) => doneAt(b) - doneAt(a)).map(b => <HistoryCard key={b.id} b={b} isPaid={b.statutPaiement === "payé"} pr={PROBLEMES.find(p => p.id === b.probleme)} tr={tr} setBookings={setBookings} lang={lang} />)}</div>;
+      case "bons": return !canWork ? <div style={{ padding: 14 }}><ProChecklist account={account} setAccounts={setAccounts} stripeRequired={stripeRequired} lang={lang} /></div> : <BonsScreen account={account} bons={bons} setBons={setBons} bookings={bookings} setBookings={setBookings} lang={lang} priorityOrder={priorityOrder} />;
+      case "marketplace": return <ProMarketplace account={account} listings={listings} setListings={setListings} sales={sales} setSales={setSales} lang={lang} />;
+      case "chat": return <div style={{ height: "calc(100vh - 190px)", minHeight: 380, display: "flex", flexDirection: "column" }}><ChatRegional account={account} chatMessages={chatMessages} setChatMessages={setChatMessages} lang={lang} /></div>;
+      case "profil": return <ProProfileTab account={account} setAccounts={setAccounts} accounts={accounts} bookings={myM} lang={lang} openLegal={openLegal} />;
+      case "dossier": return <div style={{ padding: 14 }}><ProChecklist account={account} setAccounts={setAccounts} stripeRequired={stripeRequired} lang={lang} /></div>;
+      case "virements": return <div style={{ padding: 14 }}><StripeConnectCard lang={lang} account={account} /></div>;
+      case "auto": return <AutoEntrepriseTab account={account} setAccounts={setAccounts} bookings={myM} artisanId={account.artisanId} lang={lang} />;
+      case "factu": return <FactuElecTab lang={lang} />;
+      default: return null;
+    }
+  };
+  const compteScreen = (
+    <div style={{ padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+        <label style={{ position: "relative", cursor: "pointer" }} title={tr.uploadProfilePhoto}>
+          <input type="file" accept="image/*" style={{ display: "none" }} onChange={async e => { const data = await readImageInput(e, { maxSize: 400, quality: 0.75 }); if (data) setAccounts(p => p.map(a => a.id === account.id ? { ...a, photo: data } : a)); }} />
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            {account.photo ? <img src={account.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontWeight: 900, fontSize: 24, color: T.accent }}>{initial(account.nom)}</span>}
+          </div>
+          <span style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: "50%", background: "#1c1c1c", color: "#fff", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>📷</span>
+        </label>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 900, fontSize: 19, color: T.textHi }}>{account.nom}</div>
+          <div style={{ fontSize: 12.5, color: T.textMid }}>{artisan?.note ? `★ ${artisan.note} · ` : ""}{proMetiers(account).map(m => pLabel(METIERS.find(x => x.id === m), lang)).filter(Boolean).join(", ") || tr.artisanPro}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: approved ? T.success : T.warn, marginTop: 2 }}>{approved ? (fr ? "✓ Dossier validé" : "✓ File approved") : (fr ? "Dossier en cours" : "File in progress")}</div>
+        </div>
+      </div>
+      {menuGroups.map(g => (
+        <div key={g.t} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: T.textLo, textTransform: "uppercase", letterSpacing: .6, marginBottom: 6 }}>{g.t}</div>
+          <div className="lk-card" style={{ padding: "2px 0" }}>
+            {g.items.map((it, i) => (
+              <button key={it.id} onClick={() => setSub(it.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "none", border: "none", borderTop: i ? `1px solid ${T.border}` : "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "left" }}>
+                {it.ic(T.textMid, 18)}
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: T.textHi }}>{it.l}</span>
+                {it.n > 0 && <span style={{ background: T.danger, color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 800 }}>{it.n}</span>}
+                {Icon.arrow(T.textLo, 13)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="lk-card" style={{ padding: "2px 0", marginBottom: 16 }}>
+        <button onClick={() => setDarkMode(d => !d)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "none", border: "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "left" }}>
+          <span style={{ width: 18, textAlign: "center" }}>{darkMode ? "☀️" : "🌙"}</span><span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: T.textHi }}>{darkMode ? (fr ? "Mode clair" : "Light mode") : (fr ? "Mode sombre" : "Dark mode")}</span>
+        </button>
+        {setLang && <button onClick={() => setLang(lang === "fr" ? "en" : "fr")} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "none", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "left" }}>
+          <span style={{ width: 18, textAlign: "center" }}>🌐</span><span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: T.textHi }}>{fr ? "English" : "Français"}</span>
+        </button>}
+        <button onClick={onLogout} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "none", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "left" }}>
+          {Icon.sign(T.danger, 18)}<span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: T.danger }}>{tr.logout}</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  const tabs = [
+    { id: "accueil", ic: Icon.home, l: fr ? "Accueil" : "Home", n: active.length },
+    { id: "gains", ic: Icon.euro, l: fr ? "Gains" : "Earnings" },
+    { id: "compte", ic: Icon.user, l: fr ? "Compte" : "Account", n: bonsDispo.length },
+  ];
+  const content = tab === "accueil" ? (current ? missionScreen(current) : homeScreen)
+    : tab === "gains" ? gainsScreen
+    : sub ? (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px 0" }}>
+          <button onClick={() => setSub(null)} className="lk-ghost" style={{ padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.back(T.textHi, 13)} {fr ? "Compte" : "Account"}</button>
+          <span style={{ fontWeight: 800, fontSize: 16, color: T.textHi }}>{subTitles[sub]}</span>
+        </div>
+        {subView(sub)}
+      </div>
+    ) : compteScreen;
+  const incomingPr = incoming ? PROBLEMES.find(p => p.id === incoming.probleme) : null;
+  const incomingKm = incoming ? kmTo(incoming) : null;
+
+  return (
+    <div className={darkMode ? "lk-dark" : ""} style={{ height: "100vh", background: isDesktop ? "#ecebe7" : "#fff", fontFamily: "'Inter',sans-serif", display: "flex", justifyContent: "center" }}>
+      <style>{CSS}</style>
+      <div style={{ width: "100%", maxWidth: isDesktop ? 520 : undefined, height: "100vh", display: "flex", flexDirection: "column", background: "#fff", boxShadow: isDesktop ? "0 0 40px rgba(0,0,0,.08)" : "none", position: "relative" }}>
+        {/* En-tête */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${T.border}`, background: "#fff", zIndex: 2 }}>
+          <button onClick={() => { setTab("compte"); setSub(null); }} style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", padding: 0 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(28,28,28,.06)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              {account.photo ? <img src={account.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontWeight: 800, fontSize: 15, color: T.accent }}>{initial(account.nom)}</span>}
+            </div>
+            <span style={{ fontWeight: 800, fontSize: 14, color: T.textHi }}>{firstName(account.nom)}</span>
+          </button>
+          <LockrWordmark height={16} light={false} />
+          {canWork ? (
+            <button onClick={() => setOnline(!online)} aria-pressed={online} style={pill(online ? "rgba(30,158,107,.12)" : "rgba(0,0,0,.06)", online ? T.success : T.textMid)}>
+              ● {online ? (fr ? "En ligne" : "Online") : (fr ? "Hors ligne" : "Offline")}
+            </button>
+          ) : <span style={pill("rgba(217,119,6,.1)", T.warn)}>{fr ? "Dossier" : "File"}</span>}
+        </div>
+        {notice && <div role="status" style={{ background: notice.ok ? "rgba(30,158,107,.1)" : "rgba(217,119,6,.12)", color: notice.ok ? T.success : T.warn, fontSize: 13, fontWeight: 700, padding: "10px 16px", textAlign: "center" }}>{notice.msg}</div>}
+        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 72 }}>{content}</div>
+        {/* Barre du bas : 3 onglets */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", zIndex: 3 }}>
+          {tabs.map(t => {
+            const on = tab === t.id;
             return (
-              <button key={a.id} onClick={() => goView(a.id)} style={{ flex: 1, background: "none", border: "none", padding: "10px 2px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "'Inter',sans-serif", borderTop: `2.5px solid ${on ? T.accent : "transparent"}`, position: "relative" }}>
-                {a.ic(on ? T.accent : T.textLo, 19)}
-                {a.id === "accueil" && bonsDispoCount > 0 && (
-                  <span style={{ position: "absolute", top: 5, right: "50%", marginRight: -18, background: T.danger, color: "#fff", borderRadius: 9, minWidth: 16, height: 16, fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", border: "1.5px solid #fff" }}>{bonsDispoCount}</span>
-                )}
-                <span style={{ fontSize: 9, fontWeight: 700, color: on ? T.accent : T.textLo }}>{a.l}</span>
+              <button key={t.id} onClick={() => { setTab(t.id); if (t.id === "compte") setSub(null); }} style={{ flex: 1, background: "none", border: "none", padding: "10px 2px 9px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "'Inter',sans-serif", position: "relative" }}>
+                {t.ic(on ? "#1c1c1c" : T.textLo, 21)}
+                {t.n > 0 && <span style={{ position: "absolute", top: 5, left: "50%", marginLeft: 8, background: T.danger, color: "#fff", borderRadius: 9, minWidth: 16, height: 16, fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{t.n}</span>}
+                <span style={{ fontSize: 10.5, fontWeight: 800, color: on ? "#1c1c1c" : T.textLo }}>{t.l}</span>
               </button>
             );
           })}
         </div>
-      )}
-      {clotureModal && activeMission && <ClotureModal mission={activeMission} setBookings={setBookings} onConfirm={finishMission} onCancel={() => { setClotureModal(false); if (activeMission?.statut === "terminée") { setActiveMissionId(null); setTab("accueil"); } }} lang={lang} />}
+        {/* Demande entrante — plein écran, 30 s pour accepter */}
+        {incoming && !current && (
+          <div role="dialog" aria-label={fr ? "Nouvelle demande" : "New request"} style={{ position: "absolute", inset: 0, zIndex: 20, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "flex-end" }}>
+            <div style={{ background: "#fff", width: "100%", borderRadius: "24px 24px 0 0", padding: "22px 18px 26px", animation: "slideUp .25s ease" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <span style={{ ...pill(incoming.urgence ? "rgba(220,38,38,.1)" : "rgba(30,158,107,.1)", incoming.urgence ? T.danger : T.success) }}>{incoming.urgence ? (fr ? "URGENT" : "URGENT") : (fr ? "Nouvelle demande" : "New request")}</span>
+                <span style={{ width: 44, height: 44, borderRadius: "50%", border: `3px solid ${remaining <= 10 ? T.danger : "#1c1c1c"}`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 15, color: remaining <= 10 ? T.danger : "#1c1c1c" }}>{remaining}</span>
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: T.textHi }}>{pLabel(incomingPr, lang) || incoming.probleme}</div>
+              <div style={{ fontSize: 14, color: T.textMid, marginTop: 4 }}>📍 {maskAddress(incoming.adresse)}{incomingKm != null ? ` · ${incomingKm < 1 ? `${Math.round(incomingKm * 1000)} m` : `${incomingKm.toFixed(1)} km`} · ~${Math.max(3, Math.round(incomingKm / 25 * 60))} min` : ""}</div>
+              <div style={{ display: "flex", gap: 10, margin: "16px 0 18px" }}>
+                <div style={{ flex: 1, background: "rgba(0,0,0,.04)", borderRadius: 14, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: T.textLo, fontWeight: 700 }}>{fr ? "Prix client" : "Client price"}</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: T.textHi }}>{fmt(bookingTotal(incoming))}</div>
+                </div>
+                <div style={{ flex: 1, background: "rgba(30,158,107,.08)", borderRadius: 14, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: T.success, fontWeight: 700 }}>{fr ? "Pour vous" : "For you"}</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: T.success }}>{fmt(proShare(incoming))}</div>
+                </div>
+              </div>
+              {incoming.empreinte?.statut === "autorisée" && <div style={{ fontSize: 12, color: T.textMid, marginBottom: 12 }}>💳 {fr ? "Carte du client enregistrée" : "Client card registered"}</div>}
+              <button onClick={() => accept(incoming)} disabled={accepting} style={bigBtn({ background: "linear-gradient(135deg,#1e9e6b,#15805a)", boxShadow: "0 8px 24px rgba(30,158,107,.35)" })}>{accepting ? "…" : (fr ? "Accepter" : "Accept")}</button>
+              <button onClick={() => decline(incoming)} style={{ width: "100%", background: "none", border: "none", color: T.textMid, fontSize: 14, fontWeight: 700, cursor: "pointer", padding: 14, fontFamily: "'Inter',sans-serif" }}>{fr ? "Refuser" : "Decline"}</button>
+            </div>
+          </div>
+        )}
+      </div>
+      {closing && <ClotureModal mission={closing} setBookings={setBookings} onConfirm={(m, f) => updateMission(closing.id, { statut: "terminée", termineeLe: ts(), montantFinal: m, factureImg: f })} autoCapture onRate={n => updateMission(closing.id, { noteClient: n })} onCancel={() => { setClotureModal(false); if (closing.statut === "terminée") setActiveMissionId(null); }} lang={lang} />}
       {chatMission && <ChatIntervention booking={chatMission} account={account} interventionChats={interventionChats} setInterventionChats={setInterventionChats} otherNom={chatMission.clientNom} onClose={() => setChatMission(null)} lang={lang} />}
       {monthlyModal && <MonthlyReportModal bookings={myM} artisanId={account.artisanId} lang={lang} onClose={() => setMonthlyModal(false)} />}
-      {recapMission && <MissionRecapModal mission={recapMission} lang={lang} onClose={() => setRecapMission(null)} />}
-      {/* Écran de bienvenue — premier lancement uniquement */}
       {onboard && createPortal(
-        <div style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ background: "#fff", borderRadius: 22, padding: "32px 26px 26px", maxWidth: 380, width: "100%", textAlign: "center", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: "#fff", borderRadius: 22, padding: "30px 24px 22px", maxWidth: 380, width: "100%", textAlign: "center", fontFamily: "'Inter',sans-serif" }}>
             {[
-              { ic: Icon.percent, t: lang === "en" ? "Receive vouchers" : "Recevez des bons", d: lang === "en" ? "Interventions near you appear on your Home screen. Urgent ones ring and vibrate." : "Les interventions proches de vous arrivent sur votre Accueil. Les urgences sonnent et vibrent." },
-              { ic: Icon.tool, t: lang === "en" ? "Intervene" : "Intervenez", d: lang === "en" ? "Accept, call the client, GPS route, before/after photos — everything is guided." : "Acceptez, appelez le client, itinéraire GPS, photos avant/après — tout est guidé." },
-              { ic: Icon.euro, t: lang === "en" ? "Get paid automatically" : "Soyez payé automatiquement", d: lang === "en" ? "Your share is transferred directly to your bank account after each mission." : "Votre part est virée directement sur votre compte bancaire après chaque mission." },
+              { e: "🟢", t: fr ? "Passez en ligne" : "Go online", d: fr ? "Un bouton : vous recevez les demandes des clients autour de vous (25 km)." : "One button: you receive client requests around you (25 km)." },
+              { e: "⚡", t: fr ? "Acceptez en 30 secondes" : "Accept within 30 seconds", d: fr ? "La demande s'affiche avec le prix et votre part. Le premier qui accepte prend la mission." : "The request shows the price and your share. The first to accept gets the job." },
+              { e: "💶", t: fr ? "Soyez payé automatiquement" : "Get paid automatically", d: fr ? "À la fin, la carte du client est débitée et votre part vous est virée." : "At the end, the client's card is charged and your share is paid to you." },
             ].map((st, i) => i === onboardStep && (
               <div key={i}>
-                <div style={{ width: 74, height: 74, borderRadius: 22, background: "rgba(201,160,48,.1)", border: "1.5px solid rgba(201,160,48,.3)", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>{st.ic(T.accent, 32)}</div>
+                <div style={{ fontSize: 44, marginBottom: 12 }}>{st.e}</div>
                 <div style={{ fontWeight: 900, fontSize: 20, color: T.textHi, marginBottom: 8 }}>{st.t}</div>
-                <div style={{ fontSize: 13, color: T.textMid, lineHeight: 1.6, marginBottom: 22 }}>{st.d}</div>
+                <div style={{ fontSize: 13.5, color: T.textMid, lineHeight: 1.6, marginBottom: 20 }}>{st.d}</div>
               </div>
             ))}
-            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
-              {[0, 1, 2].map(i => <div key={i} style={{ width: i === onboardStep ? 22 : 7, height: 7, borderRadius: 4, background: i === onboardStep ? T.accent : "rgba(0,0,0,.12)", transition: "all .25s" }} />)}
-            </div>
-            <button onClick={() => {
-              if (onboardStep < 2) setOnboardStep(st => st + 1);
-              else { localStorage.setItem("lk_pro_onboarded", "1"); setOnboard(false); }
-            }} className="lk-btn" style={{ width: "100%" }}>
-              {onboardStep < 2 ? (lang === "en" ? "Next" : "Suivant") : (lang === "en" ? "Let's go!" : "C'est parti !")}
-            </button>
-            {onboardStep < 2 && (
-              <button onClick={() => { localStorage.setItem("lk_pro_onboarded", "1"); setOnboard(false); }} style={{ background: "none", border: "none", color: T.textLo, fontSize: 12, cursor: "pointer", marginTop: 12, fontFamily: "'Inter',sans-serif", padding: "12px 6px", minHeight: 44 }}>
-                {lang === "en" ? "Skip" : "Passer"}
-              </button>
-            )}
+            <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 18 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: i === onboardStep ? 22 : 7, height: 7, borderRadius: 4, background: i === onboardStep ? "#1c1c1c" : "rgba(0,0,0,.12)" }} />)}</div>
+            <button onClick={() => (onboardStep < 2 ? setOnboardStep(s => s + 1) : endOnboard())} style={bigBtn({ padding: "15px 20px", fontSize: 15 })}>{onboardStep < 2 ? (fr ? "Suivant" : "Next") : (fr ? "C'est parti !" : "Let's go!")}</button>
+            {onboardStep < 2 && <button onClick={endOnboard} style={{ background: "none", border: "none", color: T.textLo, fontSize: 12.5, cursor: "pointer", marginTop: 10, padding: 10, fontFamily: "'Inter',sans-serif" }}>{fr ? "Passer" : "Skip"}</button>}
           </div>
         </div>,
         document.body
@@ -6143,77 +5638,29 @@ function ProApp({ account, bookings, setBookings, accounts, setAccounts, bons, s
   );
 }
 
-/* Récap d'une mission terminée — ouvert depuis l'Accueil */
-function MissionRecapModal({ mission: b, lang = "fr", onClose }) {
-  const fr = lang !== "en";
-  const pr = PROBLEMES.find(p => p.id === b.probleme);
-  const isPaid = b.statutPaiement === "payé";
-  return createPortal(
-    <div style={{ position: "fixed", inset: 0, zIndex: 8500, background: "rgba(0,0,0,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={onClose}>
-      <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", padding: "22px 20px 30px", maxWidth: 480, width: "100%", maxHeight: "85vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 17, color: T.textHi }}>{pLabel(pr, lang)}</div>
-            <div style={{ color: T.textLo, fontSize: 12, marginTop: 2 }}>{b.clientNom} · {fmtDate(b.createdAt)}</div>
-          </div>
-          <button onClick={onClose} style={{ background: "rgba(0,0,0,.05)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", fontSize: 14, color: T.textMid, fontFamily: "'Inter',sans-serif" }}>✕</button>
-        </div>
-
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <div style={{ flex: 1, background: T.bg, borderRadius: 10, padding: "9px 12px", display: "flex", alignItems: "center", gap: 6 }}>{Icon.pin(T.textLo, 13)}<span style={{ color: T.textMid, fontSize: 12 }}>{b.adresse}</span></div>
-        </div>
-
-        <div style={{ background: "rgba(30,158,107,.05)", border: "1px solid rgba(30,158,107,.18)", borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ color: T.textMid, fontSize: 12 }}>{fr ? "Montant total" : "Total amount"}</span>
-            <span style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{fmt(b.montantFinal ?? b.montant)}</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: T.textMid, fontSize: 12 }}>{fr ? `Votre part (${pctLabel(b)})` : `Your share (${pctLabel(b)})`}</span>
-            <span style={{ color: T.success, fontWeight: 800, fontSize: 15 }}>{fmt(proShare(b))}</span>
-          </div>
-          <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(30,158,107,.15)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: T.textMid, fontSize: 12 }}>{fr ? "Statut paiement" : "Payment status"}</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: isPaid ? T.success : T.warn, background: isPaid ? "rgba(30,158,107,.1)" : "rgba(217,119,6,.1)", borderRadius: 7, padding: "3px 9px" }}>{isPaid ? (fr ? "Payé" : "Paid") : (fr ? "En attente" : "Pending")}</span>
-          </div>
-        </div>
-
-        {(b.photoAvant || b.photoApres) && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            {b.photoAvant && (
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, marginBottom: 4 }}>{fr ? "AVANT" : "BEFORE"}</div>
-                <img src={b.photoAvant} alt="avant" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 10 }} />
-              </div>
-            )}
-            {b.photoApres && (
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, marginBottom: 4 }}>{fr ? "APRÈS" : "AFTER"}</div>
-                <img src={b.photoApres} alt="après" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 10 }} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {b.factureImg && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 10.5, color: T.textLo, fontWeight: 700, marginBottom: 4 }}>{fr ? "FACTURE" : "INVOICE"}</div>
-            <img src={b.factureImg} alt="facture" style={{ width: "100%", maxHeight: 140, objectFit: "cover", borderRadius: 10 }} />
-          </div>
-        )}
-
-        <button onClick={onClose} className="lk-ghost" style={{ width: "100%" }}>{fr ? "Fermer" : "Close"}</button>
-      </div>
-    </div>,
-    document.body
-  );
+/* Signature sonore LOCKR : do-mi-sol-do aigu ×2 + note grave finale */
+function playLockrJingle() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const tone = (freq, start, dur, vol = 0.4) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq; o.type = "triangle";
+      g.gain.setValueAtTime(0, ctx.currentTime + start);
+      g.gain.linearRampToValueAtTime(vol, ctx.currentTime + start + 0.02);
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur + 0.05);
+    };
+    tone(523, 0, 0.11); tone(659, 0.12, 0.11); tone(784, 0.24, 0.11); tone(1046, 0.36, 0.22);
+    tone(523, 0.65, 0.11); tone(659, 0.77, 0.11); tone(784, 0.89, 0.11); tone(1046, 1.01, 0.22);
+    tone(392, 1.35, 0.35, 0.3);
+  } catch { /* audio indisponible */ }
 }
 
-/* ─── CLIENT APP ───
-   Parcours simplifié : 1) besoin  2) adresse + artisan  3) devis + carte (empreinte)
-   → suivi en direct (position réelle partagée par l'artisan) → facture. */
 const CLIENT_ST = {
   en_attente_paiement: { fr: "Carte à enregistrer", en: "Card required", c: T.warn },
+  recherche: { fr: "Recherche d'un artisan", en: "Finding a craftsman", c: "#2563eb" },
+  en_attente: { fr: "En attente", en: "Pending", c: T.warn },
   assignée: { fr: "Confirmée", en: "Confirmed", c: T.accent },
   en_route: { fr: "Artisan en route", en: "On the way", c: "#2563eb" },
   en_cours: { fr: "En cours", en: "In progress", c: "#2563eb" },
@@ -6246,6 +5693,9 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
   const [helpModal, setHelpModal] = useState(false);
   const [factureView, setFactureView] = useState(null);
   const [toast, setToast] = useState(null);
+  const [order, setOrder] = useState(null);        // problème choisi : feuille « Commander »
+  const [catMetier, setCatMetier] = useState(null); // catégorie ouverte (liste des problèmes)
+  const [editAdresse, setEditAdresse] = useState(false);
   const [darkMode, setDarkMode] = useState(() => { try { return localStorage.getItem("lk_dark") === "1"; } catch { return false; } });
   useEffect(() => { try { localStorage.setItem("lk_dark", darkMode ? "1" : "0"); } catch { /* ignore */ } }, [darkMode]);
   const artisanListRef = useRef(null);
@@ -6260,14 +5710,14 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
   const myBk = visibleFor(account, bookings).filter(b => b.clientId === account.id)
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   const myDemandes = visibleFor(account, bons).filter(b => b.clientId === account.id);
-  const liveBk = myBk.find(b => ["assignée", "en_route", "en_cours"].includes(b.statut));
+  const liveBk = myBk.find(b => ["recherche", "assignée", "en_route", "en_cours"].includes(b.statut));
 
   /* Artisans proposés (profils publics) : uniquement des pros VALIDÉS par
      LOCKR, non bannis, de la ville du client et du bon métier — et, quand le
      paiement en ligne est actif, ayant activé leurs virements Stripe. Les
      artisans de démonstration ne sont montrés qu'en démonstration. */
   const proOf = id => (id ? pros.find(p => (p.artisanId || p.id) === id) : undefined);
-  const artisanList = (() => {
+  const artisanBase = (() => {
     const region = (account.ville || "").trim().toLowerCase();
     const real = pros
       .filter(a => (a.dossierStatus || "approved") === "approved" && !a.banned && (demoMode || !isDemoAccount(a)) && (!stripeRequired || a.stripeReady))
@@ -6282,13 +5732,15 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
           lat: a.lat ?? demo?.lat, lng: a.lng ?? demo?.lng, metiers: proMetiers(a).length ? proMetiers(a) : (demo ? [demo.metier] : []),
         };
       });
-    return real.filter(a => !selProb || !a.metiers.length || a.metiers.includes(selProb.metier));
+    return real;
   })();
+  const artisanAllList = artisanBase;
+  const artisanList = artisanBase.filter(a => !selProb || !a.metiers.length || a.metiers.includes(selProb.metier));
   const artisanOf = b => {
     const acc = proOf(b?.artisanId);
     const demo = DEMO_ARTISANS.find(d => d.id === b?.artisanId);
     if (!acc && !demo) return b?.artisanNom ? { nom: b.artisanNom, tel: b.artisanTel || "", color: T.accent } : null;
-    return { nom: acc?.nom || demo?.nom || b?.artisanNom, tel: acc?.tel || b?.artisanTel || demo?.tel || "", color: demo?.color || T.accent, certif: demo?.certif || (fr ? "Pro vérifié LOCKR" : "LOCKR verified pro"), photo: acc?.photo || null };
+    return { nom: acc?.nom || demo?.nom || b?.artisanNom, tel: acc?.tel || b?.artisanTel || demo?.tel || "", color: demo?.color || T.accent, certif: demo?.certif || (fr ? "Pro vérifié LOCKR" : "LOCKR verified pro"), photo: acc?.photo || null, note: demo?.note || null };
   };
 
   // Adresse : saisie (obligatoire) ou position GPS convertie en adresse
@@ -6342,28 +5794,48 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
     setPayFor({ booking: b, kind: "empreinte" });
   };
 
-  /* Aucun artisan disponible : la demande est publiée comme un « bon »
-     visible par les artisans de la ville ET les entreprises partenaires. */
-  const publierDemande = async () => {
-    if (!selProb) return;
+  /* ─── COMMANDER (logique Uber) ───
+     Prix de la grille LOCKR, carte enregistrée (rien n'est débité), puis la
+     demande part aux artisans disponibles dans un rayon de 25 km : le premier
+     qui accepte prend la mission. */
+  const clientPos = account.lat && account.lng ? { lat: account.lat, lng: account.lng } : { lat: 48.8566, lng: 2.3522 };
+  const prosFor = metier => artisanAllList.filter(a => a.dispo && (!a.metiers.length || a.metiers.includes(metier)));
+  const etaFor = metier => {
+    const kms = prosFor(metier).filter(a => a.lat && a.lng).map(a => haversineKm(clientPos, { lat: a.lat, lng: a.lng }));
+    if (!kms.length) return null;
+    return Math.max(10, Math.round(Math.min(...kms) / 25 * 60) + 8);
+  };
+  const commander = async () => {
+    if (!order) return;
     setBusy(true);
     const ad = await checkAdresse();
     setBusy(false);
     if (!ad) return;
-    const bon = {
-      id: uid(), titre: `${pLabel(selProb, "fr")} — ${account.nom}`,
-      adresse: ad.adresse, probleme: selProb.id, metier: selProb.metier,
-      urgence: !!selProb.urgence, montantEstime: 90 + (selProb.urgence ? URGENCE_SUPPLEMENT : 0),
-      postedBy: "platform", postedByNom: "LOCKR", region: account.ville || "Paris",
-      ...(ad.lat != null ? { lat: ad.lat, lng: ad.lng } : {}),
-      createdAt: ts(), techPct: PCT_DEFAULT,
-      clientId: account.id, clientNom: account.nom, clientTel: account.tel || "", openPartner: true, ...(demoMode ? { isDemo: true } : {}),
+    const b = {
+      id: uid(), demande: true, clientId: account.id, clientNom: account.nom, clientTel: account.tel || "",
+      adresse: ad.adresse, probleme: order.id, metier: order.metier, urgence: !!order.urgence,
+      montant: prixDemande(order.metier, order.urgence), techPct: PCT_DEFAULT,
+      statut: "en_attente_paiement", createdAt: ts(), region: account.ville || "Paris", bonType: "uber",
+      ...(ad.lat != null ? { lat: ad.lat, lng: ad.lng, clientPos: [ad.lat, ad.lng] } : {}),
+      ...(demoMode ? { isDemo: true } : {}),
     };
-    setBons(p => [...p, bon]);
-    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
-    setSelProb(null); setSelArt(null); setScreen("home");
-    showToast(fr ? "Demande publiée : vous serez prévenu dès qu'un professionnel accepte." : "Request published: you'll be notified as soon as a professional accepts.");
+    b.participants = bookingParticipants(b);
+    setBookings(p => [...p, b]);
+    setOrder(null); setCatMetier(null);
+    setPayFor({ booking: b, kind: "empreinte" });
   };
+  // Démonstration : un artisan de démo accepte la demande au bout de quelques secondes
+  const pendingDemande = demoMode ? myBk.find(b => b.statut === "recherche") : null;
+  useEffect(() => {
+    if (!pendingDemande) return undefined;
+    const id = pendingDemande.id, metier = pendingDemande.metier;
+    const t = setTimeout(() => {
+      const a = prosFor(metier)[0];
+      if (!a) return;
+      setBookings(p => p.map(x => x.id === id && x.statut === "recherche" ? { ...x, statut: "assignée", artisanId: a.id, artisanAccountId: a.accountId, artisanNom: a.nom, artisanTel: a.tel || "", participants: [x.clientId, a.accountId], accepteLe: ts() } : x));
+    }, 9000);
+    return () => clearTimeout(t);
+  }, [pendingDemande?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cancelBooking = async b => {
     // Artisan déjà en route : annulation tardive, frais de déplacement
@@ -6462,10 +5934,10 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
         {b.fraisDeplacement > 0 && <div style={{ marginTop: 6, fontSize: 11, color: T.textMid }}>{FRAIS_TXT(b, lang)}{b.statutPaiement === "payé" ? (fr ? " — réglés ✓" : " — paid ✓") : ""}</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
           {b.statut === "en_attente_paiement" && btn(fr ? "Confirmer avec ma carte" : "Confirm with my card", () => setPayFor({ booking: b, kind: "empreinte" }), "main")}
-          {["assignée", "en_route", "en_cours"].includes(b.statut) && btn(fr ? "Suivre en direct" : "Live tracking", () => { setTrackingId(b.id); setScreen("tracking"); }, "main")}
+          {["recherche", "assignée", "en_route", "en_cours"].includes(b.statut) && btn(fr ? "Suivre en direct" : "Live tracking", () => { setTrackingId(b.id); setScreen("tracking"); }, "main")}
           {unpaid && !empreinteActive(b) && btn(b.statut === "terminée" ? (fr ? `Régler la facture (${fmt(reste)})` : `Pay invoice (${fmt(reste)})`) : (fr ? `Régler les frais (${fmt(reste)})` : `Pay the fee (${fmt(reste)})`), () => setPayFor({ booking: b, kind: "facture" }), "main")}
           {b.statut === "terminée" && b.factureImg && btn(fr ? "Voir la facture" : "View invoice", () => setFactureView(b))}
-          {["en_attente_paiement", "assignée"].includes(b.statut) && btn(tr.cancelBooking, () => cancelBooking(b), "danger")}
+          {["en_attente_paiement", "recherche", "assignée"].includes(b.statut) && btn(tr.cancelBooking, () => cancelBooking(b), "danger")}
           {b.statut === "en_route" && btn(fraisDep > 0 ? (fr ? `Annuler (${fmt(fraisDep)} de frais)` : `Cancel (${fmt(fraisDep)} fee)`) : tr.cancelBooking, () => cancelBooking(b), "danger")}
           {b.statut === "terminée" && !b.litige && btn(fr ? "Signaler un problème" : "Report a problem", () => { setLitigeModal(b); setLitigeText(""); })}
           {["terminée", "annulée", "annulée_client"].includes(b.statut) && btn(fr ? "↻ Refaire une demande" : "↻ Book again", () => rebook(b))}
@@ -6512,17 +5984,17 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
   const modals = (
     <>
       {toast && <div role="status" style={{ position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 9999, pointerEvents: "none", background: T.success, color: "#fff", borderRadius: 12, padding: "12px 18px", fontSize: 13, fontWeight: 700, maxWidth: "calc(100% - 24px)", boxShadow: "0 8px 24px rgba(0,0,0,.2)" }}>{toast}</div>}
-      {!isDesktop && screen === "home" && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,.06)" }}>
+      {["home", "activity"].includes(screen) && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300, background: "#fff", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "center", paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(0,0,0,.06)", maxWidth: isDesktop ? 560 : undefined, margin: "0 auto" }}>
           {[
-            { ic: Icon.home, l: fr ? "Accueil" : "Home", on: true, act: () => window.scrollTo({ top: 0, behavior: "smooth" }) },
-            { ic: Icon.list, l: fr ? "Interventions" : "Bookings", act: () => document.getElementById("lk-inter")?.scrollIntoView({ behavior: "smooth" }) },
+            { ic: Icon.home, l: fr ? "Accueil" : "Home", on: screen === "home", act: () => setScreen("home") },
+            { ic: Icon.list, l: fr ? "Activité" : "Activity", on: screen === "activity", act: () => setScreen("activity") },
             { ic: Icon.chat, l: fr ? "Aide" : "Help", act: () => setHelpModal(true) },
             { ic: Icon.user, l: fr ? "Profil" : "Profile", act: () => setProfileModal(true) },
           ].map((a, i) => (
             <button key={i} onClick={a.act} style={{ flex: 1, background: "none", border: "none", padding: "10px 2px 8px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, fontFamily: "'Inter',sans-serif" }}>
-              {a.ic(a.on ? T.accent : T.textLo, 19)}
-              <span style={{ fontSize: 9, fontWeight: 700, color: a.on ? T.accent : T.textLo }}>{a.l}</span>
+              {a.ic(a.on ? "#1c1c1c" : T.textLo, 20)}
+              <span style={{ fontSize: 10, fontWeight: 800, color: a.on ? "#1c1c1c" : T.textLo }}>{a.l}</span>
             </button>
           ))}
         </div>
@@ -6568,7 +6040,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
           }}
           onUnavailable={payFor.kind === "empreinte" ? () => {
             // Paiement en ligne indisponible : réservation confirmée sans garantie bancaire
-            setBookings(p => p.map(x => x.id === payFor.booking.id ? { ...x, statut: "assignée", garantie: "aucune" } : x));
+            setBookings(p => p.map(x => x.id === payFor.booking.id ? { ...x, statut: x.demande ? "recherche" : "assignée", garantie: "aucune" } : x));
             setPayFor(null); setTrackingId(payFor.booking.id); setScreen("tracking");
           } : null}
           onClose={() => setPayFor(null)}
@@ -6606,85 +6078,147 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
     </>
   );
 
-  /* ── Accueil ── */
-  if (screen === "home") return (
-    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", paddingBottom: isDesktop ? 0 : 66 }}>
-      <style>{CSS}</style>
-      {header(null)}
-      {liveBk && (
-        <div onClick={() => { setTrackingId(liveBk.id); setScreen("tracking"); }} style={{ margin: isDesktop ? "20px auto 0" : "14px 14px 0", maxWidth: isDesktop ? 1100 : undefined, background: "rgba(37,99,235,.06)", border: "1px solid rgba(37,99,235,.2)", borderRadius: 14, padding: "12px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2563eb", animation: "blink 1.2s infinite" }} />
-            <div>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 13 }}>{fr ? (CLIENT_ST[liveBk.statut]?.fr) : (CLIENT_ST[liveBk.statut]?.en)}</div>
-              <div style={{ color: T.textMid, fontSize: 12 }}>{artisanOf(liveBk)?.nom} · {tr.followLive}</div>
-            </div>
+  /* ── Feuille « Commander » (prix, adresse, délai) ── */
+  const orderSheet = order && createPortal(
+    <div onClick={() => setOrder(null)} style={{ position: "fixed", inset: 0, zIndex: 8000, background: "rgba(0,0,0,.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", width: "100%", maxWidth: 520, borderRadius: "24px 24px 0 0", padding: "20px 18px 26px", animation: "slideUp .25s ease", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ width: 40, height: 4, background: "rgba(0,0,0,.12)", borderRadius: 2, margin: "0 auto 16px" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(0,0,0,.05)", display: "flex", alignItems: "center", justifyContent: "center" }}>{(PROB_ICONS[order.id] || Icon.tool)("#1c1c1c", 22)}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: T.textHi }}>{pLabel(order, lang)}</div>
+            <div style={{ fontSize: 12.5, color: T.textMid }}>{pDesc(order, lang)}</div>
           </div>
-          {Icon.arrow("#2563eb", 14)}
         </div>
-      )}
-      <div style={{ padding: isDesktop ? "32px" : "18px 14px", maxWidth: isDesktop ? 1100 : undefined, margin: isDesktop ? "0 auto" : undefined, width: "100%" }}>
-        <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "1fr 380px", gap: 28 }}>
-          <div>
-            <button onClick={() => { setSelMetier("serrurier"); setSelProb(PROBLEMES.find(p => p.id === "ouverture") || null); setSelArt(null); setScreen("choose"); if (navigator.vibrate) navigator.vibrate(50); }}
-              style={{ width: "100%", background: "linear-gradient(135deg,#dc2626,#991b1b)", border: "none", borderRadius: 18, padding: "18px 20px", marginBottom: 14, cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 6px 20px rgba(220,38,38,.3)" }}>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ color: "#fff", fontWeight: 900, fontSize: 17 }}>🚨 {fr ? "Urgence — Dépannage immédiat" : "Emergency — immediate help"}</div>
-                <div style={{ color: "rgba(255,255,255,.85)", fontSize: 11.5, marginTop: 3 }}>{fr ? "Porte claquée ? Les artisans les plus proches, tout de suite." : "Locked out? The closest craftsmen, right now."}</div>
+        <div style={{ marginTop: 16 }}>
+          <label className="lk-label" htmlFor="lk-adresse">{fr ? "Adresse" : "Address"}</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input id="lk-adresse" className="lk-input" value={adresse} onChange={e => { setAdresse(e.target.value); setAdresseErr(""); }} placeholder="12 rue de la Paix, 75002 Paris" autoComplete="street-address" style={{ flex: 1 }} />
+            <button onClick={useMyPosition} disabled={locating} className="lk-ghost" aria-label={fr ? "Utiliser ma position" : "Use my location"} style={{ padding: "10px 12px" }}>{locating ? "…" : Icon.pin("#1c1c1c", 16)}</button>
+          </div>
+          {adresseErr && <div role="alert" style={{ color: T.danger, fontSize: 11.5, marginTop: 6 }}>{adresseErr}</div>}
+        </div>
+        {(() => {
+          const eta = etaFor(order.metier);
+          const n = prosFor(order.metier).length;
+          return (
+            <div style={{ display: "flex", gap: 10, margin: "16px 0 10px" }}>
+              <div style={{ flex: 1, background: "rgba(0,0,0,.04)", borderRadius: 14, padding: "12px 14px" }}>
+                <div style={{ fontSize: 11, color: T.textLo, fontWeight: 700 }}>{fr ? "Prix" : "Price"}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: T.textHi }}>{fmt(prixDemande(order.metier, order.urgence))}</div>
               </div>
-              <div style={{ background: "rgba(255,255,255,.2)", borderRadius: 12, padding: "10px 12px", flexShrink: 0 }}>{Icon.arrow("#fff", 18)}</div>
-            </button>
-            <div style={{ background: "linear-gradient(135deg,rgba(201,160,48,.08),rgba(168,120,32,.05))", border: "1.5px solid rgba(201,160,48,.2)", borderRadius: 20, padding: "22px 20px", marginBottom: 14 }}>
-              <div style={{ color: T.textMid, fontSize: 12, marginBottom: 8 }}>{tr.helloUser} {firstName(account.nom)} 👋</div>
-              <div style={{ color: T.textHi, fontSize: 22, fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>{tr.whatNeed}</div>
-              <button onClick={() => { setSelProb(null); setSelArt(null); setScreen("choose"); }} className="lk-btn">{tr.findCraftsman} {Icon.arrow("#fff", 14)}</button>
-            </div>
-            <div style={{ background: "#fff", border: "1.5px solid rgba(30,158,107,.25)", borderRadius: 18, padding: "16px 18px", marginBottom: 22 }}>
-              <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>{Icon.shield(T.success, 16)} {fr ? "Prix transparent — comment ça marche" : "Transparent pricing — how it works"}</div>
-              {(fr ? ["Le prix affiché est le tarif de départ de l'artisan.", "Sur place, l'artisan diagnostique et vous remet un devis FERME AVANT tout travaux.", "Rien ne démarre sans votre accord. Une fois accepté, le prix est bloqué — zéro surprise."]
-                : ["The displayed price is the craftsman's starting price.", "On site, the craftsman diagnoses and gives you a FIRM quote BEFORE any work.", "Nothing starts without your agreement. Once accepted, the price is locked — no surprises."]).map((t, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: i < 2 ? 8 : 0 }}>
-                  <div style={{ width: 20, height: 20, borderRadius: "50%", background: "rgba(30,158,107,.1)", color: T.success, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
-                  <span style={{ fontSize: 12, color: T.textMid, lineHeight: 1.55 }}>{t}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{tr.quickInterventions}</div>
-              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(5,1fr)" : "1fr 1fr", gap: 12 }}>
-                {METIERS.map(m => (
-                  <button key={m.id} onClick={() => { setSelMetier(m.id); setSelProb(null); setSelArt(null); setScreen("choose"); }} style={{ position: "relative", borderRadius: 18, overflow: "hidden", height: isDesktop ? 150 : 120, cursor: "pointer", border: "none", fontFamily: "'Inter',sans-serif", boxShadow: "0 4px 18px rgba(0,0,0,.18)" }}>
-                    <img src={m.photo} alt="" onError={e => { e.target.style.display = "none"; }} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(160deg, ${m.color}cc 0%, ${m.color}99 100%)`, mixBlendMode: "multiply" }} />
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,transparent 30%,rgba(0,0,0,.55) 100%)" }} />
-                    <div style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "14px 14px 12px", textAlign: "left" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>{m.icon("#fff", 18)}</div>
-                      <div>
-                        <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{pLabel(m, lang)}</div>
-                        <div style={{ color: "rgba(255,255,255,.75)", fontSize: 11, marginTop: 3 }}>{pDesc(m, lang)}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+              <div style={{ flex: 1, background: "rgba(37,99,235,.06)", borderRadius: 14, padding: "12px 14px" }}>
+                <div style={{ fontSize: 11, color: "#2563eb", fontWeight: 700 }}>{fr ? "Arrivée estimée" : "Estimated arrival"}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "#2563eb" }}>{eta ? `~${eta} min` : "—"}</div>
+                <div style={{ fontSize: 11, color: T.textMid }}>{n > 0 ? (fr ? `${n} artisan${n > 1 ? "s" : ""} disponible${n > 1 ? "s" : ""}` : `${n} available`) : (fr ? "Envoyée à tous les artisans" : "Sent to all craftsmen")}</div>
               </div>
             </div>
-            {!isDesktop && (
-              <>
-                <div id="lk-inter" style={{ color: T.textHi, fontWeight: 700, fontSize: 14, marginBottom: 12, textAlign: "left" }}>{tr.myInterventions}</div>
-                {interventionsBlock}
-              </>
-            )}
-          </div>
-          {isDesktop && (
-            <div>
-              <div style={{ color: T.textHi, fontWeight: 700, fontSize: 16, marginBottom: 14 }}>{tr.myInterventions}</div>
-              {interventionsBlock}
-            </div>
-          )}
+          );
+        })()}
+        <div style={{ fontSize: 12, color: T.textMid, lineHeight: 1.5, marginBottom: 14 }}>
+          💳 {fr ? "Rien n'est débité maintenant : le montant est réservé sur votre carte et prélevé à la fin. Si le travail est plus important, l'artisan vous propose un devis sur place." : "Nothing is charged now: the amount is held on your card and charged at the end. If more work is needed, the craftsman gives you a quote on site."}
+          {fraisDep > 0 && <> {fr ? `Annulation gratuite avant le départ de l'artisan, ensuite ${fmt(fraisDep)} de frais de déplacement.` : `Free cancellation before the craftsman leaves, then a ${fmt(fraisDep)} travel fee.`}</>}
         </div>
+        <button onClick={commander} disabled={busy} style={{ width: "100%", background: "#1c1c1c", color: "#fff", border: "none", borderRadius: 16, padding: "17px", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{busy ? "…" : `${fr ? "Commander" : "Order"} · ${fmt(prixDemande(order.metier, order.urgence))}`}</button>
+        <button onClick={() => { setSelMetier(order.metier); setSelProb(order); setSelArt(null); setOrder(null); setCatMetier(null); setScreen("choose"); }} style={{ width: "100%", background: "none", border: "none", color: T.textMid, fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 12, fontFamily: "'Inter',sans-serif" }}>{fr ? "Choisir mon artisan" : "Choose my craftsman"}</button>
       </div>
-      {modals}
+    </div>, document.body
+  );
+  /* Liste des problèmes d'une catégorie */
+  const catSheet = catMetier && createPortal(
+    <div onClick={() => setCatMetier(null)} style={{ position: "fixed", inset: 0, zIndex: 7900, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", width: "100%", maxWidth: 520, borderRadius: "24px 24px 0 0", padding: "18px 16px 22px", maxHeight: "80vh", overflowY: "auto", fontFamily: "'Inter',sans-serif" }}>
+        <div style={{ fontSize: 19, fontWeight: 900, color: T.textHi, marginBottom: 12 }}>{pLabel(METIERS.find(m => m.id === catMetier), lang)}</div>
+        {PROBLEMES.filter(p => p.metier === catMetier).map(p => (
+          <button key={p.id} onClick={() => setOrder(p)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 4px", background: "none", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: "'Inter',sans-serif", textAlign: "left" }}>
+            {(PROB_ICONS[p.id] || Icon.tool)(T.textMid, 18)}
+            <span style={{ flex: 1 }}>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: T.textHi }}>{pLabel(p, lang)}{p.urgence && <span className="lk-tag-urgent" style={{ marginLeft: 8 }}>URGENT</span>}</span>
+              <span style={{ display: "block", fontSize: 12, color: T.textLo }}>{pDesc(p, lang)}</span>
+            </span>
+            <span style={{ fontWeight: 800, fontSize: 14, color: T.textHi }}>{fmt(prixDemande(p.metier, p.urgence))}</span>
+          </button>
+        ))}
+      </div>
+    </div>, document.body
+  );
+  const clientShell = (children, back = null) => (
+    <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: isDesktop ? "#ecebe7" : "#fff", fontFamily: "'Inter',sans-serif" }}>
+      <style>{CSS}</style>
+      <div style={{ maxWidth: isDesktop ? 560 : undefined, margin: "0 auto", minHeight: "100vh", background: "#fff", boxShadow: isDesktop ? "0 0 40px rgba(0,0,0,.08)" : "none", paddingBottom: 76 }}>
+        {header(back)}
+        {children}
+      </div>
+      {modals}{orderSheet}{catSheet}
     </div>
+  );
+
+  /* ── Accueil : « Quel est votre problème ? » ── */
+  if (screen === "home") return clientShell(
+    <>
+      {liveBk && (
+        <button onClick={() => { setTrackingId(liveBk.id); setScreen("tracking"); }} style={{ display: "flex", width: "calc(100% - 28px)", margin: "14px 14px 0", background: "#1c1c1c", border: "none", borderRadius: 16, padding: "14px 16px", cursor: "pointer", justifyContent: "space-between", alignItems: "center", fontFamily: "'Inter',sans-serif" }}>
+          <span style={{ display: "flex", gap: 10, alignItems: "center", textAlign: "left" }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#4ade80", animation: "blink 1.2s infinite" }} />
+            <span>
+              <span style={{ display: "block", color: "#fff", fontWeight: 800, fontSize: 14 }}>{fr ? CLIENT_ST[liveBk.statut]?.fr : CLIENT_ST[liveBk.statut]?.en}</span>
+              <span style={{ display: "block", color: "rgba(255,255,255,.7)", fontSize: 12 }}>{liveBk.statut === "recherche" ? pLabel(PROBLEMES.find(p => p.id === liveBk.probleme), lang) : `${artisanOf(liveBk)?.nom || ""} · ${tr.followLive}`}</span>
+            </span>
+          </span>
+          {Icon.arrow("#fff", 15)}
+        </button>
+      )}
+      <div style={{ padding: "18px 16px 8px" }}>
+        <div style={{ color: T.textMid, fontSize: 13 }}>{tr.helloUser} {firstName(account.nom)} 👋</div>
+        <div style={{ color: T.textHi, fontSize: 28, fontWeight: 900, lineHeight: 1.15, margin: "4px 0 12px", letterSpacing: "-.5px" }}>{fr ? "Quel est votre problème ?" : "What's the problem?"}</div>
+        {editAdresse ? (
+          <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+            <input className="lk-input" value={adresse} autoFocus onChange={e => setAdresse(e.target.value)} onBlur={() => setEditAdresse(false)} placeholder="12 rue de la Paix, 75002 Paris" aria-label={fr ? "Adresse" : "Address"} />
+          </div>
+        ) : (
+          <button onClick={() => setEditAdresse(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,.05)", border: "none", borderRadius: 24, padding: "10px 14px", cursor: "pointer", fontFamily: "'Inter',sans-serif", maxWidth: "100%" }}>
+            {Icon.pin("#1c1c1c", 15)}
+            <span style={{ fontSize: 13, fontWeight: 700, color: T.textHi, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{adresse || (fr ? "Ajouter votre adresse" : "Add your address")}</span>
+          </button>
+        )}
+      </div>
+      <div style={{ padding: "8px 16px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {["ouverture", "fuite_eau", "panne_elec", "chaudiere"].map(id => PROBLEMES.find(p => p.id === id)).filter(Boolean).map(p => {
+          const m = METIERS.find(x => x.id === p.metier);
+          const eta = etaFor(p.metier);
+          return (
+            <button key={p.id} onClick={() => setOrder(p)} style={{ background: "#f6f5f1", border: "none", borderRadius: 18, padding: "16px 14px", cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", minHeight: 128, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <span style={{ width: 40, height: 40, borderRadius: 12, background: `${m?.color || "#1c1c1c"}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>{(PROB_ICONS[p.id] || Icon.tool)(m?.color || "#1c1c1c", 20)}</span>
+              <span>
+                <span style={{ display: "block", fontSize: 15, fontWeight: 900, color: T.textHi }}>{pLabel(p, lang)}</span>
+                <span style={{ display: "block", fontSize: 12, color: T.textMid, marginTop: 2 }}>{fmt(prixDemande(p.metier, p.urgence))}{eta ? ` · ~${eta} min` : ""}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ padding: "20px 16px 6px", fontSize: 15, fontWeight: 900, color: T.textHi }}>{fr ? "Tous les services" : "All services"}</div>
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", padding: "4px 16px 10px" }}>
+        {METIERS.map(m => (
+          <button key={m.id} onClick={() => setCatMetier(m.id)} style={{ flexShrink: 0, width: 92, background: "none", border: "none", cursor: "pointer", fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 64, height: 64, borderRadius: 18, background: "#f6f5f1", display: "flex", alignItems: "center", justifyContent: "center" }}>{m.icon(m.color, 26)}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.textHi, textAlign: "center" }}>{pLabel(m, lang)}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ margin: "12px 16px 0", background: "#f6f5f1", borderRadius: 16, padding: "14px 16px", display: "grid", gap: 8 }}>
+        {(fr ? ["✓ Artisans vérifiés par LOCKR (SIRET, assurance)", "✓ Prix affiché avant de commander", "✓ Payé à la fin, par carte, dans l'application"] : ["✓ Craftsmen verified by LOCKR (SIRET, insurance)", "✓ Price shown before you order", "✓ Paid at the end, by card, in the app"]).map(t => <div key={t} style={{ fontSize: 12.5, color: T.textMid, fontWeight: 600 }}>{t}</div>)}
+      </div>
+    </>
+  );
+
+  /* ── Activité : mes interventions ── */
+  if (screen === "activity") return clientShell(
+    <div style={{ padding: "16px" }}>
+      <div style={{ fontSize: 22, fontWeight: 900, color: T.textHi, marginBottom: 12 }}>{fr ? "Activité" : "Activity"}</div>
+      {interventionsBlock}
+    </div>,
+    () => setScreen("home")
   );
 
   /* ── Nouvelle demande ── */
@@ -6758,8 +6292,8 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
                   {dispoList.length === 0 && (
                     <div style={{ background: "rgba(217,119,6,.06)", border: "1px solid rgba(217,119,6,.2)", borderRadius: 16, padding: "16px 18px", marginBottom: 16 }}>
                       <div style={{ color: T.warn, fontWeight: 700, fontSize: 13, marginBottom: 6 }}>⏳ {fr ? "Aucun artisan disponible immédiatement" : "No craftsman available right now"}</div>
-                      <div style={{ color: T.textMid, fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{fr ? "Publiez votre demande : elle est envoyée à tous les artisans et entreprises partenaires de votre ville. Vous êtes prévenu dès qu'un professionnel accepte." : "Publish your request: it is sent to every craftsman and partner company in your city. You are notified as soon as one accepts."}</div>
-                      <button onClick={publierDemande} disabled={busy} className="lk-btn">{busy ? "…" : <>{fr ? "Publier ma demande" : "Publish my request"} {Icon.arrow("#fff", 14)}</>}</button>
+                      <div style={{ color: T.textMid, fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>{fr ? "Commandez : votre demande est envoyée à tous les artisans et entreprises de votre ville, le premier disponible l'accepte." : "Order: your request is sent to every craftsman and company in your city, the first available one accepts it."}</div>
+                      <button onClick={() => setOrder(selProb)} disabled={busy} className="lk-btn">{fr ? "Commander" : "Order"} {Icon.arrow("#fff", 14)}</button>
                     </div>
                   )}
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -6804,7 +6338,7 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
             </div>
           </div>
         )}
-        {modals}
+        {modals}{orderSheet}
       </div>
     );
   }
@@ -6814,68 +6348,83 @@ function ClientApp({ account, bookings, setBookings, onLogout, pros = [], stripe
     const bk = myBk.find(b => b.id === trackingId) || liveBk;
     const art = artisanOf(bk);
     const steps = [
-      { id: "assignée", l: fr ? "Confirmée" : "Confirmed" },
+      ...(bk?.demande ? [{ id: "recherche", l: fr ? "Recherche" : "Searching" }] : []),
+      { id: "assignée", l: fr ? "Acceptée" : "Accepted" },
       { id: "en_route", l: fr ? "En route" : "On the way" },
       { id: "en_cours", l: fr ? "Sur place" : "On site" },
       { id: "terminée", l: fr ? "Terminée" : "Done" },
     ];
-    const cur = bk ? steps.findIndex(s => s.id === bk.statut) : -1;
-    return (
-      <div className={darkMode ? "lk-dark" : ""} style={{ minHeight: "100vh", background: T.bg, fontFamily: "'Inter',sans-serif", display: "flex", flexDirection: "column" }}>
-        <style>{CSS}</style>
-        {header(() => setScreen("home"))}
-        {!bk ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: T.textLo }}>{fr ? "Aucune intervention en cours." : "No ongoing booking."}</div>
-        ) : (
-          <div style={{ display: isDesktop ? "grid" : "block", gridTemplateColumns: "55% 45%", flex: 1 }}>
-            <div>
-              {["assignée", "en_route", "en_cours"].includes(bk.statut) ? (
-                <LiveMap clientPos={bk.clientPos || (bk.lat ? [bk.lat, bk.lng] : null)} artisanPos={bk.artisanPos || null} artisanColor={art?.color || T.accent} artisan={art} statut={bk.statut} lang={lang} />
-              ) : (
-                <div style={{ padding: "40px 20px", textAlign: "center", color: T.textMid }}>{bk.statut === "terminée" ? (fr ? "Intervention terminée ✓" : "Intervention completed ✓") : (fr ? (CLIENT_ST[bk.statut]?.fr || bk.statut) : (CLIENT_ST[bk.statut]?.en || bk.statut))}</div>
-              )}
-            </div>
-            <div style={{ padding: "16px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {bk.garantie === "aucune" && !bk.empreinte && (
-                <div style={{ background: "rgba(217,119,6,.07)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.warn, fontWeight: 600 }}>{fr ? "Carte non enregistrée : vous réglerez l'intervention à la fin, par carte." : "Card not registered: you will pay by card at the end of the intervention."}</div>
-              )}
-              {bk.empreinte && <div style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.2)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.textMid, fontWeight: 600 }}>{EMPREINTE_TXT(bk, lang)}</div>}
-              <div className="lk-card" style={{ padding: "14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  {steps.map((st, i) => (
-                    <div key={st.id} style={{ flex: 1, textAlign: "center" }}>
-                      <div style={{ height: 4, borderRadius: 2, background: i <= cur ? T.success : "rgba(0,0,0,.08)", marginBottom: 5 }} />
-                      <span style={{ fontSize: 10.5, fontWeight: 700, color: i <= cur ? T.success : T.textLo }}>{st.l}</span>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: 12, fontSize: 12.5, color: T.textMid }}>
-                  <b style={{ color: T.textHi }}>{pLabel(PROBLEMES.find(p => p.id === bk.probleme), lang)}</b> · {bk.adresse}
-                </div>
-              </div>
-              {art && (
-                <div className="lk-card" style={{ padding: "13px 14px", display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 12, background: `${art.color}15`, border: `1px solid ${art.color}30`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                    {art.photo ? <img src={art.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: art.color, fontWeight: 800, fontSize: 20 }}>{initial(art.nom)}</span>}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: T.textHi, fontWeight: 700, fontSize: 14 }}>{art.nom}</div>
-                    <div style={{ color: T.textLo, fontSize: 12 }}>{art.certif}</div>
-                  </div>
-                  {art.tel && <button onClick={() => callPhone(art.tel)} aria-label={fr ? "Appeler" : "Call"} style={{ background: "rgba(62,207,142,.08)", border: "1px solid rgba(62,207,142,.2)", borderRadius: 10, padding: "10px 14px", cursor: "pointer" }}>{Icon.phone(T.success, 15)}</button>}
-                  <button onClick={() => setShowChat(bk)} style={{ background: "rgba(201,160,48,.08)", border: "1px solid rgba(201,160,48,.25)", borderRadius: 10, padding: "10px 14px", color: T.gold, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{Icon.chat(T.gold, 15)} Chat</button>
-                </div>
-              )}
-              {bk.statut === "terminée" && bk.statutPaiement !== "payé" && resteAPayer(bk) > 0 && (
-                <button onClick={() => setPayFor({ booking: bk, kind: "facture" })} className="lk-btn">{Icon.card("#fff", 16)} {tr.payInvoiceBtn} — {fmt(resteAPayer(bk))}</button>
-              )}
-              {["assignée", "en_route"].includes(bk.statut) && <button onClick={() => cancelBooking(bk)} className="lk-ghost" style={{ color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{bk.statut === "en_route" && fraisDep > 0 ? (fr ? `Annuler (${fmt(fraisDep)} de frais de déplacement)` : `Cancel (${fmt(fraisDep)} travel fee)`) : tr.cancelBooking}</button>}
+    const cur = bk ? steps.findIndex(s2 => s2.id === bk.statut) : -1;
+    const searching = bk?.statut === "recherche";
+    const nPros = bk ? prosFor(bk.metier).length : 0;
+    return clientShell(!bk ? (
+      <div style={{ textAlign: "center", padding: "60px 20px", color: T.textLo }}>{fr ? "Aucune intervention en cours." : "No ongoing booking."}</div>
+    ) : (
+      <div>
+        {searching ? (
+          <div style={{ position: "relative" }}>
+            <MapCanvas center={bk.lat ? { lat: bk.lat, lng: bk.lng } : clientPos} height={260} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              {[0, 1, 2].map(i => <span key={i} style={{ position: "absolute", width: 70, height: 70, borderRadius: "50%", border: "2px solid rgba(37,99,235,.55)", animation: `lkRadar 2.4s ease-out ${i * 0.8}s infinite` }} />)}
             </div>
           </div>
+        ) : ["assignée", "en_route", "en_cours"].includes(bk.statut) ? (
+          <LiveMap clientPos={bk.clientPos || (bk.lat ? [bk.lat, bk.lng] : null)} artisanPos={bk.artisanPos || null} artisanColor={art?.color || T.accent} artisan={art} statut={bk.statut} lang={lang} />
+        ) : (
+          <div style={{ padding: "40px 20px", textAlign: "center", color: T.textMid }}>{bk.statut === "terminée" ? (fr ? "Intervention terminée ✓" : "Intervention completed ✓") : (fr ? (CLIENT_ST[bk.statut]?.fr || bk.statut) : (CLIENT_ST[bk.statut]?.en || bk.statut))}</div>
         )}
-        {modals}
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {searching && (
+            <div style={{ textAlign: "center", padding: "4px 0 6px" }}>
+              <div style={{ fontSize: 21, fontWeight: 900, color: T.textHi }}>{fr ? "Recherche d'un artisan…" : "Finding a craftsman…"}</div>
+              <div style={{ fontSize: 13, color: T.textMid, marginTop: 4, lineHeight: 1.5 }}>{nPros > 0 ? (fr ? `Votre demande est envoyée aux ${nPros} artisan${nPros > 1 ? "s" : ""} disponible${nPros > 1 ? "s" : ""} près de chez vous.` : `Your request is sent to ${nPros} available craftsm${nPros > 1 ? "en" : "an"} near you.`) : (fr ? "Votre demande est envoyée aux artisans et entreprises de votre ville." : "Your request is sent to craftsmen and companies in your city.")} {fr ? "Vous êtes prévenu dès qu'un artisan accepte." : "You'll be notified as soon as one accepts."}</div>
+            </div>
+          )}
+          {bk.garantie === "aucune" && !bk.empreinte && (
+            <div style={{ background: "rgba(217,119,6,.07)", border: "1px solid rgba(217,119,6,.25)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.warn, fontWeight: 600 }}>{fr ? "Carte non enregistrée : vous réglerez l'intervention à la fin, par carte." : "Card not registered: you will pay by card at the end of the intervention."}</div>
+          )}
+          {bk.empreinte && <div style={{ background: "rgba(30,158,107,.06)", border: "1px solid rgba(30,158,107,.2)", borderRadius: 12, padding: "10px 12px", fontSize: 12, color: T.textMid, fontWeight: 600 }}>{EMPREINTE_TXT(bk, lang)}</div>}
+          <div className="lk-card" style={{ padding: "14px" }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {steps.map((st, i) => (
+                <div key={st.id} style={{ flex: 1, textAlign: "center" }}>
+                  <div style={{ height: 4, borderRadius: 2, background: i <= cur ? "#1c1c1c" : "rgba(0,0,0,.08)", marginBottom: 5 }} />
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: i <= cur ? T.textHi : T.textLo }}>{st.l}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, fontSize: 12.5, color: T.textMid, display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span><b style={{ color: T.textHi }}>{pLabel(PROBLEMES.find(p => p.id === bk.probleme), lang)}</b> · {bk.adresse}</span>
+              <b style={{ color: T.textHi, flexShrink: 0 }}>{fmt(bookingTotal(bk))}</b>
+            </div>
+          </div>
+          {art && !searching && (
+            <div className="lk-card" style={{ padding: "13px 14px", display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ width: 50, height: 50, borderRadius: "50%", background: `${art.color}15`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                {art.photo ? <img src={art.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: art.color, fontWeight: 800, fontSize: 20 }}>{initial(art.nom)}</span>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: T.textHi, fontWeight: 800, fontSize: 15 }}>{art.nom}</div>
+                <div style={{ color: T.textLo, fontSize: 12 }}>{art.note ? `★ ${art.note} · ` : ""}{art.certif}</div>
+              </div>
+              {art.tel && <button onClick={() => callPhone(art.tel)} aria-label={fr ? "Appeler" : "Call"} style={{ background: "rgba(30,158,107,.1)", border: "none", borderRadius: "50%", width: 44, height: 44, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.phone(T.success, 17)}</button>}
+              <button onClick={() => setShowChat(bk)} aria-label="Message" style={{ background: "rgba(0,0,0,.06)", border: "none", borderRadius: "50%", width: 44, height: 44, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{Icon.chat("#1c1c1c", 17)}</button>
+            </div>
+          )}
+          {bk.statut === "terminée" && bk.statutPaiement !== "payé" && resteAPayer(bk) > 0 && (
+            <button onClick={() => setPayFor({ booking: bk, kind: "facture" })} className="lk-btn">{Icon.card("#fff", 16)} {tr.payInvoiceBtn} — {fmt(resteAPayer(bk))}</button>
+          )}
+          {bk.statut === "terminée" && art && (
+            <div className="lk-card" style={{ padding: "14px", textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.textHi, marginBottom: 8 }}>{bk.noteArtisan ? (fr ? "Merci pour votre note !" : "Thanks for your rating!") : (fr ? `Notez ${firstName(art.nom)}` : `Rate ${firstName(art.nom)}`)}</div>
+              <StarRating value={bk.noteArtisan || 0} onChange={n => setBookings(p => p.map(x => x.id === bk.id ? { ...x, noteArtisan: n, noteArtisanLe: ts() } : x))} />
+            </div>
+          )}
+          {["recherche", "assignée"].includes(bk.statut) && <button onClick={() => cancelBooking(bk)} className="lk-ghost" style={{ color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{fr ? "Annuler (gratuit)" : "Cancel (free)"}</button>}
+          {bk.statut === "en_route" && <button onClick={() => cancelBooking(bk)} className="lk-ghost" style={{ color: T.danger, borderColor: "rgba(220,38,38,.3)" }}>{fraisDep > 0 ? (fr ? `Annuler (${fmt(fraisDep)} de frais de déplacement)` : `Cancel (${fmt(fraisDep)} travel fee)`) : tr.cancelBooking}</button>}
+        </div>
       </div>
-    );
+    ), () => setScreen("home"));
   }
   return null;
 }
@@ -6989,6 +6538,7 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
   const [banTarget, setBanTarget] = useState(null);
   const [banReason, setBanReason] = useState("");
   const [rejectTarget, setRejectTarget] = useState(null);
+  const [docPreview, setDocPreview] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [litigeReply, setLitigeReply] = useState({});
   const [postModal, setPostModal] = useState(false);
@@ -7273,9 +6823,11 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
             {[
               { l: "SIRET", v: a.siret || "—", ok: siretValid(a.siret) },
               ...(a.role === "pro" ? [
-                { l: fr ? "Pièce d'identité" : "ID", v: a.docNames?.idCard || (a.hasIdCard ? "✓" : "✗"), ok: !!a.hasIdCard },
-                { l: fr ? "Assurance RC Pro" : "Insurance", v: a.docNames?.insurance || (a.hasInsurance ? "✓" : "✗"), ok: !!a.hasInsurance },
-                { l: "Kbis / INSEE", v: a.docNames?.kbis || (a.hasKbis ? "✓" : "✗"), ok: !!a.hasKbis },
+                { l: fr ? "Assurance RC Pro" : "Insurance", v: a.docs?.assurance ? (fr ? "Photo ✓" : "Photo ✓") : a.docNames?.insurance || (a.hasInsurance ? "✓" : "✗"), ok: hasDoc(a, "assurance"), img: a.docs?.assurance },
+                { l: "Kbis / INSEE", v: a.docs?.kbis ? (fr ? "Photo ✓" : "Photo ✓") : a.docNames?.kbis || (a.hasKbis ? "✓" : "✗"), ok: hasDoc(a, "kbis"), img: a.docs?.kbis },
+                a.stripeOnboarded
+                  ? { l: fr ? "Identité + IBAN" : "ID + IBAN", v: fr ? "Vérifiés par Stripe ✓" : "Checked by Stripe ✓", ok: true }
+                  : { l: fr ? "Pièce d'identité" : "ID", v: a.docs?.identite ? "Photo ✓" : a.docNames?.idCard || (a.hasIdCard ? "✓" : (fr ? "Manquante" : "Missing")), ok: hasDoc(a, "identite"), img: a.docs?.identite },
                 { l: fr ? "Métiers" : "Trades", v: proMetiers(a).join(", ") || "—", ok: proMetiers(a).length > 0 },
               ] : [
                 { l: "Kbis", v: a.docNames?.kbis || "—", ok: !!a.docNames?.kbis },
@@ -7284,14 +6836,17 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
                 { l: fr ? "Secteurs" : "Sectors", v: (a.secteurs || []).join(", ") || "—", ok: (a.secteurs || []).length > 0 },
               ]),
             ].map(it => (
-              <div key={it.l} style={{ background: it.ok ? "rgba(30,158,107,.06)" : "rgba(220,38,38,.05)", borderRadius: 8, padding: "7px 9px" }}>
-                <div style={{ color: T.textLo, fontSize: 10 }}>{it.l}</div>
-                <div style={{ color: it.ok ? T.success : T.danger, fontWeight: 700, fontSize: 11.5, wordBreak: "break-all" }}>{it.v}</div>
+              <div key={it.l} onClick={() => it.img && setDocPreview({ img: it.img, title: `${a.nom} — ${it.l}` })} style={{ background: it.ok ? "rgba(30,158,107,.06)" : "rgba(220,38,38,.05)", borderRadius: 8, padding: "7px 9px", cursor: it.img ? "zoom-in" : "default", display: "flex", gap: 8, alignItems: "center" }}>
+                {it.img && <img src={it.img} alt="" style={{ width: 38, height: 38, objectFit: "cover", borderRadius: 6, flexShrink: 0 }} />}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: T.textLo, fontSize: 10 }}>{it.l}</div>
+                  <div style={{ color: it.ok ? T.success : T.danger, fontWeight: 700, fontSize: 11.5, wordBreak: "break-all" }}>{it.v}</div>
+                </div>
               </div>
             ))}
           </div>
           {!emailOk(a) && <div style={{ fontSize: 11.5, color: T.danger, marginBottom: 8 }}>{fr ? "Validation possible dès que le professionnel aura cliqué sur le lien de confirmation reçu par e-mail (il peut le renvoyer depuis son espace)." : "Approval possible once the professional has clicked the confirmation link sent by e-mail (they can resend it from their space)."}</div>}
-          <div style={{ fontSize: 11, color: T.textLo, marginBottom: 10 }}>{fr ? "Vérifiez le SIRET sur annuaire-entreprises.data.gouv.fr et demandez les justificatifs par e-mail avant validation." : "Check the SIRET on annuaire-entreprises.data.gouv.fr and request documents by e-mail before approval."} <a href={`https://annuaire-entreprises.data.gouv.fr/rechercher?terme=${encodeURIComponent(a.siret || a.nom)}`} target="_blank" rel="noopener noreferrer" style={{ color: T.accent, fontWeight: 700 }}>{fr ? "Vérifier →" : "Check →"}</a></div>
+          <div style={{ fontSize: 11, color: T.textLo, marginBottom: 10 }}>{fr ? "Vérifiez le SIRET sur annuaire-entreprises.data.gouv.fr et les photos des documents (cliquez pour agrandir) avant validation." : "Check the SIRET on annuaire-entreprises.data.gouv.fr and the document photos (click to enlarge) before approval."} <a href={`https://annuaire-entreprises.data.gouv.fr/rechercher?terme=${encodeURIComponent(a.siret || a.nom)}`} target="_blank" rel="noopener noreferrer" style={{ color: T.accent, fontWeight: 700 }}>{fr ? "Vérifier →" : "Check →"}</a></div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button disabled={!emailOk(a)} title={emailOk(a) ? "" : (fr ? "Le professionnel doit d'abord confirmer son adresse e-mail" : "The professional must confirm their e-mail first")} onClick={() => setAccounts(p => p.map(x => x.id === a.id ? { ...x, dossierStatus: "approved", statut: "actif", valideLe: ts(), validePar: account.nom } : x))} style={{ background: "rgba(30,158,107,.1)", border: "1px solid rgba(30,158,107,.3)", borderRadius: 10, padding: "11px", color: T.success, fontWeight: 700, fontSize: 13, cursor: emailOk(a) ? "pointer" : "not-allowed", opacity: emailOk(a) ? 1 : .45 }}>{Icon.check(T.success, 14)} {tr.approveDossier}</button>
             <button onClick={() => { setRejectTarget(a); setRejectReason(""); }} style={{ background: "rgba(220,38,38,.07)", border: "1px solid rgba(220,38,38,.2)", borderRadius: 10, padding: "11px", color: T.danger, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>{Icon.x(T.danger, 14)} {tr.rejectDossier}</button>
@@ -7668,6 +7223,17 @@ function AdminApp({ account, bookings, setBookings, accounts, setAccounts, bons,
         document.body
       )}
 
+      {docPreview && createPortal(
+        <div onClick={() => setDocPreview(null)} style={{ position: "fixed", inset: 0, zIndex: 9500, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 14, maxWidth: 720, width: "100%", maxHeight: "92vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: T.textHi }}>{docPreview.title}</div>
+              <button onClick={() => setDocPreview(null)} aria-label={fr ? "Fermer" : "Close"} style={{ background: "rgba(0,0,0,.06)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer" }}>✕</button>
+            </div>
+            <img src={docPreview.img} alt={docPreview.title} style={{ width: "100%", borderRadius: 10 }} />
+          </div>
+        </div>, document.body
+      )}
       {rejectTarget && createPortal(
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", zIndex: 9000, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
           <div style={{ background: T.surface, borderRadius: "20px 20px 0 0", width: "100%", maxWidth: 480, padding: "16px 20px 32px" }}>
@@ -8657,8 +8223,28 @@ function PartenaireApp({ account, setAccounts, bookings, setBookings, bons, setB
   const mySecteurs = account.secteurs || [];
   const myBons = visibleFor(account, bons || []).filter(b => b.postedBy === account.id);
   // Demandes clients (et bons LOCKR ouverts) de la ville, dans les secteurs de l'entreprise
-  const openClientBons = visibleFor(account, bons || []).filter(b => b.postedBy === "platform" && b.openPartner && (!b.region || sameCity(b.region, myRegion)) && (!mySecteurs.length || !metierOf(b) || mySecteurs.includes(metierOf(b))));
+  const openClientBons = [
+    // Demandes « à la Uber » en attente d'un artisan (le premier qui accepte la prend)
+    ...visibleFor(account, bookings || []).filter(b => b.statut === "recherche" && !b.artisanAccountId && !b.partenaireId
+      && (!b.region || sameCity(b.region, myRegion)) && (!mySecteurs.length || !metierOf(b) || mySecteurs.includes(metierOf(b))))
+      .map(b => ({ ...b, demandeBooking: true, titre: `${pLabel(PROBLEMES.find(x => x.id === b.probleme), lang) || b.probleme} — ${b.clientNom || ""}`, montantEstime: bookingTotal(b) })),
+    ...visibleFor(account, bons || []).filter(b => b.postedBy === "platform" && b.openPartner && (!b.region || sameCity(b.region, myRegion)) && (!mySecteurs.length || !metierOf(b) || mySecteurs.includes(metierOf(b)))),
+  ];
+  const takeDemande = async (b, techId) => {
+    const tech = myTechs.find(t => t.id === techId);
+    const nomTech = tech ? `${tech.prenom} ${tech.nom}` : account.nom;
+    const patch = { statut: "assignée", partenaireId: account.id, partenaireNom: account.nom, artisanNom: nomTech, artisanTel: tech?.tel || account.tel || "",
+      technicienId: tech?.id || null, technicienNom: tech ? nomTech : null, participants: [b.clientId, account.id], accepteLe: ts() };
+    if (live) {
+      try { await runBatch([{ collection: "bookings", id: b.id, data: patch, merge: true }]); }
+      catch { alert(fr ? "Cette demande vient d'être prise par un autre professionnel." : "This request was just taken by another professional."); return; }
+    } else {
+      setBookings(p => p.map(x => x.id === b.id ? { ...x, ...patch } : x));
+    }
+    if (tech) setTechStatut(tech.id, "en_mission");
+  };
   const takeClientBon = async (bon, techId) => {
+    if (bon.demandeBooking) return takeDemande(bon, techId);
     const taken = () => alert(fr ? "Cette demande vient d'être prise par un autre professionnel." : "This request was just taken by another professional.");
     if (!bons.some(b => b.id === bon.id)) { taken(); return; }
     const tech = myTechs.find(t => t.id === techId);
@@ -9649,7 +9235,9 @@ function applyPayment({ setBookings, setAccounts, setSales, setListings }, { typ
   setBookings(p => p.map(b => {
     if (b.id !== ref) return b;
     if (type === "empreinte") {
-      return { ...b, statut: b.statut === "en_attente_paiement" ? "assignée" : b.statut, empreinte: { statut: "autorisée", montant: bookingTotal(b), autoriseeLe: ts(), demo: true } };
+      // Demande sans artisan choisi : elle part aux artisans (premier qui accepte)
+      const next = b.artisanAccountId || b.partenaireId ? "assignée" : "recherche";
+      return { ...b, statut: b.statut === "en_attente_paiement" ? next : b.statut, empreinte: { statut: "autorisée", montant: bookingTotal(b), autoriseeLe: ts(), demo: true } };
     }
     if (type === "liberation") {
       return b.empreinte ? { ...b, empreinte: { ...b.empreinte, statut: "libérée", libereeLe: ts() } } : b;
@@ -9886,7 +9474,8 @@ export default function App() {
     banned: NONE, settings: NONE, techs: NONE, factures: NONE, profiles: NONE,
   } : {
     accounts: isAdm ? ALL : [{ doc: userId }],
-    bookings: isAdm ? ALL : mine("participants"),
+    // Professionnels validés : leurs missions + les demandes en attente d'un artisan
+    bookings: isAdm ? ALL : activePro ? [...mine("participants"), { where: ["statut", "==", "recherche"] }] : mine("participants"),
     bons: isAdm || activePro ? ALL : role === "client" ? [{ where: ["clientId", "==", userId] }] : NONE,
     chat: isAdm || activePro ? ALL : NONE,
     listings: isAdm || activePro ? ALL : NONE,

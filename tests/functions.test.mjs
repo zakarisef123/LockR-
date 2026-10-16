@@ -387,6 +387,42 @@ test("marketplace : problème signalé → décision de l'admin ; vendeur sans S
   assert.equal((await get("sales/s2")).vendeurPaye, true);
 });
 
+// ── Demandes « à la Uber » ──────────────────────────────────────────────────
+test("demande sans artisan : carte enregistrée → recherche ; refus → relancée ; débit → part virée à l'artisan", async () => {
+  const dest = await onboard(tPro, "pro1");
+  await db().doc("bookings/d1").set({
+    id: "d1", clientId: "client1", participants: ["client1"], techPct: 85, montant: 130, demande: true,
+    probleme: "ouverture", statut: "en_attente_paiement", createdAt: new Date().toISOString(),
+  });
+  assert.equal((await call("create-checkout", { type: "empreinte", ref: "d1" }, tClient)).status, 200);
+  const params = stripe.calls.filter(x => x[0] === "checkout.sessions.create").pop()[1];
+  assert.equal(params.payment_intent_data.transfer_data, undefined, "pas encore d'artisan : pas de partage au paiement");
+  const sid = lastSessionId();
+  stripe.completeSession(sid);
+  await call("verify-session", { sessionId: sid });
+  let d = await get("bookings/d1");
+  assert.deepEqual([d.statut, d.empreinte.statut], ["recherche", "autorisée"]);
+  // L'artisan accepte (écriture autorisée par les règles côté application), puis refuse : la demande repart
+  await db().doc("bookings/d1").update({ statut: "assignée", artisanAccountId: "pro1", artisanId: "pro1", participants: ["client1", "pro1"] });
+  const r = await call("cancel-hold", { bookingId: "d1", reason: "refus_pro" }, tPro);
+  assert.equal(r.data.relancee, true);
+  d = await get("bookings/d1");
+  assert.deepEqual([d.statut, d.artisanAccountId, d.participants, d.empreinte.statut], ["recherche", undefined, ["client1"], "autorisée"]);
+  assert.deepEqual(d.refusePar, ["pro1"]);
+  // Un autre artisan accepte puis termine : débit + virement de sa part (85 %)
+  await db().doc("bookings/d1").update({ statut: "terminée", artisanAccountId: "pro1", artisanId: "pro1", participants: ["client1", "pro1"], montantFinal: 100 });
+  const c = await call("capture-payment", { bookingId: "d1" }, tPro);
+  assert.equal(c.status, 200, JSON.stringify(c.data));
+  const t = stripe.calls.find(x => x[0] === "transfers.create");
+  assert.deepEqual([t[1].amount, t[1].destination, !!t[1].source_transaction], [8500, dest, true]);
+  d = await get("bookings/d1");
+  assert.deepEqual([d.statutPaiement, d.proVerseAuto], ["payé", 85]);
+  // Annulation gratuite tant que la demande est en recherche
+  await db().doc("bookings/d2").set({ id: "d2", clientId: "client1", participants: ["client1"], techPct: 85, montant: 90, demande: true, statut: "recherche" });
+  assert.equal((await call("cancel-hold", { bookingId: "d2", reason: "annulation_client" }, tClient)).status, 200);
+  assert.equal((await get("bookings/d2")).statut, "annulée_client");
+});
+
 test("configuration de la plateforme", async () => {
   const r = await call("platform-config", {});
   assert.deepEqual(r.data, { stripe: true, mode: "test", server: true });
